@@ -5,27 +5,35 @@ import type { Session } from "next-auth";
 
 type AuthRequest = NextRequest & { auth: Session | null };
 
-const PUBLIC_PATHS = ["/login"];
-const ADMIN_PATHS = ["/dashboard", "/attendance", "/students", "/schedule"];
+const PUBLIC_PATHS = ["/login", "/check-in"];
+const ADMIN_PATHS = ["/dashboard", "/attendance", "/students", "/schedule", "/sessions"];
 const STUDENT_PATHS = ["/student"];
 
 export default auth((req: AuthRequest) => {
   const pathname = req.nextUrl.pathname;
   const session = req.auth;
+  const role = session?.user?.role;
 
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
+  // Not logged in
   if (!session) {
     if (isPublic) return NextResponse.next();
-    return NextResponse.redirect(new URL("/login", req.url));
+    // Preserve the intended URL so login can redirect back
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname + req.nextUrl.search);
+    return NextResponse.redirect(loginUrl);
   }
 
-  const role = session.user?.role;
-
-  // Already logged in → redirect away from login
-  if (isPublic) {
+  // Logged in → redirect away from login
+  if (pathname.startsWith("/login")) {
     const dest = role === "STUDENT" ? "/student" : "/dashboard";
     return NextResponse.redirect(new URL(dest, req.url));
+  }
+
+  // /check-in is open to students only (non-students get redirected to dashboard)
+  if (pathname.startsWith("/check-in") && role !== "STUDENT") {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
   const isAdminPath = ADMIN_PATHS.some((p) => pathname.startsWith(p));

@@ -140,7 +140,7 @@ export default function SessionQrPage() {
                   }`}
                 >
                   <QRCodeSVG
-                    value={qr.codeValue}
+                    value={`${window.location.origin}/check-in?token=${qr.codeValue}`}
                     size={260}
                     level="H"
                     includeMargin
