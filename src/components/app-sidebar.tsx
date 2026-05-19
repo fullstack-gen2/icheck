@@ -25,12 +25,24 @@ const data = {
   },
   navMain: [
     {
-      title: "Create class",
-      url: "#",
-      icon: (
-        <ListIcon
-        />
-      ),
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: <LayoutDashboardIcon />,
+    },
+    {
+      title: "Students",
+      url: "/students",
+      icon: <UsersIcon />,
+    },
+    {
+      title: "Attendance",
+      url: "/attendance",
+      icon: <CameraIcon />,
+    },
+    {
+      title: "Schedule",
+      url: "/schedule",
+      icon: <ListIcon />,
     },
   ],
   navSecondary: [
