@@ -1,12 +1,25 @@
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await auth();
+
+  if (!session) redirect("/login");
+  if (session.user.role === "STUDENT") redirect("/student");
+
+  const user = {
+    name: session.user.name ?? "Unknown",
+    email: session.user.email ?? "",
+    role: session.user.role,
+  };
+
   return (
     <SidebarProvider
       style={
@@ -16,7 +29,7 @@ export default function AdminLayout({
         } as React.CSSProperties
       }
     >
-      <AppSidebar variant="inset" />
+      <AppSidebar variant="inset" user={user} />
       <SidebarInset>
         <SiteHeader />
         <div className="flex flex-1 flex-col">
