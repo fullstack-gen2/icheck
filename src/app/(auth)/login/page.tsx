@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,12 @@ import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
+type Role = "STUDENT" | "ADMIN";
 
 function getOrCreateDeviceId(): string {
   const key = "i-check-device-id";
@@ -26,6 +28,7 @@ function getOrCreateDeviceId(): string {
 
 export default function LoginPage() {
   const router = useRouter();
+  const [role, setRole] = useState<Role>("STUDENT");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -36,6 +39,7 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
+    // Always pass deviceId — backend ignores it for non-STUDENT roles
     const deviceId = getOrCreateDeviceId();
 
     const result = await signIn("credentials", {
@@ -48,16 +52,20 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result?.error) {
-      setError("Invalid email or password. Please try again.");
+      setError(
+        role === "STUDENT"
+          ? "Invalid email or password."
+          : "Invalid credentials. Check your email and password."
+      );
       return;
     }
 
-    // Fetch session to determine role-based redirect
+    // Fetch session to get role then redirect
     const res = await fetch("/api/auth/session");
     const session = await res.json();
-    const role = session?.user?.role;
+    const userRole = session?.user?.role;
 
-    if (role === "STUDENT") {
+    if (userRole === "STUDENT") {
       router.push("/student");
     } else {
       router.push("/dashboard");
@@ -66,17 +74,37 @@ export default function LoginPage() {
 
   return (
     <Card className="w-full max-w-md shadow-lg">
-      <CardHeader className="space-y-1">
-        <div className="mb-2 flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#273C97] text-white font-bold text-sm">
+      <CardHeader className="space-y-4 pb-2">
+        {/* Logo */}
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#273C97] text-white font-bold text-sm">
             iC
           </div>
-          <span className="text-xl font-bold">i-Check</span>
+          <span className="text-xl font-bold tracking-tight">i-Check</span>
         </div>
-        <CardTitle className="text-2xl">Sign in</CardTitle>
-        <CardDescription>
-          Enter your credentials to access your account
-        </CardDescription>
+
+        {/* Role tabs */}
+        <div className="flex rounded-lg border border-gray-200 p-1 bg-gray-50">
+          {(["STUDENT", "ADMIN"] as Role[]).map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => { setRole(r); setError(""); }}
+              className={cn(
+                "flex-1 rounded-md py-1.5 text-sm font-medium transition-all",
+                role === r
+                  ? "bg-white text-[#273C97] shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              )}
+            >
+              {r === "STUDENT" ? "Student" : "Admin / Teacher"}
+            </button>
+          ))}
+        </div>
+
+        <CardTitle className="text-xl font-semibold">
+          {role === "STUDENT" ? "Student Sign in" : "Admin Sign in"}
+        </CardTitle>
       </CardHeader>
 
       <CardContent>
@@ -86,7 +114,11 @@ export default function LoginPage() {
             <Input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder={
+                role === "STUDENT"
+                  ? "student@example.com"
+                  : "admin@example.com"
+              }
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -107,15 +139,21 @@ export default function LoginPage() {
             />
           </div>
 
+          {role === "STUDENT" && (
+            <p className="text-xs text-gray-400 bg-gray-50 rounded-md px-3 py-2">
+              Your device is identified automatically for attendance tracking.
+            </p>
+          )}
+
           {error && (
-            <p className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-md">
+            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md border border-red-100">
               {error}
             </p>
           )}
 
           <Button
             type="submit"
-            className="w-full bg-[#273C97] hover:bg-[#1e2e7a]"
+            className="w-full bg-[#273C97] hover:bg-[#1e2e7a] text-white"
             disabled={loading}
           >
             {loading ? "Signing in…" : "Sign in"}
