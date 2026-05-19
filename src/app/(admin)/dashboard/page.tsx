@@ -1,5 +1,4 @@
-import { auth } from "@/auth";
-import { Badge } from "@/components/ui/badge";
+import { ClassCard } from "@/components/ui/class-card";
 import { UsersIcon, GraduationCapIcon, BookOpenIcon, ClipboardCheckIcon } from "lucide-react";
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8090";
@@ -91,7 +90,10 @@ export default async function DashboardPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
         {stats.map((s) => (
-          <div key={s.label} className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4">
+          <div
+            key={s.label}
+            className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4"
+          >
             <div className={`rounded-xl p-3 ${s.color}`}>
               <s.icon className="size-5" />
             </div>
@@ -103,11 +105,8 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* Classrooms */}
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="text-xl font-semibold text-gray-800">Classes</h2>
-        <span className="text-sm text-gray-400">{classrooms.length} classes</span>
-      </div>
+      {/* Class Info */}
+      <h2 className="text-xl font-semibold text-gray-800 mb-5">Class Info</h2>
 
       {classrooms.length === 0 ? (
         <div className="text-center py-16 text-gray-400 bg-white rounded-2xl border border-gray-200">
@@ -115,51 +114,18 @@ export default async function DashboardPage() {
           <p>No classes found</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-6">
           {classrooms.map((c) => (
-            <div
+            <ClassCard
               key={c.id}
-              className="bg-white rounded-2xl border border-gray-200 p-5 flex flex-col gap-3"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-semibold text-gray-900 leading-tight">{c.className}</p>
-                  <p className="text-xs text-gray-400 font-mono mt-0.5">{c.classCode}</p>
-                </div>
-                <Badge
-                  className={
-                    c.status
-                      ? "bg-green-100 text-green-700 hover:bg-green-100 shrink-0"
-                      : "bg-gray-100 text-gray-500 hover:bg-gray-100 shrink-0"
-                  }
-                >
-                  {c.status ? "Active" : "Inactive"}
-                </Badge>
-              </div>
-
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-500">
-                <span>
-                  <span className="text-gray-400">Program:</span>{" "}
-                  {c.programTypeName ?? "—"}
-                </span>
-                <span>
-                  <span className="text-gray-400">Shift:</span>{" "}
-                  {shiftLabel[c.shift] ?? c.shift ?? "—"}
-                </span>
-                <span>
-                  <span className="text-gray-400">Year:</span> {c.year ?? "—"}
-                </span>
-                <span>
-                  <span className="text-gray-400">Semester:</span> {c.semester ?? "—"}
-                </span>
-                <span>
-                  <span className="text-gray-400">Generation:</span> {c.generation ?? "—"}
-                </span>
-                <span>
-                  <span className="text-gray-400">A.Year:</span> {c.academicYear ?? "—"}
-                </span>
-              </div>
-            </div>
+              title={c.programTypeName ?? "Class"}
+              status={c.status ? "Active" : "Inactive"}
+              classNameValue={c.className}
+              shift={shiftLabel[c.shift] ?? c.shift ?? "—"}
+              time={`${c.startDate ?? "?"} – ${c.endDate ?? "?"}`}
+              students={`Year ${c.year ?? "?"} / Sem ${c.semester ?? "?"}`}
+              code={c.classCode ?? String(c.id)}
+            />
           ))}
         </div>
       )}

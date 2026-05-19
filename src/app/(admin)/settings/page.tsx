@@ -3,13 +3,26 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Settings2Icon,
   PencilIcon,
   TrashIcon,
-  CheckIcon,
-  XIcon,
   PlusIcon,
   LoaderCircleIcon,
 } from "lucide-react";
@@ -24,35 +37,38 @@ interface Setting {
 }
 
 const typeColor: Record<string, string> = {
-  INT: "bg-blue-100 text-blue-700",
-  BOOLEAN: "bg-purple-100 text-purple-700",
-  STRING: "bg-gray-100 text-gray-600",
+  INT: "bg-blue-100 text-blue-700 hover:bg-blue-100",
+  BOOLEAN: "bg-purple-100 text-purple-700 hover:bg-purple-100",
+  STRING: "bg-gray-100 text-gray-600 hover:bg-gray-100",
 };
+
+type SheetMode = "add" | "edit";
+
+const defaultForm = { key: "", value: "", type: "STRING", description: "" };
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Setting[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // New setting form
-  const [showAdd, setShowAdd] = useState(false);
-  const [newKey, setNewKey] = useState("");
-  const [newValue, setNewValue] = useState("");
-  const [newType, setNewType] = useState("STRING");
-  const [newDesc, setNewDesc] = useState("");
-  const [adding, setAdding] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetMode, setSheetMode] = useState<SheetMode>("add");
+  const [form, setForm] = useState(defaultForm);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+
+  const [deletingKey, setDeletingKey] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
+    setError("");
     try {
       const res = await fetch("/api/settings");
       const json = await res.json();
+      if (!res.ok) { setError("Failed to load settings."); return; }
       setSettings(json?.payload ?? []);
     } catch {
-      setError("Failed to load settings.");
+      setError("Network error loading settings.");
     } finally {
       setLoading(false);
     }
@@ -60,254 +76,260 @@ export default function SettingsPage() {
 
   useEffect(() => { load(); }, []);
 
-  async function handleSave(key: string) {
-    setSaving(true);
-    setError("");
+  function openAdd() {
+    setForm(defaultForm);
+    setFormError("");
+    setSheetMode("add");
+    setSheetOpen(true);
+  }
+
+  function openEdit(s: Setting) {
+    setForm({ key: s.settingKey, value: s.settingValue, type: s.type, description: s.description ?? "" });
+    setFormError("");
+    setSheetMode("edit");
+    setSheetOpen(true);
+  }
+
+  async function handleSubmit() {
+    if (!form.key.trim() || !form.value.trim()) {
+      setFormError("Key and value are required.");
+      return;
+    }
+    setSubmitting(true);
+    setFormError("");
     try {
-      const res = await fetch(`/api/settings/${encodeURIComponent(key)}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ value: editValue }),
-      });
-      if (!res.ok) {
-        const json = await res.json();
-        setError(json?.message ?? "Update failed.");
-        return;
+      let res: Response;
+      if (sheetMode === "add") {
+        res = await fetch("/api/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: form.key.trim(), value: form.value.trim(), type: form.type, description: form.description }),
+        });
+      } else {
+        res = await fetch(`/api/settings/${encodeURIComponent(form.key)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ value: form.value.trim() }),
+        });
       }
-      setEditingKey(null);
+      const json = await res.json();
+      if (!res.ok) { setFormError(json?.payload?.message ?? json?.message ?? "Operation failed."); return; }
+      setSheetOpen(false);
       await load();
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
   }
 
   async function handleDelete(key: string) {
-    if (!confirm(`Delete setting "${key}"?`)) return;
+    if (!confirm(`Delete setting "${key}"? This cannot be undone.`)) return;
+    setDeletingKey(key);
     try {
       const res = await fetch(`/api/settings/${encodeURIComponent(key)}`, { method: "DELETE" });
       if (!res.ok) {
-        const json = await res.json();
-        setError(json?.message ?? "Delete failed.");
+        const json = await res.json().catch(() => ({}));
+        setError(json?.payload?.message ?? json?.message ?? "Delete failed.");
         return;
       }
-      await load();
-    } catch {
-      setError("Delete failed.");
-    }
-  }
-
-  async function handleAdd() {
-    if (!newKey.trim() || !newValue.trim()) return;
-    setAdding(true);
-    setError("");
-    try {
-      const res = await fetch("/api/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: newKey.trim(), value: newValue.trim(), type: newType, description: newDesc }),
-      });
-      if (!res.ok) {
-        const json = await res.json();
-        setError(json?.message ?? "Create failed.");
-        return;
-      }
-      setShowAdd(false);
-      setNewKey(""); setNewValue(""); setNewType("STRING"); setNewDesc("");
       await load();
     } finally {
-      setAdding(false);
+      setDeletingKey(null);
     }
   }
 
   return (
     <div className="px-5 py-8">
+      {/* Page header */}
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-black">System Settings</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-black">System Settings</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage global configuration keys used by the system.</p>
+        </div>
         <Button
-          size="sm"
-          className="bg-[#273C97] hover:bg-[#1e2e7a] gap-1.5"
-          onClick={() => setShowAdd((v) => !v)}
+          className="bg-[#273C97] hover:bg-[#1e2e7a] gap-2"
+          onClick={openAdd}
         >
           <PlusIcon className="size-4" />
           Add Setting
         </Button>
       </div>
 
+      {/* Global error */}
       {error && (
         <div className="bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl px-4 py-3 mb-5">
           {error}
         </div>
       )}
 
-      {/* Add form */}
-      {showAdd && (
-        <div className="bg-white border border-[#273C97]/30 rounded-2xl p-5 mb-6">
-          <h2 className="font-semibold text-gray-800 mb-4">New Setting</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Key *</label>
-              <Input
-                placeholder="e.g. late_threshold_minutes"
-                value={newKey}
-                onChange={(e) => setNewKey(e.target.value)}
-                className="font-mono text-sm"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Value *</label>
-              <Input
-                placeholder="e.g. 10"
-                value={newValue}
-                onChange={(e) => setNewValue(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Type</label>
-              <select
-                value={newType}
-                onChange={(e) => setNewType(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#273C97]/30"
-              >
-                <option value="STRING">STRING</option>
-                <option value="INT">INT</option>
-                <option value="BOOLEAN">BOOLEAN</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Description</label>
-              <Input
-                placeholder="Optional description"
-                value={newDesc}
-                onChange={(e) => setNewDesc(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="flex gap-2 justify-end">
-            <Button variant="ghost" size="sm" onClick={() => setShowAdd(false)}>
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              className="bg-[#273C97] hover:bg-[#1e2e7a]"
-              onClick={handleAdd}
-              disabled={adding || !newKey.trim() || !newValue.trim()}
-            >
-              {adding ? <LoaderCircleIcon className="size-4 animate-spin" /> : "Create"}
-            </Button>
-          </div>
-        </div>
-      )}
-
+      {/* Table */}
       {loading ? (
-        <div className="flex justify-center py-16">
+        <div className="flex justify-center py-24">
           <LoaderCircleIcon className="size-8 animate-spin text-[#273C97]" />
         </div>
       ) : settings.length === 0 ? (
-        <div className="text-center py-16 text-gray-400 bg-white rounded-2xl border border-gray-200">
+        <div className="text-center py-20 text-gray-400 bg-white rounded-2xl border border-gray-200">
           <Settings2Icon className="size-10 mx-auto mb-3 opacity-40" />
-          <p>No settings configured.</p>
+          <p className="font-medium">No settings configured.</p>
+          <p className="text-sm mt-1">Click "Add Setting" to create the first one.</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Key</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Value</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600 hidden sm:table-cell">Type</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600 hidden md:table-cell">Description</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {settings.map((s, index) => (
-                <tr
-                  key={s.id}
-                  className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                    index === settings.length - 1 ? "border-b-0" : ""
-                  }`}
-                >
-                  <td className="px-4 py-3">
-                    <span className="font-mono text-xs text-gray-700">{s.settingKey}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    {editingKey === s.settingKey ? (
-                      <Input
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        className="h-7 text-sm w-32"
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleSave(s.settingKey);
-                          if (e.key === "Escape") setEditingKey(null);
-                        }}
-                      />
-                    ) : (
-                      <span className="font-medium text-gray-900">{s.settingValue}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 hidden sm:table-cell">
-                    <Badge className={`text-[10px] ${typeColor[s.type] ?? "bg-gray-100 text-gray-500"}`}>
+        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50">
+                <TableHead className="px-4 py-3 text-gray-600 font-semibold">Key</TableHead>
+                <TableHead className="px-4 py-3 text-gray-600 font-semibold">Value</TableHead>
+                <TableHead className="px-4 py-3 text-gray-600 font-semibold">Type</TableHead>
+                <TableHead className="px-4 py-3 text-gray-600 font-semibold hidden md:table-cell">Description</TableHead>
+                <TableHead className="px-4 py-3 text-gray-600 font-semibold hidden lg:table-cell">Last updated</TableHead>
+                <TableHead className="px-4 py-3 text-right text-gray-600 font-semibold">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {settings.map((s) => (
+                <TableRow key={s.id} className="hover:bg-gray-50 transition-colors">
+                  <TableCell className="px-4 py-3">
+                    <span className="font-mono text-sm text-gray-800">{s.settingKey}</span>
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
+                    <span className="font-semibold text-gray-900">{s.settingValue}</span>
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
+                    <Badge className={`text-xs ${typeColor[s.type] ?? "bg-gray-100 text-gray-500"}`}>
                       {s.type}
                     </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs hidden md:table-cell max-w-xs truncate">
-                    {s.description ?? "—"}
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-gray-400 text-sm hidden md:table-cell max-w-xs">
+                    <span className="truncate block">{s.description ?? "—"}</span>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-gray-400 text-xs hidden lg:table-cell whitespace-nowrap">
+                    {s.updatedAt
+                      ? new Date(s.updatedAt).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" })
+                      : "—"}
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
-                      {editingKey === s.settingKey ? (
-                        <>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="size-7 text-green-600 hover:bg-green-50"
-                            onClick={() => handleSave(s.settingKey)}
-                            disabled={saving}
-                          >
-                            {saving ? (
-                              <LoaderCircleIcon className="size-3.5 animate-spin" />
-                            ) : (
-                              <CheckIcon className="size-3.5" />
-                            )}
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="size-7 text-gray-400 hover:bg-gray-100"
-                            onClick={() => setEditingKey(null)}
-                          >
-                            <XIcon className="size-3.5" />
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="size-7 text-[#273C97] hover:bg-[#273C97]/10"
-                            onClick={() => { setEditingKey(s.settingKey); setEditValue(s.settingValue); }}
-                          >
-                            <PencilIcon className="size-3.5" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="size-7 text-red-400 hover:bg-red-50"
-                            onClick={() => handleDelete(s.settingKey)}
-                          >
-                            <TrashIcon className="size-3.5" />
-                          </Button>
-                        </>
-                      )}
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="size-8 text-[#273C97] hover:bg-[#273C97]/10"
+                        onClick={() => openEdit(s)}
+                      >
+                        <PencilIcon className="size-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="size-8 text-red-400 hover:bg-red-50 hover:text-red-600"
+                        onClick={() => handleDelete(s.settingKey)}
+                        disabled={deletingKey === s.settingKey}
+                      >
+                        {deletingKey === s.settingKey ? (
+                          <LoaderCircleIcon className="size-4 animate-spin" />
+                        ) : (
+                          <TrashIcon className="size-4" />
+                        )}
+                      </Button>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
+
+      {/* Add / Edit Sheet */}
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-md">
+          <SheetHeader className="mb-6">
+            <SheetTitle>{sheetMode === "add" ? "Add New Setting" : `Edit — ${form.key}`}</SheetTitle>
+          </SheetHeader>
+
+          <div className="flex flex-col gap-4">
+            {/* Key — read-only when editing */}
+            <div className="space-y-1.5">
+              <Label htmlFor="key">Key <span className="text-red-500">*</span></Label>
+              <Input
+                id="key"
+                placeholder="e.g. late_threshold_minutes"
+                value={form.key}
+                onChange={(e) => setForm((f) => ({ ...f, key: e.target.value }))}
+                readOnly={sheetMode === "edit"}
+                className={`font-mono ${sheetMode === "edit" ? "bg-gray-50 text-gray-500 cursor-not-allowed" : ""}`}
+              />
+            </div>
+
+            {/* Value */}
+            <div className="space-y-1.5">
+              <Label htmlFor="value">Value <span className="text-red-500">*</span></Label>
+              <Input
+                id="value"
+                placeholder="e.g. 10"
+                value={form.value}
+                onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
+              />
+            </div>
+
+            {/* Type — only for add */}
+            {sheetMode === "add" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="type">Type</Label>
+                <select
+                  id="type"
+                  value={form.type}
+                  onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+                  className="w-full border border-input rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#273C97]/30 bg-white"
+                >
+                  <option value="STRING">STRING</option>
+                  <option value="INT">INT</option>
+                  <option value="BOOLEAN">BOOLEAN</option>
+                </select>
+              </div>
+            )}
+
+            {/* Description */}
+            <div className="space-y-1.5">
+              <Label htmlFor="desc">Description</Label>
+              <Input
+                id="desc"
+                placeholder="Optional description"
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              />
+            </div>
+
+            {/* Form error */}
+            {formError && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                {formError}
+              </p>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-2 mt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setSheetOpen(false)}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-[#273C97] hover:bg-[#1e2e7a]"
+                onClick={handleSubmit}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <LoaderCircleIcon className="size-4 animate-spin mr-2" />
+                ) : null}
+                {sheetMode === "add" ? "Create" : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
