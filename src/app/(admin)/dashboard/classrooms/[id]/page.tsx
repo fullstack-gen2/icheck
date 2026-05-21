@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeftIcon, UsersIcon, CalendarIcon, BookOpenIcon } from "lucide-react";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8090";
+const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
 
 interface Classroom {
   id: number;
@@ -36,7 +36,7 @@ const SHIFT_LABEL: Record<string, string> = {
 
 async function fetchClassroom(id: string): Promise<Classroom | null> {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/classrooms/${id}`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/api/v1/classrooms/${id}`, { cache: "no-store" });
     if (!res.ok) return null;
     const json = await res.json();
     return json?.payload ?? null;
@@ -45,7 +45,7 @@ async function fetchClassroom(id: string): Promise<Classroom | null> {
 
 async function fetchStudents(id: string): Promise<Student[]> {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/classrooms/${id}/students?size=200`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/api/v1/classrooms/${id}/students?size=200`, { cache: "no-store" });
     if (!res.ok) return [];
     const json = await res.json();
     return json?.payload?.content ?? [];

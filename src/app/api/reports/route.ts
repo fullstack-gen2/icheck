@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8090";
+const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
 
 /** POST /api/reports — generate monthly or semester report */
 export async function POST(request: Request) {
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   const body = await request.json();
   const { type, ...payload } = body; // type: "monthly" | "semester"
 
-  const res = await fetch(`${BACKEND_URL}/api/reports/${type}`, {
+  const res = await fetch(`${BASE_API_URL}/api/v1/reports/${type}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

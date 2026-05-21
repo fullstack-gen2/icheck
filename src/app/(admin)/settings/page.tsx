@@ -93,9 +93,18 @@ export default function SettingsPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/settings");
-      const json = await res.json();
-      if (!res.ok) { setError("Failed to load settings."); return; }
+      const res = await fetch("/attendance/api/settings");
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // Surface the real reason — 401 means stale/missing cookie (relogin),
+        // 502 means backend unreachable, anything else gets shown verbatim.
+        const reason =
+          res.status === 401 ? "Your session expired. Please log in again." :
+          res.status === 403 ? "You don't have permission to view settings." :
+          json?.message ?? json?.error ?? `HTTP ${res.status}`;
+        setError(`Failed to load settings — ${reason}`);
+        return;
+      }
       setSettings(json?.payload ?? []);
     } catch {
       setError("Network error loading settings.");
@@ -130,13 +139,13 @@ export default function SettingsPage() {
     try {
       let res: Response;
       if (sheetMode === "add") {
-        res = await fetch("/api/settings", {
+        res = await fetch("/attendance/api/settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ key: form.key.trim(), value: form.value.trim(), type: form.type, description: form.description }),
         });
       } else {
-        res = await fetch(`/api/settings/${encodeURIComponent(form.key)}`, {
+        res = await fetch(`/attendance/api/settings/${encodeURIComponent(form.key)}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ value: form.value.trim() }),
@@ -155,7 +164,7 @@ export default function SettingsPage() {
     if (!confirm(`Delete setting "${key}"? This cannot be undone.`)) return;
     setDeletingKey(key);
     try {
-      const res = await fetch(`/api/settings/${encodeURIComponent(key)}`, { method: "DELETE" });
+      const res = await fetch(`/attendance/api/settings/${encodeURIComponent(key)}`, { method: "DELETE" });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         setError(json?.payload?.message ?? json?.message ?? "Delete failed.");
@@ -194,7 +203,7 @@ export default function SettingsPage() {
         <div className="text-center py-20 text-gray-400 bg-white rounded-2xl border border-gray-200">
           <Settings2Icon className="size-10 mx-auto mb-3 opacity-40" />
           <p className="font-medium">No settings configured.</p>
-          <p className="text-sm mt-1">Click "Add Setting" to create the first one.</p>
+          <p className="text-sm mt-1">Click `Add Setting` to create the first one.</p>
         </div>
       ) : (
         <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">

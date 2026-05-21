@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,19 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-
-type Role = "STUDENT" | "ADMIN";
-
-function getOrCreateDeviceId(): string {
-  const key = "i-check-device-id";
-  let id = localStorage.getItem(key);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(key, id);
-  }
-  return id;
-}
+import { Logo } from "@/components/logo";
 
 export default function LoginPage() {
   return (
@@ -38,7 +26,6 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
-  const [role, setRole] = useState<Role>("STUDENT");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -49,30 +36,23 @@ function LoginForm() {
     setError("");
     setLoading(true);
 
-    // Always pass deviceId — backend ignores it for non-STUDENT roles
-    const deviceId = getOrCreateDeviceId();
-
+    // The HttpOnly device cookie is attached automatically by the browser.
     const result = await signIn("credentials", {
       email,
       password,
-      deviceId,
       redirect: false,
     });
 
     setLoading(false);
 
     if (result?.error) {
-      setError(
-        role === "STUDENT"
-          ? "Invalid email or password."
-          : "Invalid credentials. Check your email and password."
-      );
+      setError("Invalid email or password.");
       return;
     }
 
-    // Fetch session to get role then redirect
-    const res = await fetch("/api/auth/session");
-    const session = await res.json();
+    // Look up the role from the freshly-issued session to route the user.
+    // getSession() honours the SessionProvider basePath, unlike a raw fetch.
+    const session = await getSession();
     const userRole = session?.user?.role;
 
     if (callbackUrl) {
@@ -86,37 +66,17 @@ function LoginForm() {
 
   return (
     <Card className="w-full max-w-md shadow-lg">
-      <CardHeader className="space-y-4 pb-2">
+      <CardHeader className="space-y-3 pb-2">
         {/* Logo */}
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#273C97] text-white font-bold text-sm">
-            iC
-          </div>
+          <Logo size={36} />
           <span className="text-xl font-bold tracking-tight">i-Check</span>
         </div>
 
-        {/* Role tabs */}
-        <div className="flex rounded-lg border border-gray-200 p-1 bg-gray-50">
-          {(["STUDENT", "ADMIN"] as Role[]).map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => { setRole(r); setError(""); }}
-              className={cn(
-                "flex-1 rounded-md py-1.5 text-sm font-medium transition-all",
-                role === r
-                  ? "bg-white text-[#273C97] shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              )}
-            >
-              {r === "STUDENT" ? "Student" : "Admin / Teacher"}
-            </button>
-          ))}
-        </div>
-
-        <CardTitle className="text-xl font-semibold">
-          {role === "STUDENT" ? "Student Sign in" : "Admin Sign in"}
-        </CardTitle>
+        <CardTitle className="text-xl font-semibold">Sign in</CardTitle>
+        <p className="text-sm text-gray-500">
+          Sign in to your i-Check account. Your role will be detected automatically.
+        </p>
       </CardHeader>
 
       <CardContent>
@@ -126,11 +86,7 @@ function LoginForm() {
             <Input
               id="email"
               type="email"
-              placeholder={
-                role === "STUDENT"
-                  ? "student@example.com"
-                  : "admin@example.com"
-              }
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -150,12 +106,6 @@ function LoginForm() {
               autoComplete="current-password"
             />
           </div>
-
-          {role === "STUDENT" && (
-            <p className="text-xs text-gray-400 bg-gray-50 rounded-md px-3 py-2">
-              Your device is identified automatically for attendance tracking.
-            </p>
-          )}
 
           {error && (
             <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md border border-red-100">

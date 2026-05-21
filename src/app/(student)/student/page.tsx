@@ -1,28 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { QrScanner } from "@/components/qr-scanner";
 import { QrCodeIcon, ClipboardListIcon } from "lucide-react";
 
-function getOrCreateDeviceId(): string {
-  const key = "i-check-device-id";
-  let id = localStorage.getItem(key);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(key, id);
-  }
-  return id;
-}
-
 export default function StudentHomePage() {
   const { data: session } = useSession();
   const [showScanner, setShowScanner] = useState(false);
-  const [deviceId, setDeviceId] = useState("");
-
-  useEffect(() => {
-    setDeviceId(getOrCreateDeviceId());
-  }, []);
 
   return (
     <div className="space-y-6">
@@ -60,11 +45,8 @@ export default function StudentHomePage() {
         </div>
       </div>
 
-      {showScanner && deviceId && (
-        <QrScanner
-          deviceId={deviceId}
-          onClose={() => setShowScanner(false)}
-        />
+      {showScanner && (
+        <QrScanner onClose={() => setShowScanner(false)} />
       )}
     </div>
   );

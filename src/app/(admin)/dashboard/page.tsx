@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ClassCard } from "@/components/ui/class-card";
 import { UsersIcon, GraduationCapIcon, BookOpenIcon, ClipboardCheckIcon } from "lucide-react";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8090";
+const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
 
 interface Summary {
   totalStudents: number;
@@ -39,7 +39,7 @@ const shiftLabel: Record<string, string> = {
 
 async function fetchSummary(): Promise<Summary | null> {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/dashboard/summary`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/api/v1/dashboard/summary`, { cache: "no-store" });
     if (!res.ok) return null;
     return (await res.json())?.payload ?? null;
   } catch { return null; }
@@ -47,7 +47,7 @@ async function fetchSummary(): Promise<Summary | null> {
 
 async function fetchAllClassrooms(): Promise<Classroom[]> {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/classrooms?size=100`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/api/v1/classrooms?size=100`, { cache: "no-store" });
     if (!res.ok) return [];
     return (await res.json())?.payload?.content ?? [];
   } catch { return []; }
@@ -57,8 +57,8 @@ async function fetchTeacherClassrooms(teacherId: string): Promise<Classroom[]> {
   try {
     // Get teacher's schedules → extract class names → filter from all classrooms
     const [schedRes, clsRes] = await Promise.all([
-      fetch(`${BACKEND_URL}/api/schedules/teachers/${teacherId}?size=100`, { cache: "no-store" }),
-      fetch(`${BACKEND_URL}/api/classrooms?size=100`, { cache: "no-store" }),
+      fetch(`${BASE_API_URL}/api/v1/schedules/teachers/${teacherId}?size=100`, { cache: "no-store" }),
+      fetch(`${BASE_API_URL}/api/v1/classrooms?size=100`, { cache: "no-store" }),
     ]);
     const schedules: Schedule[] = (await schedRes.json())?.payload?.content ?? [];
     const classrooms: Classroom[] = (await clsRes.json())?.payload?.content ?? [];

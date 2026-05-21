@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { QRCodeSVG } from "qrcode.react";
+import QRCode from "react-qr-code";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +43,7 @@ export default function SessionQrPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/sessions/${id}/qr`, { method: "POST" });
+      const res = await fetch(`/attendance/api/sessions/${id}/qr`, { method: "POST" });
       const json = await res.json();
       if (!res.ok) {
         setError(json?.payload?.message ?? json?.message ?? "Failed to generate QR");
@@ -60,7 +60,7 @@ export default function SessionQrPage() {
 
   // Load session info once
   useEffect(() => {
-    fetch(`/api/sessions/${id}`)
+    fetch(`/attendance/api/sessions/${id}`)
       .then((r) => r.json())
       .then((json) => setSessionInfo(json.payload))
       .catch(() => {});
@@ -69,7 +69,7 @@ export default function SessionQrPage() {
   // Open session then generate first QR
   useEffect(() => {
     const init = async () => {
-      await fetch(`/api/sessions/${id}/open`, { method: "POST" });
+      await fetch(`/attendance/api/sessions/${id}/open`, { method: "POST" });
       await generateQr();
     };
     init();
@@ -135,15 +135,18 @@ export default function SessionQrPage() {
             <div className="relative">
               {qr ? (
                 <div
-                  className={`transition-opacity duration-300 ${
+                  className={`transition-opacity duration-300 bg-white p-3 rounded-xl ${
                     urgent ? "opacity-60" : "opacity-100"
                   }`}
                 >
-                  <QRCodeSVG
-                    value={`${window.location.origin}/check-in?token=${qr.codeValue}`}
+                  <QRCode
+                    // App is mounted under /attendance — students must hit
+                    // /attendance/check-in, not /check-in (which 404s).
+                    value={`${window.location.origin}/attendance/check-in?token=${qr.codeValue}`}
                     size={260}
                     level="H"
-                    includeMargin
+                    style={{ height: "auto", maxWidth: "100%", width: "260px" }}
+                    viewBox="0 0 256 256"
                   />
                 </div>
               ) : (

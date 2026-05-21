@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeftIcon, ClipboardCheckIcon } from "lucide-react";
 import Link from "next/link";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8090";
+const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
 
 interface Session {
   id: number;
@@ -29,7 +29,7 @@ interface AttendanceRecord {
 
 async function fetchSession(id: string): Promise<Session | null> {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/sessions/${id}`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/api/v1/sessions/${id}`, { cache: "no-store" });
     if (!res.ok) return null;
     const json = await res.json();
     return json?.payload ?? null;
@@ -41,7 +41,7 @@ async function fetchSession(id: string): Promise<Session | null> {
 async function fetchAttendances(sessionId: string): Promise<AttendanceRecord[]> {
   try {
     const res = await fetch(
-      `${BACKEND_URL}/api/attendances/sessions/${sessionId}?size=100`,
+      `${BASE_API_URL}/api/v1/attendances/sessions/${sessionId}?size=100`,
       { cache: "no-store" }
     );
     if (!res.ok) return [];
