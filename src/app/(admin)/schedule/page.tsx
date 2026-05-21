@@ -2,19 +2,17 @@ import { auth } from "@/auth";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { QrCodeIcon, ClockIcon } from "lucide-react";
+import { QrCodeIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8090";
 
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] as const;
-type Day = (typeof DAYS)[number];
-
-const DAY_LABEL: Record<Day, string> = {
-  MONDAY: "Mon",
-  TUESDAY: "Tue",
-  WEDNESDAY: "Wed",
-  THURSDAY: "Thu",
-  FRIDAY: "Fri",
+type Day = typeof DAYS[number];
+const DAY_SHORT: Record<Day, string> = {
+  MONDAY: "Mon", TUESDAY: "Tue", WEDNESDAY: "Wed", THURSDAY: "Thu", FRIDAY: "Fri",
+};
+const DAY_FULL: Record<Day, string> = {
+  MONDAY: "Monday", TUESDAY: "Tuesday", WEDNESDAY: "Wednesday", THURSDAY: "Thursday", FRIDAY: "Friday",
 };
 
 interface ScheduleItem {
@@ -39,172 +37,328 @@ interface SessionItem {
   status: string;
 }
 
-async function fetchSchedules(role: string, userId: string): Promise<ScheduleItem[]> {
+async function fetchAllSchedules(): Promise<ScheduleItem[]> {
   try {
-    const url =
-      role === "TEACHER"
-        ? `${BACKEND_URL}/api/schedules/teachers/${userId}?size=100`
-        : `${BACKEND_URL}/api/schedules?size=100`;
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(`${BACKEND_URL}/api/schedules?size=200`, { cache: "no-store" });
     if (!res.ok) return [];
-    const json = await res.json();
-    return json?.payload?.content ?? [];
-  } catch {
-    return [];
-  }
+    return (await res.json())?.payload?.content ?? [];
+  } catch { return []; }
 }
 
-async function fetchTodaySessions(role: string, userId: string): Promise<SessionItem[]> {
-  if (role !== "TEACHER") return [];
+async function fetchTeacherSchedules(teacherId: string): Promise<ScheduleItem[]> {
   try {
-    const res = await fetch(
-      `${BACKEND_URL}/api/sessions/teachers/${userId}/upcoming?size=20`,
-      { cache: "no-store" }
-    );
+    const res = await fetch(`${BACKEND_URL}/api/schedules/teachers/${teacherId}?size=100`, { cache: "no-store" });
     if (!res.ok) return [];
-    const json = await res.json();
+    return (await res.json())?.payload?.content ?? [];
+  } catch { return []; }
+}
+
+async function fetchTodaySessions(teacherId: string): Promise<SessionItem[]> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/sessions/teachers/${teacherId}/upcoming?size=20`, { cache: "no-store" });
+    if (!res.ok) return [];
     const today = new Date().toISOString().slice(0, 10);
-    const all: SessionItem[] = json?.payload?.content ?? [];
-    return all.filter((s) => s.sessionDate === today);
-  } catch {
-    return [];
-  }
+    return ((await res.json())?.payload?.content ?? []).filter((s: SessionItem) => s.sessionDate === today);
+  } catch { return []; }
 }
 
-const statusColor: Record<string, string> = {
-  SCHEDULED: "bg-blue-100 text-blue-700",
-  ACTIVE: "bg-green-100 text-green-700",
-  COMPLETED: "bg-gray-100 text-gray-500",
-  CANCELLED: "bg-red-100 text-red-600",
+const statusBg: Record<string, string> = {
+  SCHEDULED: "border-l-blue-400  bg-blue-50",
+  ACTIVE:    "border-l-green-500 bg-green-50",
+  COMPLETED: "border-l-gray-300  bg-gray-50",
+  CANCELLED: "border-l-red-400   bg-red-50",
+};
+const statusText: Record<string, string> = {
+  SCHEDULED: "text-blue-700",
+  ACTIVE:    "text-green-700",
+  COMPLETED: "text-gray-500",
+  CANCELLED: "text-red-600",
 };
 
-export default async function SchedulePage() {
+export default async function SchedulePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ day?: string }>;
+}) {
   const session = await auth();
-  const role = session?.user?.role ?? "ADMIN";
+  const role   = session?.user?.role ?? "ADMIN";
   const userId = session?.user?.userId ?? "1";
 
+  const { day: dayParam } = await searchParams;
+  const selectedDay = DAYS.find((d) => d === dayParam?.toUpperCase()) ?? null;
+
   const [schedules, todaySessions] = await Promise.all([
-    fetchSchedules(role, userId),
-    fetchTodaySessions(role, userId),
+    role === "TEACHER" ? fetchTeacherSchedules(userId) : fetchAllSchedules(),
+    role === "TEACHER" ? fetchTodaySessions(userId) : Promise.resolve([]),
   ]);
 
-  // Group schedules by day
-  const byDay: Record<string, ScheduleItem[]> = {};
-  for (const day of DAYS) byDay[day] = [];
+  // Group by day
+  const byDay: Record<string, ScheduleItem[]> = Object.fromEntries(DAYS.map((d) => [d, []]));
   for (const s of schedules) {
     const key = s.dayOfWeek?.toUpperCase();
-    if (key && byDay[key] !== undefined) byDay[key].push(s);
+    if (key && byDay[key]) byDay[key].push(s);
   }
+  for (const day of DAYS) byDay[day].sort((a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? ""));
 
-  // Index today's sessions by subject + class for matching
-  const todaySessionMap = new Map<string, SessionItem>();
-  for (const ts of todaySessions) {
-    todaySessionMap.set(`${ts.subjectName}:${ts.classroomName}`, ts);
-  }
+  const todayMap = new Map<string, SessionItem>();
+  for (const ts of todaySessions) todayMap.set(`${ts.subjectName}:${ts.classroomName}`, ts);
 
-  const today = new Date().toLocaleDateString("en-US", { weekday: "long" }).toUpperCase();
+  const todayDow = new Date().toLocaleDateString("en-US", { weekday: "long" }).toUpperCase() as Day;
+  const totalSchedules = schedules.length;
+
+  // Prev / next day for single-day navigation
+  const selectedIdx = selectedDay ? DAYS.indexOf(selectedDay) : -1;
+  const prevDay = selectedIdx > 0 ? DAYS[selectedIdx - 1] : null;
+  const nextDay = selectedIdx >= 0 && selectedIdx < DAYS.length - 1 ? DAYS[selectedIdx + 1] : null;
 
   return (
     <div className="px-5 py-8">
-      <div className="flex items-center justify-between mb-8">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2">
         <h1 className="text-3xl font-bold text-black">Schedule</h1>
-        <span className="text-sm text-gray-500">{schedules.length} schedules</span>
+        <span className="text-sm text-gray-500">{totalSchedules} schedule{totalSchedules !== 1 ? "s" : ""}</span>
+      </div>
+      <p className="text-sm text-gray-400 mb-6">
+        {role === "ADMIN" ? "All teachers · weekly view" : "Your weekly timetable"}
+      </p>
+
+      {/* ── Day-tab navigation ─────────────────────────────────────────── */}
+      <div className="flex items-center gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
+        <Link
+          href="/schedule"
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            !selectedDay
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          Week
+        </Link>
+        {DAYS.map((day) => {
+          const isToday  = day === todayDow;
+          const isActive = day === selectedDay;
+          return (
+            <Link
+              key={day}
+              href={`/schedule?day=${day}`}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors relative ${
+                isActive
+                  ? "bg-[#273C97] text-white shadow-sm"
+                  : isToday
+                  ? "text-[#273C97] font-semibold hover:bg-white"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-white"
+              }`}
+            >
+              <span className="hidden sm:inline">{DAY_SHORT[day]}</span>
+              <span className="sm:hidden">{DAY_SHORT[day].charAt(0)}</span>
+              {isToday && !isActive && (
+                <span className="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-[#273C97]" />
+              )}
+            </Link>
+          );
+        })}
       </div>
 
-      {schedules.length === 0 ? (
-        <div className="text-center py-16 text-gray-400 bg-white rounded-2xl border border-gray-200">
-          <ClockIcon className="size-10 mx-auto mb-3 opacity-40" />
-          <p className="font-medium">No schedules found</p>
-          <p className="text-sm mt-1">Schedules are configured by admin.</p>
+      {totalSchedules === 0 ? (
+        <div className="text-center py-20 bg-white rounded-2xl border border-gray-200 text-gray-400">
+          <p className="font-medium">No schedules found.</p>
+          <p className="text-sm mt-1">{role === "TEACHER" ? "You have no scheduled classes." : "No schedules have been created yet."}</p>
+        </div>
+      ) : selectedDay ? (
+        /* ── Single-day view ──────────────────────────────────────────── */
+        <div>
+          {/* Day heading + prev/next */}
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-semibold text-gray-800">{DAY_FULL[selectedDay]}</h2>
+              {selectedDay === todayDow && (
+                <Badge className="bg-[#273C97] text-white hover:bg-[#273C97] text-xs">Today</Badge>
+              )}
+              <span className="text-sm text-gray-400">{byDay[selectedDay].length} class{byDay[selectedDay].length !== 1 ? "es" : ""}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              {prevDay ? (
+                <Link href={`/schedule?day=${prevDay}`}>
+                  <Button variant="outline" size="sm" className="h-8 px-2 gap-1">
+                    <ChevronLeftIcon className="size-4" />
+                    <span className="hidden sm:inline">{DAY_SHORT[prevDay]}</span>
+                  </Button>
+                </Link>
+              ) : (
+                <Button variant="outline" size="sm" className="h-8 px-2" disabled>
+                  <ChevronLeftIcon className="size-4" />
+                </Button>
+              )}
+              {nextDay ? (
+                <Link href={`/schedule?day=${nextDay}`}>
+                  <Button variant="outline" size="sm" className="h-8 px-2 gap-1">
+                    <span className="hidden sm:inline">{DAY_SHORT[nextDay]}</span>
+                    <ChevronRightIcon className="size-4" />
+                  </Button>
+                </Link>
+              ) : (
+                <Button variant="outline" size="sm" className="h-8 px-2" disabled>
+                  <ChevronRightIcon className="size-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {byDay[selectedDay].length === 0 ? (
+            <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-200 text-gray-400">
+              <p className="font-medium">No classes on {DAY_FULL[selectedDay]}.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {byDay[selectedDay].map((item) => {
+                const todaySession = selectedDay === todayDow
+                  ? todayMap.get(`${item.subjectName}:${item.className}`)
+                  : undefined;
+                const cardBg  = todaySession ? (statusBg[todaySession.status] ?? "border-l-gray-300 bg-white") : "border-l-[#273C97] bg-white";
+                const cardTxt = todaySession ? (statusText[todaySession.status] ?? "text-gray-500") : "";
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`rounded-xl border border-gray-100 border-l-4 px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 ${cardBg} ${!item.status ? "opacity-50" : ""}`}
+                  >
+                    {/* Time column */}
+                    <div className="shrink-0 w-28 text-center bg-white/70 rounded-lg py-2 px-3 border border-gray-100">
+                      <p className="text-sm font-bold text-gray-800">{item.startTime?.slice(0, 5)}</p>
+                      <p className="text-xs text-gray-400">–</p>
+                      <p className="text-sm font-bold text-gray-800">{item.endTime?.slice(0, 5)}</p>
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900">{item.subjectName}</p>
+                      <p className="text-sm text-gray-500 mt-0.5">{item.className}</p>
+                      {role === "ADMIN" && (
+                        <p className="text-xs text-gray-400 mt-0.5">{item.teacherName}</p>
+                      )}
+                    </div>
+
+                    {/* Badges + action */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge className="bg-gray-100 text-gray-500 hover:bg-gray-100 text-xs">
+                        Slot {item.slot}
+                      </Badge>
+                      {!item.status && (
+                        <Badge className="bg-orange-100 text-orange-600 hover:bg-orange-100 text-xs">Off</Badge>
+                      )}
+                      {todaySession && (
+                        <Badge className={`text-xs ${statusText[todaySession.status] ?? ""} ${
+                          todaySession.status === "ACTIVE" ? "bg-green-100" :
+                          todaySession.status === "SCHEDULED" ? "bg-blue-100" :
+                          todaySession.status === "CANCELLED" ? "bg-red-100" : "bg-gray-100"
+                        } hover:bg-opacity-100`}>
+                          {todaySession.status}
+                        </Badge>
+                      )}
+                      {todaySession && (todaySession.status === "SCHEDULED" || todaySession.status === "ACTIVE") && (
+                        <Link href={`/sessions/${todaySession.id}`}>
+                          <Button size="sm" className="h-7 px-2 text-xs bg-[#273C97] hover:bg-[#1e2e7a] gap-1">
+                            <QrCodeIcon className="size-3" />
+                            QR
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        /* ── Week grid ────────────────────────────────────────────────── */
+        <div className="grid grid-cols-5 gap-3 min-h-[400px]">
           {DAYS.map((day) => {
-            const isToday = today === day;
-            const items = byDay[day];
+            const isToday = day === todayDow;
+            const items   = byDay[day];
+
             return (
-              <div
-                key={day}
-                className={`rounded-2xl border p-4 flex flex-col gap-3 ${
-                  isToday
-                    ? "border-[#273C97] bg-[#273C97]/5"
-                    : "border-gray-200 bg-white"
-                }`}
-              >
-                {/* Day header */}
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`text-sm font-bold tracking-wide ${
-                      isToday ? "text-[#273C97]" : "text-gray-500"
+              <div key={day} className="flex flex-col">
+                {/* Clickable day header */}
+                <Link href={`/schedule?day=${day}`} className="block mb-3">
+                  <div
+                    className={`text-center py-2 px-1 rounded-xl transition-opacity hover:opacity-80 cursor-pointer ${
+                      isToday
+                        ? "bg-[#273C97] text-white"
+                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                     }`}
                   >
-                    {DAY_LABEL[day]}
-                  </span>
-                  {isToday && (
-                    <span className="text-[10px] bg-[#273C97] text-white rounded-full px-2 py-0.5 font-medium">
-                      Today
-                    </span>
-                  )}
-                </div>
+                    <p className={`text-xs font-semibold uppercase tracking-wider ${isToday ? "text-white/70" : "text-gray-400"}`}>
+                      <span className="hidden md:inline">{DAY_FULL[day]}</span>
+                      <span className="md:hidden">{DAY_SHORT[day]}</span>
+                    </p>
+                    {isToday && (
+                      <p className="text-[10px] text-white/60 mt-0.5">Today</p>
+                    )}
+                  </div>
+                </Link>
 
-                {items.length === 0 ? (
-                  <p className="text-xs text-gray-300 text-center py-4">—</p>
-                ) : (
-                  items.map((item) => {
-                    const todaySession = isToday
-                      ? todaySessionMap.get(`${item.subjectName}:${item.className}`)
-                      : undefined;
+                {/* Schedule cards */}
+                <div className="flex flex-col gap-2 flex-1">
+                  {items.length === 0 ? (
+                    <div className={`flex-1 rounded-xl border border-dashed flex items-center justify-center min-h-[80px] ${
+                      isToday ? "border-[#273C97]/30 bg-[#273C97]/5" : "border-gray-200"
+                    }`}>
+                      <span className="text-xs text-gray-300">Free</span>
+                    </div>
+                  ) : (
+                    items.map((item) => {
+                      const todaySession = isToday
+                        ? todayMap.get(`${item.subjectName}:${item.className}`)
+                        : undefined;
+                      const cardBg  = todaySession ? (statusBg[todaySession.status] ?? "border-l-gray-300 bg-white") : "border-l-gray-300 bg-white";
+                      const cardTxt = todaySession ? (statusText[todaySession.status] ?? "text-gray-500") : "";
 
-                    return (
-                      <div
-                        key={item.id}
-                        className={`rounded-xl p-3 flex flex-col gap-1.5 border ${
-                          item.status
-                            ? "bg-white border-gray-100"
-                            : "bg-gray-50 border-gray-100 opacity-60"
-                        }`}
-                      >
-                        <p className="text-sm font-semibold text-gray-900 leading-tight">
-                          {item.subjectName}
-                        </p>
-                        <p className="text-xs text-gray-500 truncate">{item.className}</p>
-                        <p className="text-xs text-gray-400">
-                          {item.startTime?.slice(0, 5)} – {item.endTime?.slice(0, 5)}
-                        </p>
-
-                        {!item.status && (
-                          <Badge className="bg-gray-100 text-gray-400 text-[10px] w-fit">
-                            Inactive
-                          </Badge>
-                        )}
-
-                        {todaySession && (
-                          <div className="mt-1 flex items-center justify-between gap-1">
-                            <Badge
-                              className={`text-[10px] ${
-                                statusColor[todaySession.status] ?? "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {todaySession.status}
+                      return (
+                        <div
+                          key={item.id}
+                          className={`rounded-xl border border-gray-100 border-l-4 p-3 flex flex-col gap-1.5 ${cardBg} ${!item.status ? "opacity-50" : ""}`}
+                        >
+                          <p className="text-xs font-bold text-gray-900 leading-tight line-clamp-2">
+                            {item.subjectName}
+                          </p>
+                          <p className="text-[10px] text-gray-500 truncate">{item.className}</p>
+                          {role === "ADMIN" && (
+                            <p className="text-[10px] text-gray-400 truncate">{item.teacherName}</p>
+                          )}
+                          <p className="text-[10px] font-medium text-gray-500 mt-0.5">
+                            {item.startTime?.slice(0, 5)} – {item.endTime?.slice(0, 5)}
+                          </p>
+                          <div className="flex items-center justify-between gap-1 mt-0.5">
+                            <Badge className="text-[9px] px-1.5 py-0 bg-gray-100 text-gray-500 hover:bg-gray-100">
+                              Slot {item.slot}
                             </Badge>
-                            {(todaySession.status === "SCHEDULED" ||
-                              todaySession.status === "ACTIVE") && (
-                              <Link href={`/sessions/${todaySession.id}`}>
-                                <Button
-                                  size="sm"
-                                  className="h-6 px-2 text-[10px] bg-[#273C97] hover:bg-[#1e2e7a] gap-1"
-                                >
-                                  <QrCodeIcon className="size-3" />
-                                  QR
-                                </Button>
-                              </Link>
+                            {!item.status && (
+                              <Badge className="text-[9px] px-1.5 py-0 bg-orange-100 text-orange-600 hover:bg-orange-100">
+                                Off
+                              </Badge>
                             )}
                           </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
+                          {todaySession && (
+                            <div className="mt-1 pt-1.5 border-t border-gray-100 flex items-center justify-between gap-1">
+                              <span className={`text-[10px] font-semibold ${cardTxt}`}>
+                                {todaySession.status}
+                              </span>
+                              {(todaySession.status === "SCHEDULED" || todaySession.status === "ACTIVE") && (
+                                <Link href={`/sessions/${todaySession.id}`}>
+                                  <Button size="sm" className="h-5 px-1.5 text-[10px] bg-[#273C97] hover:bg-[#1e2e7a] gap-1">
+                                    <QrCodeIcon className="size-2.5" />
+                                    QR
+                                  </Button>
+                                </Link>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             );
           })}

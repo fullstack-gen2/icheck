@@ -6,7 +6,7 @@ import type { Session } from "next-auth";
 type AuthRequest = NextRequest & { auth: Session | null };
 
 const PUBLIC_PATHS = ["/login", "/check-in"];
-const ADMIN_PATHS = ["/dashboard", "/attendance", "/students", "/schedule", "/sessions", "/settings"];
+const ADMIN_PATHS = ["/dashboard", "/attendance", "/students", "/schedule", "/sessions", "/settings", "/reports"];
 const STUDENT_PATHS = ["/student"];
 
 export default auth((req: AuthRequest) => {

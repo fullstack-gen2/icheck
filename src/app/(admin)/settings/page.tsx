@@ -37,14 +37,44 @@ interface Setting {
 }
 
 const typeColor: Record<string, string> = {
-  INT: "bg-blue-100 text-blue-700 hover:bg-blue-100",
+  INT:     "bg-blue-100 text-blue-700 hover:bg-blue-100",
   BOOLEAN: "bg-purple-100 text-purple-700 hover:bg-purple-100",
-  STRING: "bg-gray-100 text-gray-600 hover:bg-gray-100",
+  STRING:  "bg-gray-100 text-gray-600 hover:bg-gray-100",
 };
 
 type SheetMode = "add" | "edit";
-
 const defaultForm = { key: "", value: "", type: "STRING", description: "" };
+
+/** Value field — renders a boolean select or plain text input depending on type */
+function ValueField({
+  type,
+  value,
+  onChange,
+}: {
+  type: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  if (type === "BOOLEAN") {
+    return (
+      <select
+        value={value === "true" ? "true" : "false"}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full border border-input rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#273C97]/30 bg-white"
+      >
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
+    );
+  }
+  return (
+    <Input
+      placeholder={type === "INT" ? "e.g. 10" : "e.g. some_value"}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  );
+}
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Setting[]>([]);
@@ -139,29 +169,23 @@ export default function SettingsPage() {
 
   return (
     <div className="px-5 py-8">
-      {/* Page header */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-black">System Settings</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage global configuration keys used by the system.</p>
+          <p className="text-sm text-gray-500 mt-1">Global configuration keys used across all sessions.</p>
         </div>
-        <Button
-          className="bg-[#273C97] hover:bg-[#1e2e7a] gap-2"
-          onClick={openAdd}
-        >
+        <Button className="bg-[#273C97] hover:bg-[#1e2e7a] gap-2" onClick={openAdd}>
           <PlusIcon className="size-4" />
           Add Setting
         </Button>
       </div>
 
-      {/* Global error */}
       {error && (
         <div className="bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl px-4 py-3 mb-5">
           {error}
         </div>
       )}
 
-      {/* Table */}
       {loading ? (
         <div className="flex justify-center py-24">
           <LoaderCircleIcon className="size-8 animate-spin text-[#273C97]" />
@@ -176,12 +200,12 @@ export default function SettingsPage() {
         <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50">
+              <TableRow className="bg-gray-50 hover:bg-gray-50">
                 <TableHead className="px-4 py-3 text-gray-600 font-semibold">Key</TableHead>
                 <TableHead className="px-4 py-3 text-gray-600 font-semibold">Value</TableHead>
                 <TableHead className="px-4 py-3 text-gray-600 font-semibold">Type</TableHead>
                 <TableHead className="px-4 py-3 text-gray-600 font-semibold hidden md:table-cell">Description</TableHead>
-                <TableHead className="px-4 py-3 text-gray-600 font-semibold hidden lg:table-cell">Last updated</TableHead>
+                <TableHead className="px-4 py-3 text-gray-600 font-semibold hidden lg:table-cell">Updated</TableHead>
                 <TableHead className="px-4 py-3 text-right text-gray-600 font-semibold">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -192,15 +216,24 @@ export default function SettingsPage() {
                     <span className="font-mono text-sm text-gray-800">{s.settingKey}</span>
                   </TableCell>
                   <TableCell className="px-4 py-3">
-                    <span className="font-semibold text-gray-900">{s.settingValue}</span>
+                    {s.type === "BOOLEAN" ? (
+                      <Badge className={s.settingValue === "true"
+                        ? "bg-green-100 text-green-700 hover:bg-green-100"
+                        : "bg-gray-100 text-gray-500 hover:bg-gray-100"
+                      }>
+                        {s.settingValue}
+                      </Badge>
+                    ) : (
+                      <span className="font-semibold text-gray-900">{s.settingValue}</span>
+                    )}
                   </TableCell>
                   <TableCell className="px-4 py-3">
                     <Badge className={`text-xs ${typeColor[s.type] ?? "bg-gray-100 text-gray-500"}`}>
                       {s.type}
                     </Badge>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-gray-400 text-sm hidden md:table-cell max-w-xs">
-                    <span className="truncate block">{s.description ?? "—"}</span>
+                  <TableCell className="px-4 py-3 text-gray-400 text-sm hidden md:table-cell">
+                    <span className="truncate block max-w-xs">{s.description ?? "—"}</span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-gray-400 text-xs hidden lg:table-cell whitespace-nowrap">
                     {s.updatedAt
@@ -224,11 +257,10 @@ export default function SettingsPage() {
                         onClick={() => handleDelete(s.settingKey)}
                         disabled={deletingKey === s.settingKey}
                       >
-                        {deletingKey === s.settingKey ? (
-                          <LoaderCircleIcon className="size-4 animate-spin" />
-                        ) : (
-                          <TrashIcon className="size-4" />
-                        )}
+                        {deletingKey === s.settingKey
+                          ? <LoaderCircleIcon className="size-4 animate-spin" />
+                          : <TrashIcon className="size-4" />
+                        }
                       </Button>
                     </div>
                   </TableCell>
@@ -243,15 +275,19 @@ export default function SettingsPage() {
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="right" className="w-full sm:max-w-md">
           <SheetHeader className="mb-6">
-            <SheetTitle>{sheetMode === "add" ? "Add New Setting" : `Edit — ${form.key}`}</SheetTitle>
+            <SheetTitle>
+              {sheetMode === "add" ? "Add New Setting" : `Edit — ${form.key}`}
+            </SheetTitle>
           </SheetHeader>
 
           <div className="flex flex-col gap-4">
             {/* Key — read-only when editing */}
             <div className="space-y-1.5">
-              <Label htmlFor="key">Key <span className="text-red-500">*</span></Label>
+              <Label htmlFor="s-key">
+                Key <span className="text-red-500">*</span>
+              </Label>
               <Input
-                id="key"
+                id="s-key"
                 placeholder="e.g. late_threshold_minutes"
                 value={form.key}
                 onChange={(e) => setForm((f) => ({ ...f, key: e.target.value }))}
@@ -260,25 +296,17 @@ export default function SettingsPage() {
               />
             </div>
 
-            {/* Value */}
-            <div className="space-y-1.5">
-              <Label htmlFor="value">Value <span className="text-red-500">*</span></Label>
-              <Input
-                id="value"
-                placeholder="e.g. 10"
-                value={form.value}
-                onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
-              />
-            </div>
-
             {/* Type — only for add */}
             {sheetMode === "add" && (
               <div className="space-y-1.5">
-                <Label htmlFor="type">Type</Label>
+                <Label htmlFor="s-type">Type</Label>
                 <select
-                  id="type"
+                  id="s-type"
                   value={form.type}
-                  onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+                  onChange={(e) => {
+                    const t = e.target.value;
+                    setForm((f) => ({ ...f, type: t, value: t === "BOOLEAN" ? "true" : "" }));
+                  }}
                   className="w-full border border-input rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#273C97]/30 bg-white"
                 >
                   <option value="STRING">STRING</option>
@@ -288,32 +316,37 @@ export default function SettingsPage() {
               </div>
             )}
 
+            {/* Value — boolean gets select, others get input */}
+            <div className="space-y-1.5">
+              <Label htmlFor="s-value">
+                Value <span className="text-red-500">*</span>
+              </Label>
+              <ValueField
+                type={form.type}
+                value={form.value}
+                onChange={(v) => setForm((f) => ({ ...f, value: v }))}
+              />
+            </div>
+
             {/* Description */}
             <div className="space-y-1.5">
-              <Label htmlFor="desc">Description</Label>
+              <Label htmlFor="s-desc">Description</Label>
               <Input
-                id="desc"
+                id="s-desc"
                 placeholder="Optional description"
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               />
             </div>
 
-            {/* Form error */}
             {formError && (
               <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
                 {formError}
               </p>
             )}
 
-            {/* Actions */}
             <div className="flex gap-2 mt-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setSheetOpen(false)}
-                disabled={submitting}
-              >
+              <Button variant="outline" className="flex-1" onClick={() => setSheetOpen(false)} disabled={submitting}>
                 Cancel
               </Button>
               <Button
@@ -321,9 +354,7 @@ export default function SettingsPage() {
                 onClick={handleSubmit}
                 disabled={submitting}
               >
-                {submitting ? (
-                  <LoaderCircleIcon className="size-4 animate-spin mr-2" />
-                ) : null}
+                {submitting && <LoaderCircleIcon className="size-4 animate-spin mr-2" />}
                 {sheetMode === "add" ? "Create" : "Save Changes"}
               </Button>
             </div>
