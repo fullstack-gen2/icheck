@@ -1,24 +1,15 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { CheckCircleIcon, AlertCircleIcon, LoaderCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/logo";
 
 type State = "loading" | "success" | "error" | "noToken";
 
 const FETCH_TIMEOUT_MS = 12_000;
-
-function getOrCreateDeviceId(): string {
-  const key = "i-check-device-id";
-  let id = localStorage.getItem(key);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(key, id);
-  }
-  return id;
-}
 
 /** Get GPS coords with a 2s timeout — never throws, returns null on fail/timeout */
 async function getCoords(): Promise<{ latitude: number; longitude: number } | null> {
@@ -41,6 +32,7 @@ export default function CheckInPage() {
 }
 
 function CheckInContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const { data: session, status } = useSession();
@@ -62,13 +54,14 @@ function CheckInContent() {
     try {
       const coords = await coordsPromise; // at most 2s wait
 
-      const res = await fetch("/api/attendance/check-in", {
+      // The proxy reads the HttpOnly device cookie server-side, so we never
+      // expose or send the device id from client JS.
+      const res = await fetch("/attendance/api/attendance/check-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({
           qrToken,
-          deviceId: getOrCreateDeviceId(),
           latitude: coords?.latitude ?? null,
           longitude: coords?.longitude ?? null,
         }),
@@ -114,9 +107,7 @@ function CheckInContent() {
       <div className="bg-white rounded-3xl shadow-lg p-8 w-full max-w-sm text-center">
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#273C97] text-white font-bold text-sm">
-            iC
-          </div>
+          <Logo size={36} />
           <span className="text-xl font-bold tracking-tight">i-Check</span>
         </div>
 
@@ -135,7 +126,7 @@ function CheckInContent() {
             <p className="text-gray-500 text-sm">{message}</p>
             <Button
               className="mt-2 w-full bg-[#273C97] hover:bg-[#1e2e7a]"
-              onClick={() => { window.location.href = "/student"; }}
+              onClick={() => router.push("/student")}
             >
               Go to My Attendance
             </Button>
@@ -156,7 +147,7 @@ function CheckInContent() {
             <Button
               variant="ghost"
               className="w-full text-gray-400"
-              onClick={() => { window.location.href = "/student"; }}
+              onClick={() => router.push("/student")}
             >
               Back to Home
             </Button>
@@ -170,7 +161,7 @@ function CheckInContent() {
             <p className="text-gray-500 text-sm">This QR code is not valid. Ask your teacher to show a new one.</p>
             <Button
               className="mt-2 w-full bg-[#273C97]"
-              onClick={() => { window.location.href = "/student"; }}
+              onClick={() => router.push("/student")}
             >
               Back to Home
             </Button>

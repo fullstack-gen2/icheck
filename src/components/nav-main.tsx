@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   SidebarGroup,
@@ -33,10 +34,12 @@ export function NavMain({
                   tooltip={item.title}
                   isActive={isActive}
                 >
-                  <a href={item.url}>
+                  {/* Use next/link so basePath ("/attendance") is auto-prepended.
+                      A plain <a href="/students"> would 404. */}
+                  <Link href={item.url}>
                     {item.icon}
                     <span>{item.title}</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             )

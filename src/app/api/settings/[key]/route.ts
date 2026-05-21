@@ -1,7 +1,36 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8090";
+const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
+
+/**
+ * Proxy that forwards the upstream status and surfaces the real body — JSON
+ * if parseable, otherwise the first 500 chars as a `raw` field so we can see
+ * Spring stack traces / ngrok error pages in the browser response.
+ */
+async function proxy(url: string, init?: RequestInit) {
+  let res: Response;
+  try {
+    res = await fetch(url, { cache: "no-store", ...init });
+  } catch (err) {
+    console.error("[settings/[key] proxy] fetch failed:", url, err);
+    return NextResponse.json(
+      { success: false, message: `Cannot reach backend at ${url}` },
+      { status: 502 }
+    );
+  }
+
+  const text = await res.text();
+  try {
+    return NextResponse.json(text ? JSON.parse(text) : {}, { status: res.status });
+  } catch {
+    console.error("[settings/[key] proxy] non-JSON upstream:", res.status, text.slice(0, 300));
+    return NextResponse.json(
+      { success: false, message: `Upstream returned non-JSON (${res.status})`, raw: text.slice(0, 500) },
+      { status: res.status >= 400 ? res.status : 502 }
+    );
+  }
+}
 
 export async function PATCH(
   request: Request,
@@ -14,7 +43,7 @@ export async function PATCH(
   const { key } = await params;
   const body = await request.json();
 
-  const res = await fetch(`${BACKEND_URL}/api/settings/${key}`, {
+  return proxy(`${BASE_API_URL}/api/v1/settings/${key}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -22,8 +51,6 @@ export async function PATCH(
     },
     body: JSON.stringify(body),
   });
-  const data = await res.json();
-  return NextResponse.json(data, { status: res.status });
 }
 
 export async function DELETE(
@@ -36,10 +63,8 @@ export async function DELETE(
 
   const { key } = await params;
 
-  const res = await fetch(`${BACKEND_URL}/api/settings/${key}`, {
+  return proxy(`${BASE_API_URL}/api/v1/settings/${key}`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${session.user.backendToken}` },
   });
-  const data = await res.json().catch(() => ({}));
-  return NextResponse.json(data, { status: res.status });
 }

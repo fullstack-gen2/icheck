@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8090";
+const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
 
 export async function POST(
   _request: Request,
@@ -15,7 +15,7 @@ export async function POST(
   const adminId = session.user.userId;
 
   const res = await fetch(
-    `${BACKEND_URL}/api/reports/${id}/lock?adminId=${adminId}`,
+    `${BASE_API_URL}/api/v1/reports/${id}/lock?adminId=${adminId}`,
     { method: "POST" }
   );
   const data = await res.json();

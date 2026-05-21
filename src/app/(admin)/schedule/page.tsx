@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { QrCodeIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8090";
+const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
 
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] as const;
 type Day = typeof DAYS[number];
@@ -39,7 +39,7 @@ interface SessionItem {
 
 async function fetchAllSchedules(): Promise<ScheduleItem[]> {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/schedules?size=200`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/api/v1/schedules?size=200`, { cache: "no-store" });
     if (!res.ok) return [];
     return (await res.json())?.payload?.content ?? [];
   } catch { return []; }
@@ -47,7 +47,7 @@ async function fetchAllSchedules(): Promise<ScheduleItem[]> {
 
 async function fetchTeacherSchedules(teacherId: string): Promise<ScheduleItem[]> {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/schedules/teachers/${teacherId}?size=100`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/api/v1/schedules/teachers/${teacherId}?size=100`, { cache: "no-store" });
     if (!res.ok) return [];
     return (await res.json())?.payload?.content ?? [];
   } catch { return []; }
@@ -55,7 +55,7 @@ async function fetchTeacherSchedules(teacherId: string): Promise<ScheduleItem[]>
 
 async function fetchTodaySessions(teacherId: string): Promise<SessionItem[]> {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/sessions/teachers/${teacherId}/upcoming?size=20`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/api/v1/sessions/teachers/${teacherId}/upcoming?size=20`, { cache: "no-store" });
     if (!res.ok) return [];
     const today = new Date().toISOString().slice(0, 10);
     return ((await res.json())?.payload?.content ?? []).filter((s: SessionItem) => s.sessionDate === today);

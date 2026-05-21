@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8090";
+const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
 
 export async function DELETE(
   _request: Request,
@@ -14,7 +14,7 @@ export async function DELETE(
 
   const { id } = await params;
   const res = await fetch(
-    `${BACKEND_URL}/api/users/students/${id}/device`,
+    `${BASE_API_URL}/api/v1/users/students/${id}/device`,
     { method: "DELETE" }
   );
   const data = await res.json();

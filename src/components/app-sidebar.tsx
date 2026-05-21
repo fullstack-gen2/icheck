@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
@@ -21,8 +22,8 @@ import {
   UsersIcon,
   Settings2Icon,
   FileChartColumnIcon,
-  CommandIcon,
 } from "lucide-react"
+import { Logo } from "@/components/logo"
 
 // All possible nav items — filtered by role below
 const ALL_MAIN = [
@@ -61,17 +62,15 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
               asChild
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
-              <a href="/dashboard" className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#273C97] text-white">
-                  <CommandIcon className="size-4" />
-                </div>
+              <Link href="/dashboard" className="flex items-center gap-2">
+                <Logo size={32} />
                 <div className="flex flex-col leading-none">
                   <span className="text-sm font-bold tracking-tight">i-Check</span>
                   <span className="text-[10px] text-muted-foreground capitalize">
                     {role === "ADMIN" ? "Admin" : role === "TEACHER" ? "Teacher" : role}
                   </span>
                 </div>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

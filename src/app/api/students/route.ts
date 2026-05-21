@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8090";
+const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const size = searchParams.get("size") ?? "20";
 
   const res = await fetch(
-    `${BACKEND_URL}/api/users/students?page=${page}&size=${size}`,
+    `${BASE_API_URL}/api/v1/users/students?page=${page}&size=${size}`,
     { cache: "no-store" }
   );
   const data = await res.json();

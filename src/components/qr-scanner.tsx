@@ -7,12 +7,11 @@ import { XIcon, CameraIcon, CheckCircleIcon, AlertCircleIcon } from "lucide-reac
 
 interface Props {
   onClose: () => void;
-  deviceId: string;
 }
 
 type ScanState = "scanning" | "submitting" | "success" | "error";
 
-export function QrScanner({ onClose, deviceId }: Props) {
+export function QrScanner({ onClose }: Props) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [scanState, setScanState] = useState<ScanState>("scanning");
   const [message, setMessage] = useState("");
@@ -55,10 +54,11 @@ export function QrScanner({ onClose, deviceId }: Props) {
         longitude = pos.coords.longitude;
       } catch {}
 
-      const res = await fetch("/api/attendance/check-in", {
+      // deviceId is read from the HttpOnly cookie by the proxy route.
+      const res = await fetch("/attendance/api/attendance/check-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ qrToken, deviceId, latitude, longitude }),
+        body: JSON.stringify({ qrToken, latitude, longitude }),
       });
       const json = await res.json();
 

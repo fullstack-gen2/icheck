@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Providers } from "@/components/providers";
+import { LOGO_URL } from "@/components/logo";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,6 +18,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "i-Check — Smart Attendance",
   description: "Smart attendance tracking system",
+  icons: {
+    // Browser tab + bookmark icon — same Cloudinary SVG used everywhere else.
+    icon: LOGO_URL,
+    shortcut: LOGO_URL,
+    apple: LOGO_URL,
+  },
 };
 
 export default function RootLayout({
