@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 
 const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
 
+// Force per-request execution — without this, Next.js may cache the first
+// response (e.g. a pre-login 401) and keep serving it indefinitely.
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const session = await auth();
   if (!session || session.user.role === "STUDENT") {

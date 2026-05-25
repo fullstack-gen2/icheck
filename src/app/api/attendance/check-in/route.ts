@@ -4,6 +4,10 @@ import { getDeviceId } from "@/lib/device-cookie";
 
 const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
 
+// Force per-request execution — without this, Next.js may cache the first
+// response (e.g. a pre-login 401) and keep serving it indefinitely.
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   const session = await auth();
   if (!session || session.user.role !== "STUDENT") {

@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 
 const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
 
+// Force per-request execution — without this, Next.js may cache the first
+// response (e.g. a pre-login 401) and keep serving it indefinitely.
+export const dynamic = "force-dynamic";
+
 /**
  * Proxy that forwards the upstream status and surfaces the real body — JSON
  * if parseable, otherwise the first 500 chars as a `raw` field so we can see
@@ -43,12 +47,10 @@ export async function PATCH(
   const { key } = await params;
   const body = await request.json();
 
+  // No Authorization header — see GET handler in ../route.ts for why.
   return proxy(`${BASE_API_URL}/api/v1/settings/${key}`, {
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.user.backendToken}`,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
 }
@@ -63,8 +65,5 @@ export async function DELETE(
 
   const { key } = await params;
 
-  return proxy(`${BASE_API_URL}/api/v1/settings/${key}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${session.user.backendToken}` },
-  });
+  return proxy(`${BASE_API_URL}/api/v1/settings/${key}`, { method: "DELETE" });
 }

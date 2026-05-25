@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 
 const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
 
+// Force per-request execution — without this, Next.js may cache the first
+// response (which could be a pre-login 401) and keep serving it.
+export const dynamic = "force-dynamic";
+
 /**
  * Proxy a request to the Spring backend and forward whatever it says back to
  * the browser — including non-2xx responses and non-JSON bodies. Without this
@@ -51,9 +55,11 @@ export async function GET(request: Request) {
   }
   if (session.user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  return proxy(`${BASE_API_URL}/api/v1/settings`, {
-    headers: { Authorization: `Bearer ${session.user.backendToken}` },
-  });
+  // No Authorization header — the backend endpoint is unprotected and the
+  // random-UUID "token" we'd send isn't a real bearer, so Spring Security
+  // ends up rejecting/stripping it. Auth is enforced in the proxy above via
+  // auth() + role check, so the upstream call doesn't need to re-prove it.
+  return proxy(`${BASE_API_URL}/api/v1/settings`);
 }
 
 export async function POST(request: Request) {
@@ -64,10 +70,7 @@ export async function POST(request: Request) {
   const body = await request.json();
   return proxy(`${BASE_API_URL}/api/v1/settings`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.user.backendToken}`,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
 }
