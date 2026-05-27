@@ -17,8 +17,10 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { EllipsisVerticalIcon, ShieldIcon, GraduationCapIcon } from "lucide-react"
+import { useUser } from "@/components/user-provider"
 
 function initials(name: string) {
+  if (!name) return "?";
   return name
     .split(" ")
     .map((w) => w[0])
@@ -34,11 +36,15 @@ function roleLabel(role: string) {
 }
 
 export function NavUser({
-  user,
+  user: serverUser,
 }: {
   user: { name: string; email: string; role: string }
 }) {
   const { isMobile } = useSidebar()
+  // Prefer live client-side user (fetched through gateway); fall back to
+  // server-rendered prop during initial SSR / while the fetch is in flight.
+  const liveUser = useUser()
+  const user = liveUser ?? serverUser
 
   return (
     <SidebarMenu>

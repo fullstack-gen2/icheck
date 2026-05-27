@@ -11,8 +11,9 @@ export default async function AdminLayout({
 }) {
   const user = await getServerUser();
 
-  // Students should not access admin routes.
-  if (user?.role === "STUDENT") redirect("/student");
+  // Students have a limited view (Attendance + Students nav only),
+  // but they can use the sidebar layout. Only redirect if unauthenticated.
+  if (!user) redirect("/");
 
   const displayUser = {
     name:  user?.name  ?? "",
