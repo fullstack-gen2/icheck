@@ -1,19 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useUser } from "@/components/user-provider";
 import { QrScanner } from "@/components/qr-scanner";
 import { QrCodeIcon, ClipboardListIcon } from "lucide-react";
 
 export default function StudentHomePage() {
-  const { data: session } = useSession();
+  const user = useUser();
   const [showScanner, setShowScanner] = useState(false);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">
-          Welcome, {session?.user?.name}
+          Welcome, {user?.name}
         </h1>
         <p className="text-gray-500 mt-1">
           Tap <strong>Check In</strong> and scan the QR code your teacher shows on screen.

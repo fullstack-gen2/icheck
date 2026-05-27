@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeftIcon, UsersIcon, CalendarIcon, BookOpenIcon } from "lucide-react";
 
-const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
+import { BASE_API_URL } from "@/auth";
 
 interface Classroom {
   id: number;
@@ -36,7 +37,7 @@ const SHIFT_LABEL: Record<string, string> = {
 
 async function fetchClassroom(id: string): Promise<Classroom | null> {
   try {
-    const res = await fetch(`${BASE_API_URL}/api/v1/classrooms/${id}`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/api/v1/attendance/classrooms/${id}`, { cache: "no-store" });
     if (!res.ok) return null;
     const json = await res.json();
     return json?.payload ?? null;
@@ -45,7 +46,7 @@ async function fetchClassroom(id: string): Promise<Classroom | null> {
 
 async function fetchStudents(id: string): Promise<Student[]> {
   try {
-    const res = await fetch(`${BASE_API_URL}/api/v1/classrooms/${id}/students?size=200`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/api/v1/attendance/classrooms/${id}/students?size=200`, { cache: "no-store" });
     if (!res.ok) return [];
     const json = await res.json();
     return json?.payload?.content ?? [];
@@ -60,6 +61,11 @@ export default async function ClassroomDetailPage({
   const { id } = await params;
   const [classroom, students] = await Promise.all([fetchClassroom(id), fetchStudents(id)]);
 
+  // No such classroom → fall through to the app-wide 404 page so the URL
+  // bar shows a real 404 status, search engines see it, and the friendly
+  // not-found.tsx renders.
+  if (!classroom) notFound();
+
   return (
     <div className="px-5 py-8">
       {/* Back */}
@@ -71,13 +77,7 @@ export default async function ClassroomDetailPage({
         Back to Dashboard
       </Link>
 
-      {!classroom ? (
-        <div className="text-center py-20 text-gray-400">
-          <p className="font-medium">Classroom not found.</p>
-        </div>
-      ) : (
-        <>
-          {/* Classroom info card */}
+      {/* Classroom info card */}
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-8">
             <div className="h-1.5 bg-[#273C97]" />
             <div className="px-6 py-5">
@@ -180,8 +180,6 @@ export default async function ClassroomDetailPage({
               </table>
             </div>
           )}
-        </>
-      )}
     </div>
   );
 }

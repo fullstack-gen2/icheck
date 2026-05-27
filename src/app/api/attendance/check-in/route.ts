@@ -1,17 +1,18 @@
-import { auth } from "@/auth";
 import { NextResponse } from "next/server";
+import { BASE_API_URL } from "@/auth";
 import { getDeviceId } from "@/lib/device-cookie";
+import { getRequestUser } from "@/lib/server-user";
 
-const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session || session.user.role !== "STUDENT") {
+  const cookieHeader = req.headers.get("cookie") ?? "";
+  const user = await getRequestUser(cookieHeader);
+
+  if (!user || user.role !== "STUDENT") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Device id is taken from the HttpOnly cookie, never the request body —
-  // a malicious client can't pretend to be on another device.
   const deviceId = await getDeviceId();
   if (!deviceId) {
     return NextResponse.json(
@@ -21,18 +22,21 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const res = await fetch(`${BASE_API_URL}/api/v1/attendances/dynamic-qr-check-in`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      studentId: Number(session.user.userId),
-      qrToken:   body.qrToken,
-      deviceId,                                // ← from cookie
-      latitude:  body.latitude  ?? null,
-      longitude: body.longitude ?? null,
-      ipAddress: body.ipAddress ?? null,
-    }),
-  });
+  const res = await fetch(
+    `${BASE_API_URL}/api/v1/attendance/attendances/dynamic-qr-check-in`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: cookieHeader },
+      body: JSON.stringify({
+        studentId: Number(user.id),
+        qrToken:   body.qrToken,
+        deviceId,
+        latitude:  body.latitude  ?? null,
+        longitude: body.longitude ?? null,
+        ipAddress: body.ipAddress ?? null,
+      }),
+    }
+  );
   const data = await res.json();
   return NextResponse.json(data, { status: res.status });
 }

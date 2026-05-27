@@ -1,6 +1,5 @@
 "use client"
 
-import { signOut } from "next-auth/react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -104,10 +103,7 @@ export function NavUser({
 
             <DropdownMenuItem
               className="text-red-600 focus:text-red-600 focus:bg-red-50"
-              // callbackUrl is passed through verbatim — NextAuth does NOT
-              // prepend the Next.js basePath, so we include /attendance here
-              // or sign-out lands on a 404.
-              onClick={() => signOut({ callbackUrl: "/attendance/login" })}
+              onClick={() => { window.location.href = "/attendance/api/auth/logout"; }}
             >
               <LogOutIcon className="size-4" />
               Sign out

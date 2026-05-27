@@ -1,21 +1,18 @@
-import { auth } from "@/auth";
 import { NextResponse } from "next/server";
+import { BASE_API_URL } from "@/auth";
 
-const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
+export const dynamic = "force-dynamic";
 
 export async function POST(
-  _req: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session || session.user.role === "STUDENT") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   const { id } = await params;
-  const res = await fetch(`${BASE_API_URL}/api/v1/sessions/${id}/open`, {
-    method: "POST",
-  });
+  const cookieHeader = request.headers.get("cookie") ?? "";
+  const res = await fetch(
+    `${BASE_API_URL}/api/v1/attendance/sessions/${id}/open`,
+    { method: "POST", headers: { Cookie: cookieHeader } }
+  );
   const data = await res.json();
   return NextResponse.json(data, { status: res.status });
 }

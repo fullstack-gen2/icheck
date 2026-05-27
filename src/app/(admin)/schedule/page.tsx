@@ -1,10 +1,8 @@
-import { auth } from "@/auth";
+import { getServerUser, BASE_API_URL } from "@/auth";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { QrCodeIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-
-const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
 
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] as const;
 type Day = typeof DAYS[number];
@@ -39,7 +37,7 @@ interface SessionItem {
 
 async function fetchAllSchedules(): Promise<ScheduleItem[]> {
   try {
-    const res = await fetch(`${BASE_API_URL}/api/v1/schedules?size=200`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/api/v1/attendance/schedules?size=200`, { cache: "no-store" });
     if (!res.ok) return [];
     return (await res.json())?.payload?.content ?? [];
   } catch { return []; }
@@ -47,7 +45,7 @@ async function fetchAllSchedules(): Promise<ScheduleItem[]> {
 
 async function fetchTeacherSchedules(teacherId: string): Promise<ScheduleItem[]> {
   try {
-    const res = await fetch(`${BASE_API_URL}/api/v1/schedules/teachers/${teacherId}?size=100`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/api/v1/attendance/schedules/teachers/${teacherId}?size=100`, { cache: "no-store" });
     if (!res.ok) return [];
     return (await res.json())?.payload?.content ?? [];
   } catch { return []; }
@@ -55,7 +53,7 @@ async function fetchTeacherSchedules(teacherId: string): Promise<ScheduleItem[]>
 
 async function fetchTodaySessions(teacherId: string): Promise<SessionItem[]> {
   try {
-    const res = await fetch(`${BASE_API_URL}/api/v1/sessions/teachers/${teacherId}/upcoming?size=20`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/api/v1/attendance/sessions/teachers/${teacherId}/upcoming?size=20`, { cache: "no-store" });
     if (!res.ok) return [];
     const today = new Date().toISOString().slice(0, 10);
     return ((await res.json())?.payload?.content ?? []).filter((s: SessionItem) => s.sessionDate === today);
@@ -80,9 +78,9 @@ export default async function SchedulePage({
 }: {
   searchParams: Promise<{ day?: string }>;
 }) {
-  const session = await auth();
-  const role   = session?.user?.role ?? "ADMIN";
-  const userId = session?.user?.userId ?? "1";
+  const user   = await getServerUser();
+  const role   = user?.role ?? "ADMIN";
+  const userId = user?.id ?? "1";
 
   const { day: dayParam } = await searchParams;
   const selectedDay = DAYS.find((d) => d === dayParam?.toUpperCase()) ?? null;
@@ -92,7 +90,6 @@ export default async function SchedulePage({
     role === "TEACHER" ? fetchTodaySessions(userId) : Promise.resolve([]),
   ]);
 
-  // Group by day
   const byDay: Record<string, ScheduleItem[]> = Object.fromEntries(DAYS.map((d) => [d, []]));
   for (const s of schedules) {
     const key = s.dayOfWeek?.toUpperCase();
@@ -106,14 +103,12 @@ export default async function SchedulePage({
   const todayDow = new Date().toLocaleDateString("en-US", { weekday: "long" }).toUpperCase() as Day;
   const totalSchedules = schedules.length;
 
-  // Prev / next day for single-day navigation
   const selectedIdx = selectedDay ? DAYS.indexOf(selectedDay) : -1;
   const prevDay = selectedIdx > 0 ? DAYS[selectedIdx - 1] : null;
   const nextDay = selectedIdx >= 0 && selectedIdx < DAYS.length - 1 ? DAYS[selectedIdx + 1] : null;
 
   return (
     <div className="px-5 py-8">
-      {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <h1 className="text-3xl font-bold text-black">Schedule</h1>
         <span className="text-sm text-gray-500">{totalSchedules} schedule{totalSchedules !== 1 ? "s" : ""}</span>
@@ -122,7 +117,6 @@ export default async function SchedulePage({
         {role === "ADMIN" ? "All teachers · weekly view" : "Your weekly timetable"}
       </p>
 
-      {/* ── Day-tab navigation ─────────────────────────────────────────── */}
       <div className="flex items-center gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
         <Link
           href="/schedule"
@@ -165,9 +159,7 @@ export default async function SchedulePage({
           <p className="text-sm mt-1">{role === "TEACHER" ? "You have no scheduled classes." : "No schedules have been created yet."}</p>
         </div>
       ) : selectedDay ? (
-        /* ── Single-day view ──────────────────────────────────────────── */
         <div>
-          {/* Day heading + prev/next */}
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-3">
               <h2 className="text-xl font-semibold text-gray-800">{DAY_FULL[selectedDay]}</h2>
@@ -222,14 +214,11 @@ export default async function SchedulePage({
                     key={item.id}
                     className={`rounded-xl border border-gray-100 border-l-4 px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 ${cardBg} ${!item.status ? "opacity-50" : ""}`}
                   >
-                    {/* Time column */}
                     <div className="shrink-0 w-28 text-center bg-white/70 rounded-lg py-2 px-3 border border-gray-100">
                       <p className="text-sm font-bold text-gray-800">{item.startTime?.slice(0, 5)}</p>
                       <p className="text-xs text-gray-400">–</p>
                       <p className="text-sm font-bold text-gray-800">{item.endTime?.slice(0, 5)}</p>
                     </div>
-
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-gray-900">{item.subjectName}</p>
                       <p className="text-sm text-gray-500 mt-0.5">{item.className}</p>
@@ -237,12 +226,8 @@ export default async function SchedulePage({
                         <p className="text-xs text-gray-400 mt-0.5">{item.teacherName}</p>
                       )}
                     </div>
-
-                    {/* Badges + action */}
                     <div className="flex items-center gap-2 shrink-0">
-                      <Badge className="bg-gray-100 text-gray-500 hover:bg-gray-100 text-xs">
-                        Slot {item.slot}
-                      </Badge>
+                      <Badge className="bg-gray-100 text-gray-500 hover:bg-gray-100 text-xs">Slot {item.slot}</Badge>
                       {!item.status && (
                         <Badge className="bg-orange-100 text-orange-600 hover:bg-orange-100 text-xs">Off</Badge>
                       )}
@@ -271,7 +256,6 @@ export default async function SchedulePage({
           )}
         </div>
       ) : (
-        /* ── Week grid ────────────────────────────────────────────────── */
         <div className="grid grid-cols-5 gap-3 min-h-[400px]">
           {DAYS.map((day) => {
             const isToday = day === todayDow;
@@ -279,26 +263,17 @@ export default async function SchedulePage({
 
             return (
               <div key={day} className="flex flex-col">
-                {/* Clickable day header */}
                 <Link href={`/schedule?day=${day}`} className="block mb-3">
-                  <div
-                    className={`text-center py-2 px-1 rounded-xl transition-opacity hover:opacity-80 cursor-pointer ${
-                      isToday
-                        ? "bg-[#273C97] text-white"
-                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                    }`}
-                  >
+                  <div className={`text-center py-2 px-1 rounded-xl transition-opacity hover:opacity-80 cursor-pointer ${
+                    isToday ? "bg-[#273C97] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  }`}>
                     <p className={`text-xs font-semibold uppercase tracking-wider ${isToday ? "text-white/70" : "text-gray-400"}`}>
                       <span className="hidden md:inline">{DAY_FULL[day]}</span>
                       <span className="md:hidden">{DAY_SHORT[day]}</span>
                     </p>
-                    {isToday && (
-                      <p className="text-[10px] text-white/60 mt-0.5">Today</p>
-                    )}
+                    {isToday && <p className="text-[10px] text-white/60 mt-0.5">Today</p>}
                   </div>
                 </Link>
-
-                {/* Schedule cards */}
                 <div className="flex flex-col gap-2 flex-1">
                   {items.length === 0 ? (
                     <div className={`flex-1 rounded-xl border border-dashed flex items-center justify-center min-h-[80px] ${
@@ -319,9 +294,7 @@ export default async function SchedulePage({
                           key={item.id}
                           className={`rounded-xl border border-gray-100 border-l-4 p-3 flex flex-col gap-1.5 ${cardBg} ${!item.status ? "opacity-50" : ""}`}
                         >
-                          <p className="text-xs font-bold text-gray-900 leading-tight line-clamp-2">
-                            {item.subjectName}
-                          </p>
+                          <p className="text-xs font-bold text-gray-900 leading-tight line-clamp-2">{item.subjectName}</p>
                           <p className="text-[10px] text-gray-500 truncate">{item.className}</p>
                           {role === "ADMIN" && (
                             <p className="text-[10px] text-gray-400 truncate">{item.teacherName}</p>
@@ -330,20 +303,14 @@ export default async function SchedulePage({
                             {item.startTime?.slice(0, 5)} – {item.endTime?.slice(0, 5)}
                           </p>
                           <div className="flex items-center justify-between gap-1 mt-0.5">
-                            <Badge className="text-[9px] px-1.5 py-0 bg-gray-100 text-gray-500 hover:bg-gray-100">
-                              Slot {item.slot}
-                            </Badge>
+                            <Badge className="text-[9px] px-1.5 py-0 bg-gray-100 text-gray-500 hover:bg-gray-100">Slot {item.slot}</Badge>
                             {!item.status && (
-                              <Badge className="text-[9px] px-1.5 py-0 bg-orange-100 text-orange-600 hover:bg-orange-100">
-                                Off
-                              </Badge>
+                              <Badge className="text-[9px] px-1.5 py-0 bg-orange-100 text-orange-600 hover:bg-orange-100">Off</Badge>
                             )}
                           </div>
                           {todaySession && (
                             <div className="mt-1 pt-1.5 border-t border-gray-100 flex items-center justify-between gap-1">
-                              <span className={`text-[10px] font-semibold ${cardTxt}`}>
-                                {todaySession.status}
-                              </span>
+                              <span className={`text-[10px] font-semibold ${cardTxt}`}>{todaySession.status}</span>
                               {(todaySession.status === "SCHEDULED" || todaySession.status === "ACTIVE") && (
                                 <Link href={`/sessions/${todaySession.id}`}>
                                   <Button size="sm" className="h-5 px-1.5 text-[10px] bg-[#273C97] hover:bg-[#1e2e7a] gap-1">

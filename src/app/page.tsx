@@ -1,14 +1,14 @@
-import { auth } from "@/auth";
+import { getServerUser } from "@/auth";
 import { redirect } from "next/navigation";
 
 export default async function RootPage() {
-  const session = await auth();
+  const user = await getServerUser();
 
-  if (!session) {
+  if (!user) {
     redirect("/login");
   }
 
-  if (session.user.role === "STUDENT") {
+  if (user.role === "STUDENT") {
     redirect("/student");
   }
 

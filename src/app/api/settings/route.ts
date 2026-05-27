@@ -1,18 +1,16 @@
-import { auth } from "@/auth";
 import { NextResponse } from "next/server";
+import { BASE_API_URL } from "@/auth";
 
-const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
+export const dynamic = "force-dynamic";
 
-/**
- * Proxy a request to the Spring backend and forward whatever it says back to
- * the browser — including non-2xx responses and non-JSON bodies. Without this
- * the route just rethrows on `res.json()` and the browser sees a generic 500
- * with no detail.
- */
-async function proxy(url: string, init?: RequestInit) {
+async function proxy(url: string, cookieHeader: string, init?: RequestInit) {
   let res: Response;
   try {
-    res = await fetch(url, { cache: "no-store", ...init });
+    res = await fetch(url, {
+      cache: "no-store",
+      ...init,
+      headers: { Cookie: cookieHeader, ...(init?.headers as Record<string, string> | undefined) },
+    });
   } catch (err) {
     console.error("[settings proxy] fetch failed:", url, err);
     return NextResponse.json(
@@ -22,11 +20,9 @@ async function proxy(url: string, init?: RequestInit) {
   }
 
   const text = await res.text();
-  // Try to parse as JSON; if upstream returned HTML/text, surface as message.
   try {
     return NextResponse.json(text ? JSON.parse(text) : {}, { status: res.status });
   } catch {
-    console.error("[settings proxy] non-JSON upstream:", res.status, text.slice(0, 300));
     return NextResponse.json(
       { success: false, message: `Upstream returned non-JSON (${res.status})`, raw: text.slice(0, 500) },
       { status: res.status >= 400 ? res.status : 502 }
@@ -35,39 +31,16 @@ async function proxy(url: string, init?: RequestInit) {
 }
 
 export async function GET(request: Request) {
-  const session = await auth();
-
-  // Diagnostic: log cookies the browser actually sent on THIS request.
-  // If the session cookie name is missing here, the browser scoped it to a
-  // path that doesn't include /attendance/api/settings.
-  if (!session) {
-    const cookieHeader = request.headers.get("cookie") ?? "";
-    const cookieNames = cookieHeader.split(";").map((c) => c.trim().split("=")[0]).filter(Boolean);
-    console.warn("[settings proxy] no session. Cookies seen on request:", cookieNames);
-    return NextResponse.json(
-      { error: "Unauthorized", debug: { cookieNames } },
-      { status: 401 }
-    );
-  }
-  if (session.user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-  return proxy(`${BASE_API_URL}/api/v1/settings`, {
-    headers: { Authorization: `Bearer ${session.user.backendToken}` },
-  });
+  const cookieHeader = request.headers.get("cookie") ?? "";
+  return proxy(`${BASE_API_URL}/api/v1/attendance/settings`, cookieHeader);
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
+  const cookieHeader = request.headers.get("cookie") ?? "";
   const body = await request.json();
-  return proxy(`${BASE_API_URL}/api/v1/settings`, {
+  return proxy(`${BASE_API_URL}/api/v1/attendance/settings`, cookieHeader, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.user.backendToken}`,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
 }

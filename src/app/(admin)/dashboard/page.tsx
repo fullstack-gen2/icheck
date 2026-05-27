@@ -1,9 +1,8 @@
-import { auth } from "@/auth";
+import { getServerUser } from "@/auth";
+import { BASE_API_URL } from "@/auth";
 import Link from "next/link";
 import { ClassCard } from "@/components/ui/class-card";
 import { UsersIcon, GraduationCapIcon, BookOpenIcon, ClipboardCheckIcon } from "lucide-react";
-
-const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
 
 interface Summary {
   totalStudents: number;
@@ -39,7 +38,7 @@ const shiftLabel: Record<string, string> = {
 
 async function fetchSummary(): Promise<Summary | null> {
   try {
-    const res = await fetch(`${BASE_API_URL}/api/v1/dashboard/summary`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/api/v1/attendance/dashboard/summary`, { cache: "no-store" });
     if (!res.ok) return null;
     return (await res.json())?.payload ?? null;
   } catch { return null; }
@@ -47,7 +46,7 @@ async function fetchSummary(): Promise<Summary | null> {
 
 async function fetchAllClassrooms(): Promise<Classroom[]> {
   try {
-    const res = await fetch(`${BASE_API_URL}/api/v1/classrooms?size=100`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/api/v1/attendance/classrooms?size=100`, { cache: "no-store" });
     if (!res.ok) return [];
     return (await res.json())?.payload?.content ?? [];
   } catch { return []; }
@@ -55,10 +54,9 @@ async function fetchAllClassrooms(): Promise<Classroom[]> {
 
 async function fetchTeacherClassrooms(teacherId: string): Promise<Classroom[]> {
   try {
-    // Get teacher's schedules → extract class names → filter from all classrooms
     const [schedRes, clsRes] = await Promise.all([
-      fetch(`${BASE_API_URL}/api/v1/schedules/teachers/${teacherId}?size=100`, { cache: "no-store" }),
-      fetch(`${BASE_API_URL}/api/v1/classrooms?size=100`, { cache: "no-store" }),
+      fetch(`${BASE_API_URL}/api/v1/attendance/schedules/teachers/${teacherId}?size=100`, { cache: "no-store" }),
+      fetch(`${BASE_API_URL}/api/v1/attendance/classrooms?size=100`, { cache: "no-store" }),
     ]);
     const schedules: Schedule[] = (await schedRes.json())?.payload?.content ?? [];
     const classrooms: Classroom[] = (await clsRes.json())?.payload?.content ?? [];
@@ -69,9 +67,9 @@ async function fetchTeacherClassrooms(teacherId: string): Promise<Classroom[]> {
 }
 
 export default async function DashboardPage() {
-  const session = await auth();
-  const role      = session?.user?.role ?? "ADMIN";
-  const userId    = session?.user?.userId ?? "";
+  const user = await getServerUser();
+  const role      = user?.role ?? "ADMIN";
+  const userId    = user?.id ?? "";
   const isTeacher = role === "TEACHER";
 
   const [summary, classrooms] = await Promise.all([
@@ -90,7 +88,6 @@ export default async function DashboardPage() {
     <div className="px-5 py-8">
       <h1 className="text-3xl font-bold text-black mb-8">Dashboard</h1>
 
-      {/* Stats — admin only */}
       {!isTeacher && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {stats.map((s) => (
@@ -107,7 +104,6 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Classes heading */}
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-xl font-semibold text-gray-800">
           {isTeacher ? "My Classes" : "Class Info"}

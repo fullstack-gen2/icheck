@@ -36,11 +36,28 @@ interface Setting {
   updatedAt: string | null;
 }
 
-const typeColor: Record<string, string> = {
-  INT:     "bg-blue-100 text-blue-700 hover:bg-blue-100",
-  BOOLEAN: "bg-purple-100 text-purple-700 hover:bg-purple-100",
-  STRING:  "bg-gray-100 text-gray-600 hover:bg-gray-100",
+/**
+ * Friendly labels shown to users in place of raw `snake_case` database keys.
+ * Unknown keys fall through `humanizeKey()` below.
+ */
+const KEY_LABELS: Record<string, string> = {
+  early_checkin_minutes:             "Early check-in window (minutes)",
+  late_threshold_minutes:            "Late threshold (minutes)",
+  student_attendance_cutoff_minutes: "Student attendance cut-off (minutes)",
+  teacher_edit_deadline_minutes:     "Teacher correction deadline (minutes)",
+  qr_expire_seconds:                 "QR code expiry (seconds)",
+  gps_allowed_radius_meters:         "GPS allowed radius (meters)",
+  max_sessions_per_day:              "Maximum sessions per day",
+  attendance_reminder_enabled:       "Attendance reminder enabled",
 };
+
+/** Best-effort prettifier for keys not in the explicit map. */
+function humanizeKey(key: string): string {
+  if (KEY_LABELS[key]) return KEY_LABELS[key];
+  return key
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (ch) => ch.toUpperCase());
+}
 
 type SheetMode = "add" | "edit";
 const defaultForm = { key: "", value: "", type: "STRING", description: "" };
@@ -210,9 +227,8 @@ export default function SettingsPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50 hover:bg-gray-50">
-                <TableHead className="px-4 py-3 text-gray-600 font-semibold">Key</TableHead>
+                <TableHead className="px-4 py-3 text-gray-600 font-semibold">Setting</TableHead>
                 <TableHead className="px-4 py-3 text-gray-600 font-semibold">Value</TableHead>
-                <TableHead className="px-4 py-3 text-gray-600 font-semibold">Type</TableHead>
                 <TableHead className="px-4 py-3 text-gray-600 font-semibold hidden md:table-cell">Description</TableHead>
                 <TableHead className="px-4 py-3 text-gray-600 font-semibold hidden lg:table-cell">Updated</TableHead>
                 <TableHead className="px-4 py-3 text-right text-gray-600 font-semibold">Actions</TableHead>
@@ -222,7 +238,10 @@ export default function SettingsPage() {
               {settings.map((s) => (
                 <TableRow key={s.id} className="hover:bg-gray-50 transition-colors">
                   <TableCell className="px-4 py-3">
-                    <span className="font-mono text-sm text-gray-800">{s.settingKey}</span>
+                    {/* Friendly label first, raw key as a small caption underneath
+                        so admins who know the key by name still recognize it. */}
+                    <div className="font-medium text-gray-900">{humanizeKey(s.settingKey)}</div>
+                    <div className="font-mono text-[11px] text-gray-400 mt-0.5">{s.settingKey}</div>
                   </TableCell>
                   <TableCell className="px-4 py-3">
                     {s.type === "BOOLEAN" ? (
@@ -230,19 +249,14 @@ export default function SettingsPage() {
                         ? "bg-green-100 text-green-700 hover:bg-green-100"
                         : "bg-gray-100 text-gray-500 hover:bg-gray-100"
                       }>
-                        {s.settingValue}
+                        {s.settingValue === "true" ? "Enabled" : "Disabled"}
                       </Badge>
                     ) : (
                       <span className="font-semibold text-gray-900">{s.settingValue}</span>
                     )}
                   </TableCell>
-                  <TableCell className="px-4 py-3">
-                    <Badge className={`text-xs ${typeColor[s.type] ?? "bg-gray-100 text-gray-500"}`}>
-                      {s.type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="px-4 py-3 text-gray-400 text-sm hidden md:table-cell">
-                    <span className="truncate block max-w-xs">{s.description ?? "—"}</span>
+                  <TableCell className="px-4 py-3 text-gray-500 text-sm hidden md:table-cell">
+                    <span className="block max-w-xs">{s.description ?? "—"}</span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-gray-400 text-xs hidden lg:table-cell whitespace-nowrap">
                     {s.updatedAt
@@ -285,8 +299,13 @@ export default function SettingsPage() {
         <SheetContent side="right" className="w-full sm:max-w-md">
           <SheetHeader className="mb-6">
             <SheetTitle>
-              {sheetMode === "add" ? "Add New Setting" : `Edit — ${form.key}`}
+              {sheetMode === "add" ? "Add New Setting" : `Edit — ${humanizeKey(form.key)}`}
             </SheetTitle>
+            {/* Show the underlying database key on edit so the admin still
+                knows which row they're touching. */}
+            {sheetMode === "edit" && (
+              <p className="font-mono text-xs text-gray-400">{form.key}</p>
+            )}
           </SheetHeader>
 
           <div className="flex flex-col gap-4">

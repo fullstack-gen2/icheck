@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ResetDeviceButton } from "@/components/reset-device-button";
-import { useSession } from "next-auth/react";
+import { useUser } from "@/components/user-provider";
 import { UsersIcon, ChevronDownIcon } from "lucide-react";
 
 interface Student {
@@ -37,7 +37,7 @@ const SHIFT_LABEL: Record<string, string> = { MORNING: "Morning", AFTERNOON: "Af
 const SCHOLARSHIP_COURSES = ["Fullstack", "Foundation", "Pre-Uni", "ITP", "ITE"];
 
 export default function StudentsPage() {
-  const { data: session } = useSession();
+  const user = useUser();
 
   const [students, setStudents]   = useState<Student[]>([]);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
@@ -118,7 +118,7 @@ export default function StudentsPage() {
     setFilterGeneration(""); setFilterCourse("");
   }
 
-  const isAdmin = session?.user?.role === "ADMIN";
+  const isAdmin = user?.role === "ADMIN";
 
   return (
     <div className="px-5 py-8">
