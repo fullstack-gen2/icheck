@@ -102,7 +102,7 @@ export default function ReportsPage() {
 
   // Load classrooms once
   useEffect(() => {
-    fetch("/attendance/api/classrooms?size=200")
+    fetch("/attendance/classrooms?size=200")
       .then((r) => r.json())
       .then((j) => { setClassrooms(j?.payload?.content ?? []); setLoadingCls(false); })
       .catch(() => setLoadingCls(false));
@@ -166,7 +166,7 @@ export default function ReportsPage() {
         ? { type: "semester", studentId: null, classId: selectedCls.id, semester: Number(genSemester), year: Number(genYear) }
         : { type: "monthly",  studentId: null, classId: selectedCls.id, month: Number(genMonth),       year: Number(genYear) };
 
-      const stuRes  = await fetch(`/attendance/api/classrooms/${selectedCls.id}/students`);
+      const stuRes  = await fetch(`/attendance/classrooms/${selectedCls.id}/students`);
       const stuJson = await stuRes.json();
       const students: { id: number }[] = stuJson?.payload?.content ?? [];
 
