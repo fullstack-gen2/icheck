@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   const { type, ...payload } = body;
 
   const res = await fetch(
-    `${BASE_API_URL}/api/v1/attendance/reports/${type}`,
+    `${BASE_API_URL}/reports/${type}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: cookieHeader },

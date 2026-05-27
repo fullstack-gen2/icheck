@@ -36,10 +36,6 @@ interface Setting {
   updatedAt: string | null;
 }
 
-/**
- * Friendly labels shown to users in place of raw `snake_case` database keys.
- * Unknown keys fall through `humanizeKey()` below.
- */
 const KEY_LABELS: Record<string, string> = {
   early_checkin_minutes:             "Early check-in window (minutes)",
   late_threshold_minutes:            "Late threshold (minutes)",
@@ -110,11 +106,10 @@ export default function SettingsPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/attendance/settings");
+      const res = await fetch("/attendance/api/settings");
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        // Surface the real reason — 401 means stale/missing cookie (relogin),
-        // 502 means backend unreachable, anything else gets shown verbatim.
+        
         const reason =
           res.status === 401 ? "Your session expired. Please log in again." :
           res.status === 403 ? "You don't have permission to view settings." :
@@ -156,7 +151,7 @@ export default function SettingsPage() {
     try {
       let res: Response;
       if (sheetMode === "add") {
-        res = await fetch("/attendance/settings", {
+        res = await fetch("/attendance/api/settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ key: form.key.trim(), value: form.value.trim(), type: form.type, description: form.description }),

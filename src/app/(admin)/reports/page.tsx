@@ -166,9 +166,6 @@ export default function ReportsPage() {
         ? { type: "semester", studentId: null, classId: selectedCls.id, semester: Number(genSemester), year: Number(genYear) }
         : { type: "monthly",  studentId: null, classId: selectedCls.id, month: Number(genMonth),       year: Number(genYear) };
 
-      // Backend generates per-student; call once per student in class
-      // Actually the backend requires studentId — we generate for each student
-      // Fetch students in classroom first
       const stuRes  = await fetch(`/attendance/api/classrooms/${selectedCls.id}/students`);
       const stuJson = await stuRes.json();
       const students: { id: number }[] = stuJson?.payload?.content ?? [];

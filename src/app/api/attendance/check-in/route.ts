@@ -23,7 +23,7 @@ export async function POST(req: Request) {
 
   const body = await req.json();
   const res = await fetch(
-    `${BASE_API_URL}/attendance/attendances/dynamic-qr-check-in`,
+    `${BASE_API_URL}/attendances/dynamic-qr-check-in`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: cookieHeader },

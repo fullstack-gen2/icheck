@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     const to    = new Date(today.getTime() +  7 * 86400_000).toISOString().slice(0, 10);
 
     const clsRes  = await fetch(
-      `${BASE_API_URL}/api/v1/attendance/classrooms?size=200`,
+      `${BASE_API_URL}/classrooms?size=200`,
       { cache: "no-store", headers: { Cookie: cookieHeader } }
     );
     const clsJson = await clsRes.json();
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     const results = await Promise.all(
       classrooms.map((c) =>
         fetch(
-          `${BASE_API_URL}/api/v1/attendance/sessions/classrooms/${c.id}?from=${from}&to=${to}&size=50`,
+          `${BASE_API_URL}/sessions/classrooms/${c.id}?from=${from}&to=${to}&size=50`,
           { cache: "no-store", headers: { Cookie: cookieHeader } }
         )
           .then((r) => r.json())
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
   const page      = searchParams.get("page") ?? "0";
 
   const res = await fetch(
-    `${BASE_API_URL}/api/v1/attendance/sessions/teachers/${teacherId}/upcoming?page=${page}&size=${size}`,
+    `${BASE_API_URL}/sessions/teachers/${teacherId}/upcoming?page=${page}&size=${size}`,
     { cache: "no-store", headers: { Cookie: cookieHeader } }
   );
   const data = await res.json();

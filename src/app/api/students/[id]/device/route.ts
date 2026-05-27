@@ -10,7 +10,7 @@ export async function DELETE(
   const { id } = await params;
   const cookieHeader = request.headers.get("cookie") ?? "";
   const res = await fetch(
-    `${BASE_API_URL}/api/v1/attendance/users/students/${id}/device`,
+    `${BASE_API_URL}/users/students/${id}/device`,
     { method: "DELETE", headers: { Cookie: cookieHeader } }
   );
   const data = await res.json();

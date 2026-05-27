@@ -10,7 +10,7 @@ export async function GET(request: Request) {
 
   const cookieHeader = request.headers.get("cookie") ?? "";
   const res = await fetch(
-    `${BASE_API_URL}/api/v1/attendance/classrooms?page=${page}&size=${size}`,
+    `${BASE_API_URL}/classrooms?page=${page}&size=${size}`,
     { cache: "no-store", headers: { Cookie: cookieHeader } }
   );
   const data = await res.json();

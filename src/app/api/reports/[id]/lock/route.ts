@@ -15,7 +15,7 @@ export async function POST(
   const adminId = user?.id ?? "";
 
   const res = await fetch(
-    `${BASE_API_URL}/api/v1/attendance/reports/${id}/lock?adminId=${adminId}`,
+    `${BASE_API_URL}/reports/${id}/lock?adminId=${adminId}`,
     { method: "POST", headers: { Cookie: cookieHeader } }
   );
   const data = await res.json();
