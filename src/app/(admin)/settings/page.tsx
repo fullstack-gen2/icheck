@@ -110,7 +110,7 @@ export default function SettingsPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/attendance/api/settings");
+      const res = await fetch("/attendance/settings");
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         // Surface the real reason — 401 means stale/missing cookie (relogin),
@@ -156,13 +156,13 @@ export default function SettingsPage() {
     try {
       let res: Response;
       if (sheetMode === "add") {
-        res = await fetch("/attendance/api/settings", {
+        res = await fetch("/attendance/settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ key: form.key.trim(), value: form.value.trim(), type: form.type, description: form.description }),
         });
       } else {
-        res = await fetch(`/attendance/api/settings/${encodeURIComponent(form.key)}`, {
+        res = await fetch(`/attendance/settings/${encodeURIComponent(form.key)}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ value: form.value.trim() }),
@@ -181,7 +181,7 @@ export default function SettingsPage() {
     if (!confirm(`Delete setting "${key}"? This cannot be undone.`)) return;
     setDeletingKey(key);
     try {
-      const res = await fetch(`/attendance/api/settings/${encodeURIComponent(key)}`, { method: "DELETE" });
+      const res = await fetch(`/attendance/settings/${encodeURIComponent(key)}`, { method: "DELETE" });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         setError(json?.payload?.message ?? json?.message ?? "Delete failed.");

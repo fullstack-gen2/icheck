@@ -9,9 +9,8 @@ export default async function StudentLayout({
 }) {
   const user = await getServerUser();
 
-  if (!user || user.role !== "STUDENT") {
-    redirect("/login");
-  }
+  // Non-students should not access student routes.
+  if (user && user.role !== "STUDENT") redirect("/dashboard");
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -21,13 +20,7 @@ export default async function StudentLayout({
         </div>
         <span className="text-xl font-semibold">i-Check</span>
         <div className="ml-auto flex items-center gap-4">
-          <span className="text-sm opacity-90">{user.name}</span>
-          <a
-            href="/attendance/api/auth/logout"
-            className="text-sm bg-white/20 hover:bg-white/30 px-3 py-1 rounded-md transition-colors"
-          >
-            Sign out
-          </a>
+          <span className="text-sm opacity-90">{user?.name ?? ""}</span>
         </div>
       </header>
       <main className="max-w-4xl mx-auto px-4 py-8">{children}</main>

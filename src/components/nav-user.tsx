@@ -16,7 +16,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { EllipsisVerticalIcon, LogOutIcon, ShieldIcon, GraduationCapIcon } from "lucide-react"
+import { EllipsisVerticalIcon, ShieldIcon, GraduationCapIcon } from "lucide-react"
 
 function initials(name: string) {
   return name
@@ -99,15 +99,6 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
 
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem
-              className="text-red-600 focus:text-red-600 focus:bg-red-50"
-              onClick={() => { window.location.href = "/attendance/api/auth/logout"; }}
-            >
-              <LogOutIcon className="size-4" />
-              Sign out
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
