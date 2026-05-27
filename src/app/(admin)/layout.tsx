@@ -1,5 +1,4 @@
 import { getServerUser } from "@/auth";
-import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -11,9 +10,8 @@ export default async function AdminLayout({
 }) {
   const user = await getServerUser();
 
-  // Students have a limited view (Attendance + Students nav only),
-  // but they can use the sidebar layout. Only redirect if unauthenticated.
-  if (!user) redirect("/");
+  // BFF gateway handles authentication before requests reach Next.js.
+  // Students see a limited nav (Attendance + Students items) via role filtering in AppSidebar.
 
   const displayUser = {
     name:  user?.name  ?? "",
