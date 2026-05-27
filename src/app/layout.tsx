@@ -19,7 +19,6 @@ export const metadata: Metadata = {
   title: "i-Check — Smart Attendance",
   description: "Smart attendance tracking system",
   icons: {
-    // Browser tab + bookmark icon — same Cloudinary SVG used everywhere else.
     icon: LOGO_URL,
     shortcut: LOGO_URL,
     apple: LOGO_URL,

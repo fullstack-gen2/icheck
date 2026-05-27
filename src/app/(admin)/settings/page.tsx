@@ -106,7 +106,7 @@ export default function SettingsPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/attendance/settings");
+      const res = await fetch(`/attendance/settings`);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         
@@ -151,7 +151,7 @@ export default function SettingsPage() {
     try {
       let res: Response;
       if (sheetMode === "add") {
-        res = await fetch("/attendance/settings", {
+        res = await fetch(`/attendance/settings`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ key: form.key.trim(), value: form.value.trim(), type: form.type, description: form.description }),

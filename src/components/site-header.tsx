@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronRightIcon, BellIcon } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { DarkModeToggle, ThemeSelector } from "@/components/theme-toggle";
 
 const ROUTE_LABELS: Record<string, string> = {
   "/dashboard":            "Attendance",
@@ -58,17 +58,17 @@ export function SiteHeader() {
         />
 
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-1 text-sm text-gray-500">
+        <nav className="flex items-center gap-1 text-sm">
           {segments.map((seg, i) => (
             <span key={seg.path} className="flex items-center gap-1">
               {i > 0 && (
-                <ChevronRightIcon className="size-3.5 text-gray-300" />
+                <ChevronRightIcon className="size-3.5 text-muted-foreground/50" />
               )}
               <span
                 className={
                   i === segments.length - 1
-                    ? "font-semibold text-gray-900 dark:text-gray-100"
-                    : "text-gray-400"
+                    ? "font-semibold text-foreground"
+                    : "text-muted-foreground"
                 }
               >
                 {seg.label}
@@ -77,15 +77,22 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        {/* Right-side actions */}
-        <div className="ml-auto flex items-center gap-1">
-          {/* Notification bell */}
+        {/* ── Right-side controls (Insight-style) ── */}
+        <div className="ml-auto flex items-center gap-0.5">
+
+          {/* 1. Dark / Light toggle */}
+          <DarkModeToggle />
+
+          {/* 2. Named theme selector */}
+          <ThemeSelector />
+
+          {/* 3. Notification bell */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-8 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                className="size-8 text-muted-foreground hover:text-foreground"
               >
                 <BellIcon className="size-4" />
               </Button>
@@ -96,19 +103,17 @@ export function SiteHeader() {
                 <span className="text-xs text-muted-foreground">0 new</span>
               </div>
               <div className="flex flex-col items-center justify-center py-10 text-center">
-                <BellIcon className="size-8 text-gray-200 mb-2" />
+                <BellIcon className="size-8 text-muted-foreground/20 mb-2" />
                 <p className="text-sm text-muted-foreground">
                   No notifications yet
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-xs text-muted-foreground/60 mt-0.5">
                   You&apos;re all caught up!
                 </p>
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Theme toggle (light / dark / system + color) */}
-          <ThemeToggle />
         </div>
       </div>
     </header>

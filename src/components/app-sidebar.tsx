@@ -22,17 +22,19 @@ import {
   UsersIcon,
   Settings2Icon,
   FileChartColumnIcon,
+  BookOpenIcon,
 } from "lucide-react"
 import { Logo } from "@/components/logo"
 
 // All possible nav items — filtered by role below.
 // STUDENT role sees only Attendance (dashboard overview) and Students.
 const ALL_MAIN = [
-  { title: "Attendance", url: "/dashboard",  icon: <LayoutDashboardIcon />, roles: ["ADMIN", "TEACHER", "STUDENT"] },
-  { title: "Students",   url: "/students",   icon: <UsersIcon />,           roles: ["ADMIN", "TEACHER", "STUDENT"] },
-  { title: "Sessions",   url: "/attendance", icon: <CameraIcon />,          roles: ["ADMIN", "TEACHER"] },
-  { title: "Schedule",   url: "/schedule",   icon: <ListIcon />,            roles: ["ADMIN", "TEACHER"] },
-  { title: "Reports",    url: "/reports",    icon: <FileChartColumnIcon />, roles: ["ADMIN", "TEACHER"] },
+  { title: "Attendance", url: "/dashboard",             icon: <LayoutDashboardIcon />, roles: ["ADMIN", "TEACHER", "STUDENT"] },
+  { title: "Classes",    url: "/dashboard/classrooms",  icon: <BookOpenIcon />,        roles: ["ADMIN", "TEACHER", "STUDENT"] },
+  { title: "Students",   url: "/students",              icon: <UsersIcon />,           roles: ["ADMIN", "TEACHER", "STUDENT"] },
+  { title: "Sessions",   url: "/attendance",            icon: <CameraIcon />,          roles: ["ADMIN", "TEACHER"] },
+  { title: "Schedule",   url: "/schedule",              icon: <ListIcon />,            roles: ["ADMIN", "TEACHER"] },
+  { title: "Reports",    url: "/reports",               icon: <FileChartColumnIcon />, roles: ["ADMIN", "TEACHER"] },
 ];
 
 const ALL_SECONDARY = [

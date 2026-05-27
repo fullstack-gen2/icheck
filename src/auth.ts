@@ -1,12 +1,42 @@
 import { cookies } from "next/headers";
 
+// Attendance microservice (for /attendance/** business endpoints)
 export const BASE_API_URL =
-  process.env.BASE_API_URL;
+  process.env.BASE_API_URL ??
+  process.env.BACKEND_URL ??
+  "https://attendance.icheck.today/api/v1";
+
+// Spring Cloud Gateway BFF origin (where /api/v1/auth/me lives).
+// Used only for server-side fetches; the browser hits the same origin
+// via relative paths.
+export const GATEWAY_URL =
+  process.env.GATEWAY_URL ??
+  process.env.NEXT_PUBLIC_GATEWAY_URL ??
+  "https://insight.istad.co";
+
 export interface AppUser {
   id: string;
   name: string;
   email: string;
   role: string;
+}
+
+/** Maps the gateway's /auth/me response into our AppUser shape. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapAuthMe(p: any): AppUser | null {
+  if (!p || typeof p !== "object") return null;
+  const username = p.username ?? p.preferred_username ?? "";
+  const email    = p.email ?? "";
+  if (!username && !email) return null;
+
+  return {
+    id:    String(username || email),
+    name:  String(username || email),
+    email: String(email),
+    role:  Array.isArray(p.roles) && p.roles.length > 0
+      ? String(p.roles[0])
+      : (p.role ?? "USER"),
+  };
 }
 
 export async function getServerUser(): Promise<AppUser | null> {
@@ -17,25 +47,12 @@ export async function getServerUser(): Promise<AppUser | null> {
       .map((c) => `${c.name}=${c.value}`)
       .join("; ");
 
-    const res = await fetch(
-      `${BASE_API_URL}/attendance/users/me`,
-      {
-        cache: "no-store",
-        headers: { Cookie: cookieHeader },
-      }
-    );
-
+    const res = await fetch(`${GATEWAY_URL}/api/v1/auth/me`, {
+      cache: "no-store",
+      headers: { Cookie: cookieHeader },
+    });
     if (!res.ok) return null;
-    const json = await res.json();
-    const p = json?.payload;
-    if (!p) return null;
-
-    return {
-      id: String(p.id ?? ""),
-      name: p.name ?? p.username ?? p.email ?? "",
-      email: p.email ?? "",
-      role: p.role ?? "USER",
-    };
+    return mapAuthMe(await res.json());
   } catch {
     return null;
   }
