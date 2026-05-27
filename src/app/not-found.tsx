@@ -3,13 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import { CompassIcon } from "lucide-react";
 
-/**
- * App-wide 404. Triggered when a route doesn't exist, or when any server
- * component calls `notFound()` from "next/navigation".
- *
- * Kept as a server component so it renders without JS — even broken bundles
- * still show a sensible page.
- */
 export default function NotFound() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
@@ -35,11 +28,6 @@ export default function NotFound() {
           <Link href="/dashboard">
             <Button className="w-full bg-[#273C97] hover:bg-[#1e2e7a]">
               Go to Dashboard
-            </Button>
-          </Link>
-          <Link href="/login">
-            <Button variant="ghost" className="w-full text-gray-500">
-              Back to Sign in
             </Button>
           </Link>
         </div>

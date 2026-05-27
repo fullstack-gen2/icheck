@@ -1,13 +1,9 @@
 import { BASE_API_URL } from "@/auth";
 
-/**
- * Get the current user from inside a Next.js Route Handler by forwarding
- * the browser's BFF session cookie to the attendance backend.
- */
 export async function getRequestUser(cookieHeader: string) {
   try {
     const res = await fetch(
-      `${BASE_API_URL}/api/v1/attendance/users/me`,
+      `${BASE_API_URL}/attendance/users/me`,
       {
         cache: "no-store",
         headers: { Cookie: cookieHeader },

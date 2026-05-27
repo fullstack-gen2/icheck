@@ -1,8 +1,7 @@
 import { cookies } from "next/headers";
 
 export const BASE_API_URL =
-  process.env.BASE_API_URL ?? "https://attendance.icheck.today";
-
+  process.env.BASE_API_URL ?? "https://attendance.icheck.today/api/v1";
 export interface AppUser {
   id: string;
   name: string;
@@ -19,7 +18,7 @@ export async function getServerUser(): Promise<AppUser | null> {
       .join("; ");
 
     const res = await fetch(
-      `${BASE_API_URL}/api/v1/attendance/users/me`,
+      `${BASE_API_URL}/attendance/users/me`,
       {
         cache: "no-store",
         headers: { Cookie: cookieHeader },
