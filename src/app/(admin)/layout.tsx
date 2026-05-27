@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { getServerUser } from "@/auth";
 import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
@@ -9,16 +9,10 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  const user = await getServerUser();
 
-  if (!session) redirect("/login");
-  if (session.user.role === "STUDENT") redirect("/student");
-
-  const user = {
-    name: session.user.name ?? "Unknown",
-    email: session.user.email ?? "",
-    role: session.user.role,
-  };
+  if (!user) redirect("/login");
+  if (user.role === "STUDENT") redirect("/student");
 
   return (
     <SidebarProvider

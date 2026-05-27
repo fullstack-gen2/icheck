@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useUser } from "@/components/user-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,8 +68,8 @@ function pct(n: number) { return `${n.toFixed(1)}%`; }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function ReportsPage() {
-  const { data: session } = useSession();
-  const isAdmin = session?.user?.role === "ADMIN";
+  const user = useUser();
+  const isAdmin = user?.role === "ADMIN";
 
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [reports,    setReports]    = useState<Report[]>([]);

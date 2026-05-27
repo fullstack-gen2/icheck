@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useUser } from "@/components/user-provider";
 import { CheckCircleIcon, AlertCircleIcon, LoaderCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
@@ -35,7 +35,7 @@ function CheckInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
-  const { data: session, status } = useSession();
+  const user = useUser();
   const [state, setState] = useState<State>("loading");
   const [message, setMessage] = useState("");
   const didSubmit = useRef(false);
@@ -72,7 +72,7 @@ function CheckInContent() {
 
       if (res.ok) {
         setState("success");
-        setMessage(`Attendance recorded for ${session?.user?.name ?? "you"}.`);
+        setMessage(`Attendance recorded for ${user?.name ?? "you"}.`);
       } else {
         setState("error");
         setMessage(
@@ -96,11 +96,9 @@ function CheckInContent() {
 
   useEffect(() => {
     if (!token) { setState("noToken"); return; }
-    if (status === "loading") return;
-    if (status === "unauthenticated") return; // middleware redirects to /login
     doCheckIn(token);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, token]);
+  }, [token]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">

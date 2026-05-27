@@ -1,26 +1,26 @@
-import { auth } from "@/auth";
+import { cookies } from "next/headers";
+import { BASE_API_URL } from "@/auth";
 
 /**
- * Server-side fetch that automatically forwards the caller's IAM access_token
- * as a Bearer credential to the attendance backend.
+ * Server-side fetch that forwards the caller's BFF session cookie to the
+ * attendance backend so the Gateway can inject the Bearer token.
  *
- * Usage inside any Next.js API route:
- *   const res = await backendFetch("/api/v1/classrooms?size=100");
+ * Usage inside any Next.js Server Component or Route Handler:
+ *   const res = await backendFetch("/api/v1/attendance/classrooms?size=100");
  */
-
-const BASE_API_URL =
-  process.env.BASE_API_URL ?? "http://attendance-service:8090";
-
 export async function backendFetch(
   path: string,
   init?: RequestInit
 ): Promise<Response> {
-  const session = await auth();
-  const token = session?.user?.backendToken;
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((c) => `${c.name}=${c.value}`)
+    .join("; ");
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(cookieHeader ? { Cookie: cookieHeader } : {}),
     ...(init?.headers as Record<string, string> | undefined),
   };
 
