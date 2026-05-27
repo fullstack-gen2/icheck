@@ -1,13 +1,6 @@
 import { cookies } from "next/headers";
 import { BASE_API_URL } from "@/auth";
 
-/**
- * Server-side fetch that forwards the caller's BFF session cookie to the
- * attendance backend so the Gateway can inject the Bearer token.
- *
- * Usage inside any Next.js Server Component or Route Handler:
- *   const res = await backendFetch("/api/v1/attendance/classrooms?size=100");
- */
 export async function backendFetch(
   path: string,
   init?: RequestInit
