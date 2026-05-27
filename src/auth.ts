@@ -1,14 +1,13 @@
 import { cookies } from "next/headers";
 
-// Attendance microservice (for /attendance/** business endpoints)
-export const BASE_API_URL =
-  process.env.BASE_API_URL ??
-  process.env.BACKEND_URL ??
-  "https://attendance.icheck.today/api/v1";
 
-// Spring Cloud Gateway BFF origin (where /api/v1/auth/me lives).
-// Used only for server-side fetches; the browser hits the same origin
-// via relative paths.
+export const BASE_API_URL = process.env.BASE_API_URL;
+
+  // process.env.BASE_API_URL ??
+  // process.env.BACKEND_URL;
+  //"https://attendance.icheck.today/api/v1";
+
+
 export const GATEWAY_URL =
   process.env.GATEWAY_URL ??
   process.env.NEXT_PUBLIC_GATEWAY_URL ??
