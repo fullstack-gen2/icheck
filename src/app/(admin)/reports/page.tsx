@@ -142,8 +142,8 @@ export default function ReportsPage() {
     setReports([]); setWarnings([]); setError("");
     try {
       const [repRes, warnRes] = await Promise.all([
-        fetch(`/attendance/api/reports/classrooms/${cls.id}?size=100`),
-        fetch(`/attendance/api/reports/classrooms/${cls.id}/warnings`),
+        fetch(`/attendance/reports/classrooms/${cls.id}?size=100`),
+        fetch(`/attendance/reports/classrooms/${cls.id}/warnings`),
       ]);
       const repJson  = await repRes.json();
       const warnJson = await warnRes.json();
@@ -171,7 +171,7 @@ export default function ReportsPage() {
       const students: { id: number }[] = stuJson?.payload?.content ?? [];
 
       await Promise.all(students.map((stu) =>
-        fetch("/attendance/api/reports", {
+        fetch("/attendance/reports", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...body, studentId: stu.id }),
@@ -189,7 +189,7 @@ export default function ReportsPage() {
   async function handleLock(reportId: number) {
     setLockingId(reportId); setError("");
     try {
-      const res  = await fetch(`/attendance/api/reports/${reportId}/lock`, { method: "POST" });
+      const res  = await fetch(`/attendance/reports/${reportId}/lock`, { method: "POST" });
       const json = await res.json();
       if (!res.ok) { setError(json?.message ?? "Lock failed."); return; }
       if (selectedCls) await loadReports(selectedCls);

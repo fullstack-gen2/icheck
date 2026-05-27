@@ -43,7 +43,7 @@ export default function SessionQrPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/attendance/api/sessions/${id}/qr`, { method: "POST" });
+      const res = await fetch(`/attendance/sessions/${id}/qr`, { method: "POST" });
       const json = await res.json();
       if (!res.ok) {
         setError(json?.payload?.message ?? json?.message ?? "Failed to generate QR");
@@ -60,7 +60,7 @@ export default function SessionQrPage() {
 
   // Load session info once
   useEffect(() => {
-    fetch(`/attendance/api/sessions/${id}`)
+    fetch(`/attendance/sessions/${id}`)
       .then((r) => r.json())
       .then((json) => setSessionInfo(json.payload))
       .catch(() => {});
@@ -69,7 +69,7 @@ export default function SessionQrPage() {
   // Open session then generate first QR
   useEffect(() => {
     const init = async () => {
-      await fetch(`/attendance/api/sessions/${id}/open`, { method: "POST" });
+      await fetch(`/attendance/sessions/${id}/open`, { method: "POST" });
       await generateQr();
     };
     init();
