@@ -15,16 +15,25 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
 
   useEffect(() => {
-    fetch("/attendance/users/me")
+    // Gateway BFF exposes the OIDC identity at /api/v1/auth/me (flat shape,
+    // no `payload` wrapper). The browser is same-origin with the gateway,
+    // so a relative path is enough — cookies travel automatically.
+    fetch("/api/v1/auth/me", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((json) => {
-        const p = json?.payload;
-        if (!p) return;
+      .then((p) => {
+        if (!p || typeof p !== "object") return;
+        const username = p.username ?? p.preferred_username ?? "";
+        const email    = p.email ?? "";
+        if (!username && !email) return;
+
         setUser({
-          id: String(p.id ?? ""),
-          name: p.name ?? p.username ?? p.email ?? "",
-          email: p.email ?? "",
-          role: p.role ?? "USER",
+          id:    String(username || email),
+          name:  String(username || email),
+          email: String(email),
+          role:
+            Array.isArray(p.roles) && p.roles.length > 0
+              ? String(p.roles[0])
+              : (p.role ?? "USER"),
         });
       })
       .catch(() => {});

@@ -2,107 +2,111 @@
 
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import { SunIcon, MoonIcon, MonitorIcon } from "lucide-react";
+import { SunMoon, PaletteIcon, ChevronDownIcon, CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const COLOR_THEMES = [
-  { name: "Navy",    value: "navy",    color: "#273C97" },
-  { name: "Emerald", value: "emerald", color: "#059669" },
-  { name: "Rose",    value: "rose",    color: "#e11d48" },
-  { name: "Amber",   value: "amber",   color: "#d97706" },
-  { name: "Violet",  value: "violet",  color: "#7c3aed" },
+export const NAMED_THEMES = [
+  { name: "i-Check",  value: "icheck"   },
+  { name: "Claude",   value: "claude"   },
+  { name: "Supabase", value: "supabase" },
+  { name: "Vercel",   value: "vercel"   },
+  { name: "Mono",     value: "mono"     },
+  { name: "Rose",     value: "rose"     },
+  { name: "Emerald",  value: "emerald"  },
+  { name: "Violet",   value: "violet"   },
+  { name: "Amber",    value: "amber"    },
 ];
 
-export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  const [colorTheme, setColorTheme] = useState("navy");
+function applyNamedTheme(value: string) {
+  localStorage.setItem("named-theme", value);
+  // "icheck" = default; no data-theme attribute needed
+  if (value === "icheck") {
+    document.documentElement.removeAttribute("data-theme");
+  } else {
+    document.documentElement.setAttribute("data-theme", value);
+  }
+}
+
+/** Small circle button — toggles dark ↔ light mode */
+export function DarkModeToggle() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return <div className="size-8" />;
+
+  const isDark = resolvedTheme === "dark";
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="size-8 text-muted-foreground hover:text-foreground"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+    >
+      <SunMoon className="size-4" />
+    </Button>
+  );
+}
+
+/** Pill button — opens named-theme dropdown (Insight-style) */
+export function ThemeSelector() {
+  const [namedTheme, setNamedTheme] = useState("icheck");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    const saved = localStorage.getItem("color-theme") ?? "navy";
-    setColorTheme(saved);
-    document.documentElement.setAttribute("data-color", saved);
+    const saved = localStorage.getItem("named-theme") ?? "icheck";
+    setNamedTheme(saved);
+    applyNamedTheme(saved);
   }, []);
 
-  function applyColorTheme(value: string) {
-    setColorTheme(value);
-    localStorage.setItem("color-theme", value);
-    document.documentElement.setAttribute("data-color", value);
+  function selectTheme(value: string) {
+    setNamedTheme(value);
+    applyNamedTheme(value);
   }
 
-  if (!mounted) return <div className="size-8" />;
+  if (!mounted) return <div className="h-8 w-24" />;
 
-  const Icon =
-    theme === "dark" ? MoonIcon : theme === "light" ? SunIcon : MonitorIcon;
+  const currentLabel =
+    NAMED_THEMES.find((t) => t.value === namedTheme)?.name ?? "i-Check";
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          size="icon"
-          className="size-8 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+          className="h-8 gap-1.5 px-2.5 text-sm font-normal text-muted-foreground hover:text-foreground"
         >
-          <Icon className="size-4" />
+          <PaletteIcon className="size-4 shrink-0" />
+          <span className="hidden sm:inline">{currentLabel}</span>
+          <ChevronDownIcon className="size-3.5 shrink-0 opacity-60" />
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuLabel className="text-xs text-muted-foreground">
-          Appearance
+      <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuLabel className="text-xs text-muted-foreground pb-1">
+          themes
         </DropdownMenuLabel>
-
-        <DropdownMenuItem onClick={() => setTheme("light")}>
-          <SunIcon className="size-4 mr-2" />
-          Light
-          {theme === "light" && (
-            <span className="ml-auto text-xs text-primary">✓</span>
-          )}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
-          <MoonIcon className="size-4 mr-2" />
-          Dark
-          {theme === "dark" && (
-            <span className="ml-auto text-xs text-primary">✓</span>
-          )}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
-          <MonitorIcon className="size-4 mr-2" />
-          System
-          {theme === "system" && (
-            <span className="ml-auto text-xs text-primary">✓</span>
-          )}
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator />
-
-        <DropdownMenuLabel className="text-xs text-muted-foreground">
-          Color
-        </DropdownMenuLabel>
-        <div className="flex items-center gap-2 px-2 py-2">
-          {COLOR_THEMES.map((ct) => (
-            <button
-              key={ct.value}
-              title={ct.name}
-              onClick={() => applyColorTheme(ct.value)}
-              style={{ background: ct.color }}
-              className={`size-6 rounded-full border-2 transition-all ${
-                colorTheme === ct.value
-                  ? "border-gray-800 dark:border-white scale-110 shadow"
-                  : "border-transparent hover:border-gray-400"
-              }`}
-            />
-          ))}
-        </div>
+        {NAMED_THEMES.map((t) => (
+          <DropdownMenuItem
+            key={t.value}
+            onClick={() => selectTheme(t.value)}
+            className="flex items-center justify-between"
+          >
+            {t.name}
+            {namedTheme === t.value && (
+              <CheckIcon className="size-4 text-primary" />
+            )}
+          </DropdownMenuItem>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );

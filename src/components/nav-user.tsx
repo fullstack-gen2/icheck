@@ -16,23 +16,35 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { EllipsisVerticalIcon, ShieldIcon, GraduationCapIcon } from "lucide-react"
+import {
+  ChevronsUpDownIcon,
+  UserIcon,
+  BellIcon,
+  LogOutIcon,
+} from "lucide-react"
 import { useUser } from "@/components/user-provider"
 
 function initials(name: string) {
   if (!name) return "?";
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  // Multi-word names → first letter of each word (max 2)
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  // Single word (e.g. "chanthorn") → first two letters
+  return name.slice(0, 2).toUpperCase();
 }
 
-function roleLabel(role: string) {
-  if (role === "ADMIN") return "Admin";
-  if (role === "TEACHER") return "Teacher";
-  return role;
+async function handleLogout() {
+  try {
+    // Spring Cloud Gateway BFF exposes POST /logout at the gateway root
+    await fetch("/logout", { method: "POST", credentials: "include" });
+  } catch {
+    // ignore network errors — still redirect
+  }
+  // Redirect to IAM which will ask user to re-authenticate
+  window.location.href =
+    process.env.NEXT_PUBLIC_LOGIN_URL ?? "https://iam.istad.co";
 }
 
 export function NavUser({
@@ -41,10 +53,11 @@ export function NavUser({
   user: { name: string; email: string; role: string }
 }) {
   const { isMobile } = useSidebar()
-  // Prefer live client-side user (fetched through gateway); fall back to
-  // server-rendered prop during initial SSR / while the fetch is in flight.
+  // Prefer live client-side user; fall back to server-rendered prop during SSR.
   const liveUser = useUser()
   const user = liveUser ?? serverUser
+
+  const avatarBg = "bg-[#273C97]"
 
   return (
     <SidebarMenu>
@@ -56,37 +69,38 @@ export function NavUser({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarFallback className="rounded-lg bg-[#273C97] text-white text-xs font-semibold">
+                <AvatarFallback className={`rounded-lg ${avatarBg} text-white text-xs font-semibold`}>
                   {initials(user.name)}
                 </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
+                <span className="truncate font-semibold">{user.name || "—"}</span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {user.email}
+                  {user.email || "—"}
                 </span>
               </div>
-              <EllipsisVerticalIcon className="ml-auto size-4" />
+              <ChevronsUpDownIcon className="ml-auto size-4 opacity-50" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
 
           <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            className="w-(--radix-dropdown-menu-trigger-width) min-w-64 rounded-xl"
             side={isMobile ? "bottom" : "right"}
             align="end"
             sideOffset={4}
           >
+            {/* Profile header */}
             <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarFallback className="rounded-lg bg-[#273C97] text-white text-xs font-semibold">
+              <div className="flex items-center gap-3 px-3 py-3 text-left text-sm">
+                <Avatar className="h-10 w-10 rounded-xl">
+                  <AvatarFallback className={`rounded-xl ${avatarBg} text-white text-sm font-semibold`}>
                     {initials(user.name)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {user.email}
+                <div className="grid flex-1 text-left leading-tight gap-0.5">
+                  <span className="font-semibold text-foreground">{user.name || "—"}</span>
+                  <span className="text-xs text-muted-foreground truncate">
+                    {user.email || "—"}
                   </span>
                 </div>
               </div>
@@ -94,17 +108,28 @@ export function NavUser({
 
             <DropdownMenuSeparator />
 
+            {/* Menu items */}
             <DropdownMenuGroup>
-              <DropdownMenuItem className="pointer-events-none opacity-60">
-                {user.role === "ADMIN" ? (
-                  <ShieldIcon className="size-4" />
-                ) : (
-                  <GraduationCapIcon className="size-4" />
-                )}
-                <span>{roleLabel(user.role)}</span>
+              <DropdownMenuItem className="gap-3 py-2.5">
+                <UserIcon className="size-4 text-muted-foreground" />
+                <span>Account</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-3 py-2.5">
+                <BellIcon className="size-4 text-muted-foreground" />
+                <span>Notifications</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
 
+            <DropdownMenuSeparator />
+
+            {/* Log out */}
+            <DropdownMenuItem
+              className="gap-3 py-2.5 text-red-500 focus:text-red-500 focus:bg-red-50 dark:focus:bg-red-950/30"
+              onClick={handleLogout}
+            >
+              <LogOutIcon className="size-4" />
+              <span>Log out</span>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
