@@ -1,3 +1,5 @@
+// app/(admin)/attendance/[id]/page.tsx
+
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeftIcon, ClipboardCheckIcon } from "lucide-react";
 import Link from "next/link";
@@ -40,7 +42,7 @@ async function fetchSession(id: string): Promise<Session | null> {
 async function fetchAttendances(sessionId: string): Promise<AttendanceRecord[]> {
   try {
     const res = await fetch(
-      `${BASE_API_URL}/attendances/sessions/${sessionId}?size=100`,
+      `${BASE_API_URL}/attendance/attendances/sessions/${sessionId}?size=100`,
       { cache: "no-store" }
     );
     if (!res.ok) return [];
