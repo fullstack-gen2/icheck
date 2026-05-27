@@ -150,7 +150,7 @@ export default function SessionQrPage() {
                   />
                 </div>
               ) : (
-                <div className="w-[260px] h-[260px] bg-gray-100 rounded-xl animate-pulse" />
+                <div className="w-65 h-65 bg-gray-100 rounded-xl animate-pulse" />
               )}
             </div>
 
