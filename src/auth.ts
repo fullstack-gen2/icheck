@@ -1,84 +1,95 @@
 import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { getDeviceId } from "@/lib/device-cookie";
 
-const BASE_API_URL = process.env.BASE_API_URL ?? "http://localhost:8090";
+// Server-side base URL for the attendance backend.
+// In production this is the internal Docker service name so the jwt()
+// callback can resolve the internal integer userId right after OAuth login.
+const BASE_API_URL =
+  process.env.BASE_API_URL ?? "http://attendance-service:8090";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  // NB: do NOT set `basePath` here. Next.js's own `basePath: "/attendance"`
-  // (next.config.ts) strips that prefix BEFORE the request reaches the auth
-  // handler, so internally the URL is already `/api/auth/...` — which is
-  // exactly NextAuth's default. Setting `/attendance/api/auth` here would
-  // cause UnknownAction because the substring wouldn't match.
-  // The client (SessionProvider) still needs the full `/attendance/api/auth`
-  // because the browser hits the public URL with the Next.js prefix.
   providers: [
-    Credentials({
-      // No deviceId here — it lives in an HttpOnly cookie and is read
-      // server-side from the incoming request.
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      authorize: async (credentials) => {
-        // Read the device id from the HttpOnly cookie rather than trusting
-        // the client to pass it in — clients can't read it, can't forge it.
-        const deviceId = await getDeviceId();
-
-        const res = await fetch(`${BASE_API_URL}/api/v1/auth/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: credentials.email,
-            password: credentials.password,
-            deviceId: deviceId,
-          }),
-        });
-
-        if (!res.ok) return null;
-
-        const json = await res.json();
-        const data = json?.payload; // backend wraps in ApiResponse { success, message, payload }
-        if (!data?.token) return null;
-
+    {
+      id: "istad-iam",
+      name: "ISTAD IAM",
+      // type: "oidc" → NextAuth auto-discovers endpoints from
+      //   https://iam.istad.co/.well-known/openid-configuration
+      type: "oidc",
+      issuer: "https://iam.istad.co",
+      clientId: process.env.IAM_CLIENT_ID!,
+      clientSecret: process.env.IAM_CLIENT_SECRET!,
+      authorization: { params: { scope: "openid profile email" } },
+      checks: ["pkce", "state"],
+      profile(profile: Record<string, unknown>) {
+        const roles = profile.roles as string[] | undefined;
         return {
-          id: String(data.userId),
-          name: data.fullName,
-          email: String(credentials.email),
-          role: data.role as string,
-          backendToken: data.token as string,
-          deviceBound: data.deviceBound as boolean,
+          id: profile.sub as string,
+          name: (profile.name ??
+            profile.preferred_username ??
+            profile.sub) as string,
+          email: (profile.email ?? "") as string,
+          image: (profile.picture ?? null) as string | null,
+          role:
+            roles?.[0] ??
+            (profile.role as string | undefined) ??
+            "USER",
         };
       },
-    }),
+    },
   ],
+
   callbacks: {
-    jwt({ token, user }) {
-      if (user) {
-        token.role = user.role;
-        token.backendToken = user.backendToken;
-        token.userId = user.id;
-        token.deviceBound = user.deviceBound;
+    async jwt({ token, account, profile }) {
+      // Only runs on the first sign-in (when account is present)
+      if (account?.access_token) {
+        token.backendToken = account.access_token;
+
+        // Resolve the internal integer userId from the attendance backend.
+        // The backend's /me endpoint reads the email claim from the IAM JWT
+        // and returns the matching User record.
+        try {
+          const res = await fetch(`${BASE_API_URL}/api/v1/users/me`, {
+            headers: { Authorization: `Bearer ${account.access_token}` },
+            cache: "no-store",
+          });
+          if (res.ok) {
+            const json = await res.json();
+            const id = json?.payload?.id;
+            if (id != null) token.userId = String(id);
+          }
+        } catch {
+          // Non-fatal — userId will be undefined for users not yet in the DB
+        }
       }
+
+      if (profile) {
+        const p = profile as Record<string, unknown>;
+        const roles = p.roles as string[] | undefined;
+        token.role =
+          roles?.[0] ??
+          (p.role as string | undefined) ??
+          (token.role as string | undefined);
+      }
+
       return token;
     },
+
     session({ session, token }) {
-      session.user.role = token.role as string;
+      session.user.role = (token.role as string) ?? "USER";
       session.user.backendToken = token.backendToken as string;
-      session.user.userId = token.userId as string;
-      session.user.deviceBound = token.deviceBound as boolean;
+      session.user.userId = (token.userId as string) ?? "";
       return session;
     },
   },
+
   pages: {
     signIn: "/login",
     error: "/login",
   },
+
   session: { strategy: "jwt" },
-  // Pin cookie path to "/" so the session cookie is sent to every route in
-  // the app (e.g. /attendance/api/settings), regardless of where NextAuth's
-  // own endpoints are mounted. Without this, a basePath misconfiguration can
-  // scope the cookie to /api/auth and break every other proxy with 401.
+
+  // Pin the session cookie path to "/" so it is sent on every route,
+  // regardless of the Next.js basePath ("/attendance").
   cookies: {
     sessionToken: {
       name:

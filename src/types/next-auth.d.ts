@@ -3,8 +3,12 @@ import "next-auth";
 declare module "next-auth" {
   interface User {
     role: string;
+    /** IAM access_token — used as Bearer when calling the attendance backend. */
     backendToken: string;
-    deviceBound: boolean;
+    /** Internal integer user ID in the attendance database. */
+    userId: string;
+    /** Only relevant for student accounts; not populated from IAM OAuth2. */
+    deviceBound?: boolean;
   }
 
   interface Session {
@@ -16,7 +20,7 @@ declare module "next-auth" {
       role: string;
       backendToken: string;
       userId: string;
-      deviceBound: boolean;
+      deviceBound?: boolean;
     };
   }
 }
@@ -26,6 +30,6 @@ declare module "next-auth/jwt" {
     role: string;
     backendToken: string;
     userId: string;
-    deviceBound: boolean;
+    deviceBound?: boolean;
   }
 }

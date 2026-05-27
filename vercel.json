@@ -2,9 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "redirects": [
     {
-      "source": "/",
-      "destination": "/attendance/login",
-      "permanent": false
+      "source": "/(.*)",
+      "destination": "https://insight.istad.co/attendance",
+      "permanent": true
     }
   ]
 }
