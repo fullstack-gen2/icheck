@@ -106,7 +106,8 @@ export default function SettingsPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/attendance/settings");
+      //const res = await fetch("/attendance/settings");
+      const res = await fetch("https://attendance.icheck.today/api/v1/attendance/settings");
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         
