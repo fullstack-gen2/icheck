@@ -10,7 +10,7 @@ export async function POST(
   const { id } = await params;
   const cookieHeader = request.headers.get("cookie") ?? "";
   const res = await fetch(
-    `${BASE_API_URL}/api/v1/attendance/qr-codes/sessions/${id}/dynamic`,
+    `${BASE_API_URL}/attendance/qr-codes/sessions/${id}/dynamic`,
     { method: "POST", headers: { Cookie: cookieHeader } }
   );
   const data = await res.json();

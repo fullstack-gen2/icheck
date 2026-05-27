@@ -36,10 +36,6 @@ interface Setting {
   updatedAt: string | null;
 }
 
-/**
- * Friendly labels shown to users in place of raw `snake_case` database keys.
- * Unknown keys fall through `humanizeKey()` below.
- */
 const KEY_LABELS: Record<string, string> = {
   early_checkin_minutes:             "Early check-in window (minutes)",
   late_threshold_minutes:            "Late threshold (minutes)",
@@ -113,8 +109,7 @@ export default function SettingsPage() {
       const res = await fetch("/attendance/settings");
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        // Surface the real reason — 401 means stale/missing cookie (relogin),
-        // 502 means backend unreachable, anything else gets shown verbatim.
+        
         const reason =
           res.status === 401 ? "Your session expired. Please log in again." :
           res.status === 403 ? "You don't have permission to view settings." :

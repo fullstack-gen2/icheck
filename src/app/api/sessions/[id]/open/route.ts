@@ -10,7 +10,7 @@ export async function POST(
   const { id } = await params;
   const cookieHeader = request.headers.get("cookie") ?? "";
   const res = await fetch(
-    `${BASE_API_URL}/api/v1/attendance/sessions/${id}/open`,
+    `${BASE_API_URL}/attendance/sessions/${id}/open`,
     { method: "POST", headers: { Cookie: cookieHeader } }
   );
   const data = await res.json();

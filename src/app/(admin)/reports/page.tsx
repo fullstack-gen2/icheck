@@ -102,7 +102,7 @@ export default function ReportsPage() {
 
   // Load classrooms once
   useEffect(() => {
-    fetch("/attendance/api/classrooms?size=200")
+    fetch("/attendance/classrooms?size=200")
       .then((r) => r.json())
       .then((j) => { setClassrooms(j?.payload?.content ?? []); setLoadingCls(false); })
       .catch(() => setLoadingCls(false));
@@ -142,8 +142,8 @@ export default function ReportsPage() {
     setReports([]); setWarnings([]); setError("");
     try {
       const [repRes, warnRes] = await Promise.all([
-        fetch(`/attendance/api/reports/classrooms/${cls.id}?size=100`),
-        fetch(`/attendance/api/reports/classrooms/${cls.id}/warnings`),
+        fetch(`/attendance/reports/classrooms/${cls.id}?size=100`),
+        fetch(`/attendance/reports/classrooms/${cls.id}/warnings`),
       ]);
       const repJson  = await repRes.json();
       const warnJson = await warnRes.json();
@@ -166,15 +166,12 @@ export default function ReportsPage() {
         ? { type: "semester", studentId: null, classId: selectedCls.id, semester: Number(genSemester), year: Number(genYear) }
         : { type: "monthly",  studentId: null, classId: selectedCls.id, month: Number(genMonth),       year: Number(genYear) };
 
-      // Backend generates per-student; call once per student in class
-      // Actually the backend requires studentId — we generate for each student
-      // Fetch students in classroom first
-      const stuRes  = await fetch(`/attendance/api/classrooms/${selectedCls.id}/students`);
+      const stuRes  = await fetch(`/attendance/classrooms/${selectedCls.id}/students`);
       const stuJson = await stuRes.json();
       const students: { id: number }[] = stuJson?.payload?.content ?? [];
 
       await Promise.all(students.map((stu) =>
-        fetch("/attendance/api/reports", {
+        fetch("/attendance/reports", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...body, studentId: stu.id }),
@@ -192,7 +189,7 @@ export default function ReportsPage() {
   async function handleLock(reportId: number) {
     setLockingId(reportId); setError("");
     try {
-      const res  = await fetch(`/attendance/api/reports/${reportId}/lock`, { method: "POST" });
+      const res  = await fetch(`/attendance/reports/${reportId}/lock`, { method: "POST" });
       const json = await res.json();
       if (!res.ok) { setError(json?.message ?? "Lock failed."); return; }
       if (selectedCls) await loadReports(selectedCls);

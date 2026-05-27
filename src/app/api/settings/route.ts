@@ -32,13 +32,13 @@ async function proxy(url: string, cookieHeader: string, init?: RequestInit) {
 
 export async function GET(request: Request) {
   const cookieHeader = request.headers.get("cookie") ?? "";
-  return proxy(`${BASE_API_URL}/api/v1/attendance/settings`, cookieHeader);
+  return proxy(`${BASE_API_URL}/attendance/settings`, cookieHeader);
 }
 
 export async function POST(request: Request) {
   const cookieHeader = request.headers.get("cookie") ?? "";
   const body = await request.json();
-  return proxy(`${BASE_API_URL}/api/v1/attendance/settings`, cookieHeader, {
+  return proxy(`${BASE_API_URL}/attendance/settings`, cookieHeader, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

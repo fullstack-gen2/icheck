@@ -55,7 +55,7 @@ export function QrScanner({ onClose }: Props) {
       } catch {}
 
       // deviceId is read from the HttpOnly cookie by the proxy route.
-      const res = await fetch("/attendance/api/attendance/check-in", {
+      const res = await fetch("/attendance/attendance/check-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ qrToken, latitude, longitude }),

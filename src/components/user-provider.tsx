@@ -15,7 +15,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
 
   useEffect(() => {
-    fetch("/attendance/api/me")
+    fetch("/attendance/me")
       .then((r) => (r.ok ? r.json() : null))
       .then((json) => {
         const p = json?.payload;
