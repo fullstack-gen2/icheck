@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const cookieHeader = request.headers.get("cookie") ?? "";
   const body = await request.json();
-  return proxy(`${BASE_API_URL}/settings`, cookieHeader, {
+  return proxy(`${BASE_API_URL}/attendance/settings`, cookieHeader, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

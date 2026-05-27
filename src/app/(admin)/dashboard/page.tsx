@@ -38,7 +38,7 @@ const shiftLabel: Record<string, string> = {
 
 async function fetchSummary(): Promise<Summary | null> {
   try {
-    const res = await fetch(`${BASE_API_URL}/attendance/dashboard/summary`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/dashboard/summary`, { cache: "no-store" });
     if (!res.ok) return null;
     return (await res.json())?.payload ?? null;
   } catch { return null; }

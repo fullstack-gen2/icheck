@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const cookieHeader = request.headers.get("cookie") ?? "";
-  const res = await fetch(`${BASE_API_URL}/attendance/users/me`, {
+  const res = await fetch(`${BASE_API_URL}/users/me`, {
     cache: "no-store",
     headers: { Cookie: cookieHeader },
   }).catch(() => null);
