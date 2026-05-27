@@ -18,7 +18,7 @@ export async function getServerUser(): Promise<AppUser | null> {
       .join("; ");
 
     const res = await fetch(
-      `${BASE_API_URL}/users/me`,
+      `${BASE_API_URL}/attendance/users/me`,
       {
         cache: "no-store",
         headers: { Cookie: cookieHeader },

@@ -3,7 +3,7 @@ import { BASE_API_URL } from "@/auth";
 export async function getRequestUser(cookieHeader: string) {
   try {
     const res = await fetch(
-      `${BASE_API_URL}/users/me`,
+      `${BASE_API_URL}/attendance/users/me`,
       {
         cache: "no-store",
         headers: { Cookie: cookieHeader },

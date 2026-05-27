@@ -37,7 +37,7 @@ export async function PATCH(
   const { key } = await params;
   const cookieHeader = request.headers.get("cookie") ?? "";
   const body = await request.json();
-  return proxy(`${BASE_API_URL}/settings/${key}`, cookieHeader, {
+  return proxy(`${BASE_API_URL}/attendance/settings/${key}`, cookieHeader, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -50,5 +50,5 @@ export async function DELETE(
 ) {
   const { key } = await params;
   const cookieHeader = request.headers.get("cookie") ?? "";
-  return proxy(`${BASE_API_URL}/settings/${key}`, cookieHeader, { method: "DELETE" });
+  return proxy(`${BASE_API_URL}/attendance/settings/${key}`, cookieHeader, { method: "DELETE" });
 }

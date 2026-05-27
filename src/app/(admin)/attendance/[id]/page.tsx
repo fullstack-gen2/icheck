@@ -30,7 +30,7 @@ interface AttendanceRecord {
 
 async function fetchSession(id: string): Promise<Session | null> {
   try {
-    const res = await fetch(`${BASE_API_URL}/sessions/${id}`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/attendance/sessions/${id}`, { cache: "no-store" });
     if (!res.ok) return null;
     const json = await res.json();
     return json?.payload ?? null;
