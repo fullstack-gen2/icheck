@@ -43,7 +43,7 @@ export default function SessionQrPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/attendance/sessions/${id}/qr`, { method: "POST" });
+      const res = await fetch(`/attendance/qr-codes/sessions/${id}/dynamic`, { method: "POST" });
       const json = await res.json();
       if (!res.ok) {
         setError(json?.payload?.message ?? json?.message ?? "Failed to generate QR");

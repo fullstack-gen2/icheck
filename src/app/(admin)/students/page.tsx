@@ -55,7 +55,7 @@ export default function StudentsPage() {
     async function load() {
       setLoading(true);
       const [sRes, cRes] = await Promise.all([
-        fetch("/attendance/students?size=300"),
+        fetch("/attendance/users/students?size=300"),
         fetch("/attendance/classrooms?size=200"),
       ]);
       const sJson = await sRes.json();

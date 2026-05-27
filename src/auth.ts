@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 
 export const BASE_API_URL =
-  process.env.BASE_API_URL ?? "https://attendance.icheck.today/api/v1";
+  process.env.BASE_API_URL;
 export interface AppUser {
   id: string;
   name: string;
