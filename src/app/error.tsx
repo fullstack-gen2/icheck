@@ -37,7 +37,7 @@ export default function ErrorBoundary({
         </p>
 
         {process.env.NODE_ENV !== "production" && (
-          <pre className="text-left text-xs bg-gray-100 text-gray-700 rounded-lg p-3 mb-6 overflow-x-auto whitespace-pre-wrap break-words">
+          <pre className="text-left text-xs bg-gray-100 text-gray-700 rounded-lg p-3 mb-6 overflow-x-auto whitespace-pre-wrap wrap-break-word">
             {error.message}
             {error.digest && <span className="block mt-1 text-gray-400">digest: {error.digest}</span>}
           </pre>
