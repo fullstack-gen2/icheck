@@ -39,7 +39,7 @@ async function fetchClassroom(id: string): Promise<Classroom | null> {
   try {
     // Server component — must use absolute URL. Relative paths only work
     // in the browser; Node's fetch doesn't know what "/attendance" is.
-    const res = await fetch(`${BASE_API_URL}/attendance/classrooms/${id}`, { cache: "no-store" });
+    const res = await fetch(`/api/v1/attendance/classrooms/${id}`, { cache: "no-store" });
     if (!res.ok) return null;
     const json = await res.json();
     return json?.payload ?? null;
@@ -48,7 +48,7 @@ async function fetchClassroom(id: string): Promise<Classroom | null> {
 
 async function fetchStudents(id: string): Promise<Student[]> {
   try {
-    const res = await fetch(`${BASE_API_URL}/attendance/classrooms/${id}/students?size=200`, { cache: "no-store" });
+    const res = await fetch(`/api/v1/attendance/classrooms/${id}/students?size=200`, { cache: "no-store" });
     if (!res.ok) return [];
     const json = await res.json();
     return json?.payload?.content ?? [];

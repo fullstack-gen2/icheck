@@ -38,7 +38,7 @@ const shiftLabel: Record<string, string> = {
 
 async function fetchSummary(): Promise<Summary | null> {
   try {
-    const res = await fetch(`${BASE_API_URL}/attendance/dashboard/summary`, { cache: "no-store" });
+    const res = await fetch(`/api/v1/attendance/dashboard/summary`, { cache: "no-store" });
     if (!res.ok) return null;
     return (await res.json())?.payload ?? null;
   } catch { return null; }
@@ -46,7 +46,7 @@ async function fetchSummary(): Promise<Summary | null> {
 
 async function fetchAllClassrooms(): Promise<Classroom[]> {
   try {
-    const res = await fetch(`${BASE_API_URL}/attendance/classrooms?size=100`, { cache: "no-store" });
+    const res = await fetch(`/api/v1/attendance/classrooms?size=100`, { cache: "no-store" });
     if (!res.ok) return [];
     return (await res.json())?.payload?.content ?? [];
   } catch { return []; }
@@ -55,8 +55,8 @@ async function fetchAllClassrooms(): Promise<Classroom[]> {
 async function fetchTeacherClassrooms(teacherId: string): Promise<Classroom[]> {
   try {
     const [schedRes, clsRes] = await Promise.all([
-      fetch(`${BASE_API_URL}/attendance/schedules/teachers/${teacherId}?size=100`, { cache: "no-store" }),
-      fetch(`${BASE_API_URL}/attendance/classrooms?size=100`, { cache: "no-store" }),
+      fetch(`/api/v1/attendance/schedules/teachers/${teacherId}?size=100`, { cache: "no-store" }),
+      fetch(`/api/v1/attendance/classrooms?size=100`, { cache: "no-store" }),
     ]);
     const schedules: Schedule[] = (await schedRes.json())?.payload?.content ?? [];
     const classrooms: Classroom[] = (await clsRes.json())?.payload?.content ?? [];
