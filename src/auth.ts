@@ -7,7 +7,6 @@ export const BASE_API_URL = process.env.BASE_API_URL;
   // process.env.BACKEND_URL;
   //"https://attendance.icheck.today/api/v1";
 
-
 //=========================================
 // Re-exported from the client-safe module so server-only modules can also
 // reach for it. Client components MUST import API_URL from "@/lib/api-config"
