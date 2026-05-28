@@ -44,7 +44,8 @@ async function handleLogout() {
   }
   // Redirect to IAM which will ask user to re-authenticate
   window.location.href =
-    process.env.NEXT_PUBLIC_LOGIN_URL ?? "https://iam.istad.co";
+    // process.env.NEXT_PUBLIC_LOGIN_URL ?? "https://iam.istad.co/login";
+    process.env.NEXT_PUBLIC_LOGIN_URL ?? "https://iam.istad.co/login";
 }
 
 export function NavUser({
