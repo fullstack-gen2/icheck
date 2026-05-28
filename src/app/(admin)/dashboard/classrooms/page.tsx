@@ -106,7 +106,7 @@ export default async function ClassroomsPage() {
                 {grouped[group].map((c) => (
                   <Link
                     key={c.id}
-                    href={`/dashboard/classrooms/${c.id}`}
+                    href={`/api/v1/attendance/classrooms/${c.id}`}
                     className="block hover:scale-[1.01] transition-transform"
                   >
                     <ClassCard
