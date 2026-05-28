@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { BASE_API_URL } from "@/auth";
+import { GATEWAY_URL } from "@/auth";
+import { API_URL } from "@/lib/api-config";
 import { getDeviceId } from "@/lib/device-cookie";
 import { getRequestUser } from "@/lib/server-user";
 
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
 
   const body = await req.json();
   const res = await fetch(
-    `${BASE_API_URL}/attendance/attendances/dynamic-qr-check-in`,
+    `${GATEWAY_URL}${API_URL}/attendances/dynamic-qr-check-in`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: cookieHeader },
