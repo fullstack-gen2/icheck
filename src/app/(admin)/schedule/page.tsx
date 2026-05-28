@@ -1,4 +1,4 @@
-import { getServerUser, BASE_API_URL } from "@/auth";
+import { getServerUser, BASE_API_URL, API_URL } from "@/auth";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ interface SessionItem {
 
 async function fetchAllSchedules(): Promise<ScheduleItem[]> {
   try {
-    const res = await fetch(`${BASE_API_URL}/attendance/schedules?size=200`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/${API_URL}/attendance/schedules?size=200`, { cache: "no-store" });
     if (!res.ok) return [];
     return (await res.json())?.payload?.content ?? [];
   } catch { return []; }
@@ -45,7 +45,7 @@ async function fetchAllSchedules(): Promise<ScheduleItem[]> {
 
 async function fetchTeacherSchedules(teacherId: string): Promise<ScheduleItem[]> {
   try {
-    const res = await fetch(`${BASE_API_URL}/attendance/schedules/teachers/${teacherId}?size=100`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/${API_URL}/attendance/schedules/teachers/${teacherId}?size=100`, { cache: "no-store" });
     if (!res.ok) return [];
     return (await res.json())?.payload?.content ?? [];
   } catch { return []; }
@@ -53,7 +53,7 @@ async function fetchTeacherSchedules(teacherId: string): Promise<ScheduleItem[]>
 
 async function fetchTodaySessions(teacherId: string): Promise<SessionItem[]> {
   try {
-    const res = await fetch(`${BASE_API_URL}/attendance/sessions/teachers/${teacherId}/upcoming?size=20`, { cache: "no-store" });
+    const res = await fetch(`${BASE_API_URL}/${API_URL}/sessions/teachers/${teacherId}/upcoming?size=20`, { cache: "no-store" });
     if (!res.ok) return [];
     const today = new Date().toISOString().slice(0, 10);
     return ((await res.json())?.payload?.content ?? []).filter((s: SessionItem) => s.sessionDate === today);
