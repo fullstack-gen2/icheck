@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { BookOpenIcon } from "lucide-react";
 import { ClassCard } from "@/components/ui/class-card";
-import { getServerUser, BASE_API_URL } from "@/auth";
+import { getServerUser } from "@/auth";
+import { backendFetch } from "@/lib/api-fetch";
 
 interface Classroom {
   id: number;
@@ -30,7 +31,7 @@ const SHIFT_LABEL: Record<string, string> = {
 
 async function fetchAllClassrooms(): Promise<Classroom[]> {
   try {
-    const res = await fetch(`/api/v1/attendance/classrooms?size=200`, { cache: "no-store" });
+    const res = await backendFetch(`/classrooms?size=200`);
     if (!res.ok) return [];
     return (await res.json())?.payload?.content ?? [];
   } catch { return []; }
@@ -39,8 +40,8 @@ async function fetchAllClassrooms(): Promise<Classroom[]> {
 async function fetchTeacherClassrooms(teacherId: string): Promise<Classroom[]> {
   try {
     const [schedRes, clsRes] = await Promise.all([
-      fetch(`/api/v1/attendance/schedules/teachers/${teacherId}?size=200`, { cache: "no-store" }),
-      fetch(`/api/v1/attendance/classrooms?size=200`, { cache: "no-store" }),
+      backendFetch(`/schedules/teachers/${teacherId}?size=200`),
+      backendFetch(`/classrooms?size=200`),
     ]);
     const schedules:  Schedule[]  = (await schedRes.json())?.payload?.content ?? [];
     const classrooms: Classroom[] = (await clsRes.json())?.payload?.content  ?? [];
@@ -106,7 +107,7 @@ export default async function ClassroomsPage() {
                 {grouped[group].map((c) => (
                   <Link
                     key={c.id}
-                    href={`/api/v1/attendance/classrooms/${c.id}`}
+                    href={`/dashboard/classrooms/${c.id}`}
                     className="block hover:scale-[1.01] transition-transform"
                   >
                     <ClassCard

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeftIcon, UsersIcon, CalendarIcon, BookOpenIcon } from "lucide-react";
 
-import { BASE_API_URL } from "@/auth";
+import { backendFetch } from "@/lib/api-fetch";
 
 interface Classroom {
   id: number;
@@ -37,9 +37,7 @@ const SHIFT_LABEL: Record<string, string> = {
 
 async function fetchClassroom(id: string): Promise<Classroom | null> {
   try {
-    // Server component — must use absolute URL. Relative paths only work
-    // in the browser; Node's fetch doesn't know what "/attendance" is.
-    const res = await fetch(`/api/v1/attendance/classrooms/${id}`, { cache: "no-store" });
+    const res = await backendFetch(`/classrooms/${id}`);
     if (!res.ok) return null;
     const json = await res.json();
     return json?.payload ?? null;
@@ -48,7 +46,7 @@ async function fetchClassroom(id: string): Promise<Classroom | null> {
 
 async function fetchStudents(id: string): Promise<Student[]> {
   try {
-    const res = await fetch(`/api/v1/attendance/classrooms/${id}/students?size=200`, { cache: "no-store" });
+    const res = await backendFetch(`/classrooms/${id}/students?size=200`);
     if (!res.ok) return [];
     const json = await res.json();
     return json?.payload?.content ?? [];

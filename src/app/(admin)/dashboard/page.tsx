@@ -1,5 +1,5 @@
 import { getServerUser } from "@/auth";
-import { BASE_API_URL } from "@/auth";
+import { backendFetch } from "@/lib/api-fetch";
 import Link from "next/link";
 import { ClassCard } from "@/components/ui/class-card";
 import { UsersIcon, GraduationCapIcon, BookOpenIcon, ClipboardCheckIcon } from "lucide-react";
@@ -38,7 +38,7 @@ const shiftLabel: Record<string, string> = {
 
 async function fetchSummary(): Promise<Summary | null> {
   try {
-    const res = await fetch(`/api/v1/attendance/dashboard/summary`, { cache: "no-store" });
+    const res = await backendFetch(`/dashboard/summary`);
     if (!res.ok) return null;
     return (await res.json())?.payload ?? null;
   } catch { return null; }
@@ -46,7 +46,7 @@ async function fetchSummary(): Promise<Summary | null> {
 
 async function fetchAllClassrooms(): Promise<Classroom[]> {
   try {
-    const res = await fetch(`/api/v1/attendance/classrooms?size=100`, { cache: "no-store" });
+    const res = await backendFetch(`/classrooms?size=100`);
     if (!res.ok) return [];
     return (await res.json())?.payload?.content ?? [];
   } catch { return []; }
@@ -55,8 +55,8 @@ async function fetchAllClassrooms(): Promise<Classroom[]> {
 async function fetchTeacherClassrooms(teacherId: string): Promise<Classroom[]> {
   try {
     const [schedRes, clsRes] = await Promise.all([
-      fetch(`/api/v1/attendance/schedules/teachers/${teacherId}?size=100`, { cache: "no-store" }),
-      fetch(`/api/v1/attendance/classrooms?size=100`, { cache: "no-store" }),
+      backendFetch(`/schedules/teachers/${teacherId}?size=100`),
+      backendFetch(`/classrooms?size=100`),
     ]);
     const schedules: Schedule[] = (await schedRes.json())?.payload?.content ?? [];
     const classrooms: Classroom[] = (await clsRes.json())?.payload?.content ?? [];

@@ -55,8 +55,8 @@ export default function AttendancePage() {
     async function load() {
       setLoading(true);
       const [sesRes, clsRes] = await Promise.all([
-        fetch("/attendance/sessions?size=100"),
-        fetch("/attendance/classrooms?size=200"),
+        fetch("/api/v1/attendance/sessions?size=100"),
+        fetch("/api/v1/attendance/classrooms?size=200"),
       ]);
       const sesJson = await sesRes.json();
       const clsJson = await clsRes.json();
