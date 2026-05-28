@@ -9,7 +9,10 @@ export const BASE_API_URL = process.env.BASE_API_URL;
 
 
 //=========================================
-export const API_URL = "/api/v1/attendance";
+// Re-exported from the client-safe module so server-only modules can also
+// reach for it. Client components MUST import API_URL from "@/lib/api-config"
+// instead, otherwise next/headers (used below) leaks into the browser bundle.
+export { API_URL } from "@/lib/api-config";
 
 
 export const GATEWAY_URL =

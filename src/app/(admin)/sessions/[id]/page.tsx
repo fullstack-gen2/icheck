@@ -11,7 +11,7 @@ import {
   UsersIcon,
   ClockIcon,
 } from "lucide-react";
-import { API_URL, BASE_API_URL } from "@/auth";
+import { API_URL } from "@/lib/api-config";
 
 const QR_TTL_SECONDS = 30;
 
@@ -44,7 +44,7 @@ export default function SessionQrPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${BASE_API_URL}/${API_URL}/attendance/qr-codes/sessions/${id}/dynamic`, { method: "POST" });
+      const res = await fetch(`${API_URL}/qr-codes/sessions/${id}/dynamic`, { method: "POST" });
       const json = await res.json();
       if (!res.ok) {
         setError(json?.payload?.message ?? json?.message ?? "Failed to generate QR");
@@ -61,7 +61,7 @@ export default function SessionQrPage() {
 
   // Load session info once
   useEffect(() => {
-    fetch(`${BASE_API_URL}/${API_URL}/attendance/sessions/${id}`)
+    fetch(`${API_URL}/sessions/${id}`)
       .then((r) => r.json())
       .then((json) => setSessionInfo(json.payload))
       .catch(() => {});
@@ -70,7 +70,7 @@ export default function SessionQrPage() {
   // Open session then generate first QR
   useEffect(() => {
     const init = async () => {
-      await fetch(`${BASE_API_URL}/${API_URL}/attendance/sessions/${id}/open`, { method: "POST" });
+      await fetch(`${API_URL}/sessions/${id}/open`, { method: "POST" });
       await generateQr();
     };
     init();
@@ -141,9 +141,12 @@ export default function SessionQrPage() {
                   }`}
                 >
                   <QRCode
-                    // App is mounted under /attendance — students must hit
-                    // /attendance/check-in, not /check-in (which 404s).
-                    value={`${BASE_API_URL}/${API_URL}/attendance/check-in?token=${qr.codeValue}`}
+                    // QR is scanned by a student's phone camera, so the value
+                    // MUST be an absolute URL — relative paths can't be opened
+                    // from a camera scan. The Next.js app sits under the
+                    // /attendance basePath, so the check-in page is at
+                    // `${origin}/attendance/check-in?token=...`.
+                    value={`${window.location.origin}/attendance/check-in?token=${qr.codeValue}`}
                     size={260}
                     level="H"
                     style={{ height: "auto", maxWidth: "100%", width: "260px" }}
