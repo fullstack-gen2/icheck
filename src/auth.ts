@@ -8,6 +8,10 @@ export const BASE_API_URL = process.env.BASE_API_URL;
   //"https://attendance.icheck.today/api/v1";
 
 
+//=========================================
+export const API_URL = "/api/v1/attendance";
+
+
 export const GATEWAY_URL =
   process.env.GATEWAY_URL ??
   process.env.NEXT_PUBLIC_GATEWAY_URL ??

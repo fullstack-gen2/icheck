@@ -26,6 +26,7 @@ import {
   PlusIcon,
   LoaderCircleIcon,
 } from "lucide-react";
+import { API_URL, BASE_API_URL } from "@/auth";
 
 interface Setting {
   id: number;
@@ -106,7 +107,7 @@ export default function SettingsPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/v1/attendance/settings`); // iam/users
+      const res = await fetch(`${BASE_API_URL}/${API_URL}/settings`); // iam/users
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         
@@ -151,13 +152,13 @@ export default function SettingsPage() {
     try {
       let res: Response;
       if (sheetMode === "add") {
-        res = await fetch(`/api/v1/attendance/settings`, {
+        res = await fetch(`${BASE_API_URL}/${API_URL}/settings`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ key: form.key.trim(), value: form.value.trim(), type: form.type, description: form.description }),
         });
       } else {
-        res = await fetch(`/api/v1/attendance/settings/${encodeURIComponent(form.key)}`, {
+        res = await fetch(`${BASE_API_URL}/${API_URL}/settings/${encodeURIComponent(form.key)}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ value: form.value.trim() }),
@@ -176,7 +177,7 @@ export default function SettingsPage() {
     if (!confirm(`Delete setting "${key}"? This cannot be undone.`)) return;
     setDeletingKey(key);
     try {
-      const res = await fetch(`/api/v1/attendance/settings/${encodeURIComponent(key)}`, { method: "DELETE" });
+      const res = await fetch(`${BASE_API_URL}/${API_URL}/settings/${encodeURIComponent(key)}`, { method: "DELETE" });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         setError(json?.payload?.message ?? json?.message ?? "Delete failed.");
