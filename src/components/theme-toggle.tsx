@@ -1,9 +1,9 @@
 "use client";
 
-import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import { SunMoon, PaletteIcon, ChevronDownIcon, CheckIcon } from "lucide-react";
+import { PaletteIcon, ChevronDownIcon, CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,25 +34,19 @@ function applyNamedTheme(value: string) {
   }
 }
 
-/** Small circle button — toggles dark ↔ light mode */
+/** MagicUI animated dark/light toggle — circle clip-path reveal. */
 export function DarkModeToggle() {
-  const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   if (!mounted) return <div className="size-8" />;
 
-  const isDark = resolvedTheme === "dark";
-
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="size-8 text-muted-foreground hover:text-foreground"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
-      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-    >
-      <SunMoon className="size-4" />
-    </Button>
+    <AnimatedThemeToggler
+      variant="circle"
+      duration={450}
+      className="inline-flex items-center justify-center size-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors [&>svg]:size-4"
+      title="Toggle theme"
+    />
   );
 }
 

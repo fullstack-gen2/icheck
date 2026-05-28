@@ -57,7 +57,7 @@ export function NavUser({
   const liveUser = useUser()
   const user = liveUser ?? serverUser
 
-  const avatarBg = "bg-[#273C97]"
+  const avatarBg = "bg-primary"
 
   return (
     <SidebarMenu>

@@ -73,7 +73,7 @@ function ValueField({
       <select
         value={value === "true" ? "true" : "false"}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full border border-input rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#273C97]/30 bg-white"
+        className="w-full border border-input rounded-lg px-3 py-2 text-sm text-foreground/80 focus:outline-none focus:ring-2 focus:ring-primary/30 bg-card"
       >
         <option value="true">true</option>
         <option value="false">false</option>
@@ -106,7 +106,7 @@ export default function SettingsPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/attendance/settings`);
+      const res = await fetch(`/api/v1/attendance/settings`); // iam/users
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         
@@ -151,13 +151,13 @@ export default function SettingsPage() {
     try {
       let res: Response;
       if (sheetMode === "add") {
-        res = await fetch(`/attendance/settings`, {
+        res = await fetch(`/api/v1/attendance/settings`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ key: form.key.trim(), value: form.value.trim(), type: form.type, description: form.description }),
         });
       } else {
-        res = await fetch(`/attendance/settings/${encodeURIComponent(form.key)}`, {
+        res = await fetch(`/api/v1/attendance/settings/${encodeURIComponent(form.key)}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ value: form.value.trim() }),
@@ -176,7 +176,7 @@ export default function SettingsPage() {
     if (!confirm(`Delete setting "${key}"? This cannot be undone.`)) return;
     setDeletingKey(key);
     try {
-      const res = await fetch(`/attendance/settings/${encodeURIComponent(key)}`, { method: "DELETE" });
+      const res = await fetch(`/api/v1/attendance/settings/${encodeURIComponent(key)}`, { method: "DELETE" });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         setError(json?.payload?.message ?? json?.message ?? "Delete failed.");
@@ -192,10 +192,10 @@ export default function SettingsPage() {
     <div className="px-5 py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-black">System Settings</h1>
-          <p className="text-sm text-gray-500 mt-1">Global configuration keys used across all sessions.</p>
+          <h1 className="text-3xl font-bold text-foreground">System Settings</h1>
+          <p className="text-sm text-muted-foreground mt-1">Global configuration keys used across all sessions.</p>
         </div>
-        <Button className="bg-[#273C97] hover:bg-[#1e2e7a] gap-2" onClick={openAdd}>
+        <Button className="bg-primary hover:bg-primary/90 gap-2" onClick={openAdd}>
           <PlusIcon className="size-4" />
           Add Setting
         </Button>
@@ -209,51 +209,51 @@ export default function SettingsPage() {
 
       {loading ? (
         <div className="flex justify-center py-24">
-          <LoaderCircleIcon className="size-8 animate-spin text-[#273C97]" />
+          <LoaderCircleIcon className="size-8 animate-spin text-primary" />
         </div>
       ) : settings.length === 0 ? (
-        <div className="text-center py-20 text-gray-400 bg-white rounded-2xl border border-gray-200">
+        <div className="text-center py-20 text-muted-foreground/70 bg-card rounded-2xl border border-border">
           <Settings2Icon className="size-10 mx-auto mb-3 opacity-40" />
           <p className="font-medium">No settings configured.</p>
           <p className="text-sm mt-1">Click `Add Setting` to create the first one.</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50 hover:bg-gray-50">
-                <TableHead className="px-4 py-3 text-gray-600 font-semibold">Setting</TableHead>
-                <TableHead className="px-4 py-3 text-gray-600 font-semibold">Value</TableHead>
-                <TableHead className="px-4 py-3 text-gray-600 font-semibold hidden md:table-cell">Description</TableHead>
-                <TableHead className="px-4 py-3 text-gray-600 font-semibold hidden lg:table-cell">Updated</TableHead>
-                <TableHead className="px-4 py-3 text-right text-gray-600 font-semibold">Actions</TableHead>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="px-4 py-3 text-muted-foreground font-semibold">Setting</TableHead>
+                <TableHead className="px-4 py-3 text-muted-foreground font-semibold">Value</TableHead>
+                <TableHead className="px-4 py-3 text-muted-foreground font-semibold hidden md:table-cell">Description</TableHead>
+                <TableHead className="px-4 py-3 text-muted-foreground font-semibold hidden lg:table-cell">Updated</TableHead>
+                <TableHead className="px-4 py-3 text-right text-muted-foreground font-semibold">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {settings.map((s) => (
-                <TableRow key={s.id} className="hover:bg-gray-50 transition-colors">
+                <TableRow key={s.id} className="hover:bg-muted/50 transition-colors">
                   <TableCell className="px-4 py-3">
                     {/* Friendly label first, raw key as a small caption underneath
                         so admins who know the key by name still recognize it. */}
-                    <div className="font-medium text-gray-900">{humanizeKey(s.settingKey)}</div>
-                    <div className="font-mono text-[11px] text-gray-400 mt-0.5">{s.settingKey}</div>
+                    <div className="font-medium text-foreground">{humanizeKey(s.settingKey)}</div>
+                    <div className="font-mono text-[11px] text-muted-foreground/70 mt-0.5">{s.settingKey}</div>
                   </TableCell>
                   <TableCell className="px-4 py-3">
                     {s.type === "BOOLEAN" ? (
                       <Badge className={s.settingValue === "true"
                         ? "bg-green-100 text-green-700 hover:bg-green-100"
-                        : "bg-gray-100 text-gray-500 hover:bg-gray-100"
+                        : "bg-muted text-muted-foreground hover:bg-muted"
                       }>
                         {s.settingValue === "true" ? "Enabled" : "Disabled"}
                       </Badge>
                     ) : (
-                      <span className="font-semibold text-gray-900">{s.settingValue}</span>
+                      <span className="font-semibold text-foreground">{s.settingValue}</span>
                     )}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-gray-500 text-sm hidden md:table-cell">
+                  <TableCell className="px-4 py-3 text-muted-foreground text-sm hidden md:table-cell">
                     <span className="block max-w-xs">{s.description ?? "—"}</span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-gray-400 text-xs hidden lg:table-cell whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-muted-foreground/70 text-xs hidden lg:table-cell whitespace-nowrap">
                     {s.updatedAt
                       ? new Date(s.updatedAt).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" })
                       : "—"}
@@ -263,7 +263,7 @@ export default function SettingsPage() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="size-8 text-[#273C97] hover:bg-[#273C97]/10"
+                        className="size-8 text-primary hover:bg-primary/10"
                         onClick={() => openEdit(s)}
                       >
                         <PencilIcon className="size-4" />
@@ -299,7 +299,7 @@ export default function SettingsPage() {
             {/* Show the underlying database key on edit so the admin still
                 knows which row they're touching. */}
             {sheetMode === "edit" && (
-              <p className="font-mono text-xs text-gray-400">{form.key}</p>
+              <p className="font-mono text-xs text-muted-foreground/70">{form.key}</p>
             )}
           </SheetHeader>
 
@@ -315,7 +315,7 @@ export default function SettingsPage() {
                 value={form.key}
                 onChange={(e) => setForm((f) => ({ ...f, key: e.target.value }))}
                 readOnly={sheetMode === "edit"}
-                className={`font-mono ${sheetMode === "edit" ? "bg-gray-50 text-gray-500 cursor-not-allowed" : ""}`}
+                className={`font-mono ${sheetMode === "edit" ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : ""}`}
               />
             </div>
 
@@ -330,7 +330,7 @@ export default function SettingsPage() {
                     const t = e.target.value;
                     setForm((f) => ({ ...f, type: t, value: t === "BOOLEAN" ? "true" : "" }));
                   }}
-                  className="w-full border border-input rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#273C97]/30 bg-white"
+                  className="w-full border border-input rounded-lg px-3 py-2 text-sm text-foreground/80 focus:outline-none focus:ring-2 focus:ring-primary/30 bg-card"
                 >
                   <option value="STRING">STRING</option>
                   <option value="INT">INT</option>
@@ -373,7 +373,7 @@ export default function SettingsPage() {
                 Cancel
               </Button>
               <Button
-                className="flex-1 bg-[#273C97] hover:bg-[#1e2e7a]"
+                className="flex-1 bg-primary hover:bg-primary/90"
                 onClick={handleSubmit}
                 disabled={submitting}
               >

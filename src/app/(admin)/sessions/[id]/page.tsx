@@ -96,7 +96,7 @@ export default function SessionQrPage() {
   const urgent = countdown <= 8;
 
   return (
-    <div className="min-h-screen bg-[#273C97] flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-primary flex flex-col items-center justify-center p-6">
       {/* Header */}
       <div className="w-full max-w-lg mb-6 flex items-center justify-between text-white">
         <div>
@@ -120,7 +120,7 @@ export default function SessionQrPage() {
       </div>
 
       {/* QR Card */}
-      <div className="bg-white rounded-3xl p-8 w-full max-w-lg flex flex-col items-center gap-6 shadow-2xl">
+      <div className="bg-card rounded-3xl p-8 w-full max-w-lg flex flex-col items-center gap-6 shadow-2xl">
         {error ? (
           <div className="text-center py-8">
             <p className="text-red-500 font-medium mb-4">{error}</p>
@@ -135,7 +135,7 @@ export default function SessionQrPage() {
             <div className="relative">
               {qr ? (
                 <div
-                  className={`transition-opacity duration-300 bg-white p-3 rounded-xl ${
+                  className={`transition-opacity duration-300 bg-card p-3 rounded-xl ${
                     urgent ? "opacity-60" : "opacity-100"
                   }`}
                 >
@@ -150,7 +150,7 @@ export default function SessionQrPage() {
                   />
                 </div>
               ) : (
-                <div className="w-65 h-65 bg-gray-100 rounded-xl animate-pulse" />
+                <div className="w-65 h-65 bg-muted rounded-xl animate-pulse" />
               )}
             </div>
 
@@ -193,7 +193,7 @@ export default function SessionQrPage() {
                   {countdown}s
                 </text>
               </svg>
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-muted-foreground/70">
                 {urgent ? "Refreshing soon…" : "QR refreshes automatically"}
               </p>
             </div>

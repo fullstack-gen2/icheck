@@ -86,18 +86,18 @@ export default async function DashboardPage() {
 
   return (
     <div className="px-5 py-8">
-      <h1 className="text-3xl font-bold text-black mb-8">Dashboard</h1>
+      <h1 className="text-3xl font-bold text-foreground mb-8">Dashboard</h1>
 
       {!isTeacher && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {stats.map((s) => (
-            <div key={s.label} className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4">
+            <div key={s.label} className="bg-card rounded-2xl border border-border p-5 flex items-center gap-4">
               <div className={`rounded-xl p-3 ${s.color}`}>
                 <s.icon className="size-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">{s.value.toLocaleString()}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
+                <p className="text-2xl font-bold text-foreground">{s.value.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
               </div>
             </div>
           ))}
@@ -105,14 +105,14 @@ export default async function DashboardPage() {
       )}
 
       <div className="flex items-center justify-between mb-5">
-        <h2 className="text-xl font-semibold text-gray-800">
+        <h2 className="text-xl font-semibold text-foreground">
           {isTeacher ? "My Classes" : "Class Info"}
         </h2>
-        <span className="text-sm text-gray-400">{classrooms.length} classes</span>
+        <span className="text-sm text-muted-foreground/70">{classrooms.length} classes</span>
       </div>
 
       {classrooms.length === 0 ? (
-        <div className="text-center py-16 text-gray-400 bg-white rounded-2xl border border-gray-200">
+        <div className="text-center py-16 text-muted-foreground/70 bg-card rounded-2xl border border-border">
           <BookOpenIcon className="size-10 mx-auto mb-3 opacity-40" />
           <p>{isTeacher ? "You have no classes assigned." : "No classes found."}</p>
         </div>

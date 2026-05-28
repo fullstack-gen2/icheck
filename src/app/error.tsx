@@ -17,8 +17,8 @@ export default function ErrorBoundary({
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
-      <div className="bg-white rounded-3xl shadow-lg p-10 w-full max-w-md text-center">
+    <div className="min-h-screen bg-muted/50 flex flex-col items-center justify-center p-6">
+      <div className="bg-card rounded-3xl shadow-lg p-10 w-full max-w-md text-center">
         <div className="flex items-center justify-center gap-2 mb-6">
           <Logo size={36} />
           <span className="text-xl font-bold tracking-tight">i-Check</span>
@@ -30,16 +30,16 @@ export default function ErrorBoundary({
           </div>
         </div>
 
-        <h1 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h1>
-        <p className="text-sm text-gray-500 mb-6">
+        <h1 className="text-xl font-bold text-foreground mb-2">Something went wrong</h1>
+        <p className="text-sm text-muted-foreground mb-6">
           We hit an unexpected error rendering this page. You can try again, or
           go back to the dashboard.
         </p>
 
         {process.env.NODE_ENV !== "production" && (
-          <pre className="text-left text-xs bg-gray-100 text-gray-700 rounded-lg p-3 mb-6 overflow-x-auto whitespace-pre-wrap wrap-break-word">
+          <pre className="text-left text-xs bg-muted text-foreground/80 rounded-lg p-3 mb-6 overflow-x-auto whitespace-pre-wrap wrap-break-word">
             {error.message}
-            {error.digest && <span className="block mt-1 text-gray-400">digest: {error.digest}</span>}
+            {error.digest && <span className="block mt-1 text-muted-foreground/70">digest: {error.digest}</span>}
           </pre>
         )}
 
@@ -50,7 +50,7 @@ export default function ErrorBoundary({
           </Button>
           <Button
             variant="ghost"
-            className="w-full text-gray-500"
+            className="w-full text-muted-foreground"
             onClick={() => { window.location.href = "/attendance/dashboard"; }}
           >
             Go to Dashboard

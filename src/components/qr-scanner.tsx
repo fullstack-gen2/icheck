@@ -79,14 +79,14 @@ export function QrScanner({ onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden">
+      <div className="bg-card rounded-3xl w-full max-w-sm overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div className="flex items-center gap-2">
-            <CameraIcon className="size-5 text-[#273C97]" />
+            <CameraIcon className="size-5 text-primary" />
             <span className="font-semibold">Scan QR Code</span>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-muted-foreground/70 hover:text-muted-foreground">
             <XIcon className="size-5" />
           </button>
         </div>
@@ -95,29 +95,29 @@ export function QrScanner({ onClose }: Props) {
         <div className="p-5">
           {scanState === "scanning" && (
             <>
-              <p className="text-sm text-gray-500 text-center mb-4">
+              <p className="text-sm text-muted-foreground text-center mb-4">
                 Point your camera at the QR code on screen
               </p>
               <div
                 id="qr-reader"
-                className="rounded-2xl overflow-hidden border-2 border-dashed border-[#273C97]/30"
+                className="rounded-2xl overflow-hidden border-2 border-dashed border-primary/30"
               />
             </>
           )}
 
           {scanState === "submitting" && (
             <div className="py-12 flex flex-col items-center gap-3">
-              <div className="size-12 border-4 border-[#273C97] border-t-transparent rounded-full animate-spin" />
-              <p className="text-gray-500 text-sm">Recording attendance…</p>
+              <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              <p className="text-muted-foreground text-sm">Recording attendance…</p>
             </div>
           )}
 
           {scanState === "success" && (
             <div className="py-10 flex flex-col items-center gap-3 text-center">
               <CheckCircleIcon className="size-14 text-green-500" />
-              <p className="font-semibold text-gray-900">Check-in Successful!</p>
-              <p className="text-sm text-gray-500">{message}</p>
-              <Button className="mt-2 w-full bg-[#273C97]" onClick={onClose}>
+              <p className="font-semibold text-foreground">Check-in Successful!</p>
+              <p className="text-sm text-muted-foreground">{message}</p>
+              <Button className="mt-2 w-full bg-primary" onClick={onClose}>
                 Done
               </Button>
             </div>
@@ -126,8 +126,8 @@ export function QrScanner({ onClose }: Props) {
           {scanState === "error" && (
             <div className="py-10 flex flex-col items-center gap-3 text-center">
               <AlertCircleIcon className="size-14 text-red-400" />
-              <p className="font-semibold text-gray-900">Check-in Failed</p>
-              <p className="text-sm text-gray-500">{message}</p>
+              <p className="font-semibold text-foreground">Check-in Failed</p>
+              <p className="text-sm text-muted-foreground">{message}</p>
               <Button
                 variant="outline"
                 className="mt-2 w-full"

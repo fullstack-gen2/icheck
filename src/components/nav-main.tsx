@@ -31,8 +31,10 @@ export function NavMain({
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
                   asChild
+                  size="lg"
                   tooltip={item.title}
                   isActive={isActive}
+                  className="text-base"
                 >
                   {/* Use next/link so basePath ("/attendance") is auto-prepended.
                       A plain <a href="/students"> would 404. */}

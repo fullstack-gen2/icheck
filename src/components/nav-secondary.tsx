@@ -27,7 +27,7 @@ export function NavSecondary({
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton asChild>
+              <SidebarMenuButton asChild size="lg" className="text-base">
                 {/* next/link: handles the /attendance basePath automatically. */}
                 <Link href={item.url}>
                   {item.icon}

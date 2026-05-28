@@ -1,11 +1,15 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Brand mark. SVG hosted on Cloudinary — change the URL here and every
- * surface (login, sidebar, student layout, check-in) updates at once.
+ * Brand assets — Cloudinary-hosted, swap URLs here and every surface updates.
+ *  - LOGO_URL          : square mark only (favicon, avatar, splash).
+ *  - LOGO_WORDMARK_URL : logo + text lock-up for the sidebar header.
  */
 export const LOGO_URL =
   "https://res.cloudinary.com/dsmqsivcj/image/upload/v1779342444/erdgqkwvh2mfuprw2yfk.svg";
+
+export const LOGO_WORDMARK_URL =
+  "https://res.cloudinary.com/dsmqsivcj/image/upload/v1779733974/lwg6puq41ne1bpp9jywj.png";
 
 interface LogoProps {
   /** Pixel size of the square logo. */
@@ -14,11 +18,7 @@ interface LogoProps {
   className?: string;
 }
 
-/**
- * Renders the i-Check logo. Uses a plain <img> on purpose:
- *  - SVG bypasses next/image optimization regardless;
- *  - the file is already on a CDN, so no extra perf to gain.
- */
+/** Square brand mark — used for favicon, avatar, splash. */
 export function Logo({ size = 32, className }: LogoProps) {
   return (
     /* eslint-disable-next-line @next/next/no-img-element */
@@ -29,6 +29,26 @@ export function Logo({ size = 32, className }: LogoProps) {
       height={size}
       className={cn("object-contain", className)}
       style={{ width: size, height: size }}
+    />
+  );
+}
+
+interface LogoWordmarkProps {
+  /** Pixel height; width auto-scales. */
+  height?: number;
+  className?: string;
+}
+
+/** Full lock-up: logo + "i-Check" text. Used in the sidebar header. */
+export function LogoWordmark({ height = 28, className }: LogoWordmarkProps) {
+  return (
+    /* eslint-disable-next-line @next/next/no-img-element */
+    <img
+      src={LOGO_WORDMARK_URL}
+      alt="i-Check"
+      height={height}
+      className={cn("object-contain w-auto", className)}
+      style={{ height }}
     />
   );
 }

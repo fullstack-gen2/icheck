@@ -123,8 +123,8 @@ export default function StudentsPage() {
   return (
     <div className="px-5 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-black">Students</h1>
-        <span className="text-sm text-gray-500">{filtered.length} of {students.length}</span>
+        <h1 className="text-3xl font-bold text-foreground">Students</h1>
+        <span className="text-sm text-muted-foreground">{filtered.length} of {students.length}</span>
       </div>
 
       {/* Program Type Tabs */}
@@ -135,8 +135,8 @@ export default function StudentsPage() {
             onClick={() => { setProgramType(pt); resetFilters(); }}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all border ${
               programType === pt
-                ? "bg-[#273C97] text-white border-[#273C97]"
-                : "bg-white text-gray-600 border-gray-200 hover:border-[#273C97]/50"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-card text-muted-foreground border-border hover:border-primary/50"
             }`}
           >
             {pt === "ALL" ? "All" : pt === "BACHELOR" ? "Bachelor" : "Scholarship"}
@@ -189,7 +189,7 @@ export default function StudentsPage() {
           />
 
           {(filterYear || filterSemester || filterShift || filterGeneration || filterCourse) && (
-            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600" onClick={resetFilters}>
+            <Button variant="ghost" size="sm" className="text-muted-foreground/70 hover:text-muted-foreground" onClick={resetFilters}>
               Clear
             </Button>
           )}
@@ -197,23 +197,23 @@ export default function StudentsPage() {
       )}
 
       {loading ? (
-        <div className="text-center py-16 text-gray-400">Loading students…</div>
+        <div className="text-center py-16 text-muted-foreground/70">Loading students…</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-gray-400 bg-white rounded-2xl border border-gray-200">
+        <div className="text-center py-16 text-muted-foreground/70 bg-card rounded-2xl border border-border">
           <UsersIcon className="size-10 mx-auto mb-3 opacity-40" />
           <p className="font-medium">No students match your filters.</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
+        <div className="rounded-xl border border-border overflow-hidden bg-card">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Student</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden md:table-cell">Class</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden sm:table-cell">Student No.</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Status</th>
+              <tr className="bg-muted/50 border-b border-border">
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Student</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">Class</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">Student No.</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Status</th>
                 {isAdmin && (
-                  <th className="text-right px-4 py-3 font-semibold text-gray-600">Device</th>
+                  <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Device</th>
                 )}
               </tr>
             </thead>
@@ -221,18 +221,18 @@ export default function StudentsPage() {
               {filtered.map((student, index) => (
                 <tr
                   key={student.id}
-                  className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                  className={`border-b border-border/50 hover:bg-muted/50 transition-colors ${
                     index === filtered.length - 1 ? "border-b-0" : ""
                   }`}
                 >
                   <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">{student.name}</div>
-                    <div className="text-xs text-gray-400">{student.email}</div>
+                    <div className="font-medium text-foreground">{student.name}</div>
+                    <div className="text-xs text-muted-foreground/70">{student.email}</div>
                   </td>
-                  <td className="px-4 py-3 text-gray-600 hidden md:table-cell">
+                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
                     {student.className ?? "—"}
                   </td>
-                  <td className="px-4 py-3 text-gray-500 hidden sm:table-cell font-mono text-xs">
+                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell font-mono text-xs">
                     {student.studentNo}
                   </td>
                   <td className="px-4 py-3">
@@ -240,7 +240,7 @@ export default function StudentsPage() {
                       className={
                         student.status === "ACTIVE"
                           ? "bg-green-100 text-green-700 hover:bg-green-100"
-                          : "bg-gray-100 text-gray-500 hover:bg-gray-100"
+                          : "bg-muted text-muted-foreground hover:bg-muted"
                       }
                     >
                       {student.status}
@@ -278,10 +278,10 @@ function FilterSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`appearance-none pl-3 pr-7 py-1.5 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-[#273C97]/30 ${
+        className={`appearance-none pl-3 pr-7 py-1.5 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${
           value
-            ? "border-[#273C97] bg-[#273C97]/5 text-[#273C97] font-medium"
-            : "border-gray-200 bg-white text-gray-600"
+            ? "border-primary bg-primary/5 text-primary font-medium"
+            : "border-border bg-card text-muted-foreground"
         }`}
       >
         <option value="">{label}</option>
@@ -289,7 +289,7 @@ function FilterSelect({
           <option key={o.value} value={o.value}>{o.label}</option>
         ))}
       </select>
-      <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
+      <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/70" />
     </div>
   );
 }

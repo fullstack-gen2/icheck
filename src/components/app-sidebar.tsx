@@ -24,7 +24,7 @@ import {
   FileChartColumnIcon,
   BookOpenIcon,
 } from "lucide-react"
-import { Logo } from "@/components/logo"
+import { LogoWordmark } from "@/components/logo"
 
 // All possible nav items — filtered by role below.
 // STUDENT role sees only Attendance (dashboard overview) and Students.
@@ -63,16 +63,15 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              className="data-[slot=sidebar-menu-button]:p-1.5!"
+              size="lg"
+              className="h-14 data-[slot=sidebar-menu-button]:p-2!"
             >
-              <Link href="/dashboard" className="flex items-center gap-2">
-                <Logo size={32} />
-                <div className="flex flex-col leading-none">
-                  <span className="text-sm font-bold tracking-tight">i-Check</span>
-                  <span className="text-[10px] text-muted-foreground capitalize">
-                    {role === "ADMIN" ? "Admin" : role === "TEACHER" ? "Teacher" : role}
-                  </span>
-                </div>
+              <Link href="/dashboard" className="flex items-center gap-2 py-2">
+                {/* Combined logo + "i-Check" wordmark */}
+                <LogoWordmark height={40} />
+                <span className="text-xs text-muted-foreground capitalize ml-auto pr-1 font-medium">
+                  {role === "ADMIN" ? "Admin" : role === "TEACHER" ? "Teacher" : role}
+                </span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

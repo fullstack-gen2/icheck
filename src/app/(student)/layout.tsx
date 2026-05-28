@@ -13,9 +13,9 @@ export default async function StudentLayout({
   if (user && user.role !== "STUDENT") redirect("/dashboard");
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-[#273C97] text-white px-6 py-4 flex items-center gap-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-white p-1">
+    <div className="min-h-screen bg-muted/50">
+      <header className="bg-primary text-primary-foreground px-6 py-4 flex items-center gap-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-card p-1">
           <Logo size={24} />
         </div>
         <span className="text-xl font-semibold">i-Check</span>
