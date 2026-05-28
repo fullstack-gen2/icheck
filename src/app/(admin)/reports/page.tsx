@@ -204,14 +204,14 @@ export default function ReportsPage() {
     <div className="px-5 py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
-        <h1 className="text-3xl font-bold text-black">Reports</h1>
+        <h1 className="text-3xl font-bold text-foreground">Reports</h1>
         {selectedCls && (
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-muted-foreground">
             {reports.length} reports · {warnings.length} warnings
           </span>
         )}
       </div>
-      <p className="text-sm text-gray-400 mb-8">Select a classroom to view or generate attendance reports.</p>
+      <p className="text-sm text-muted-foreground/70 mb-8">Select a classroom to view or generate attendance reports.</p>
 
       {error && (
         <div className="bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl px-4 py-3 mb-5">
@@ -227,7 +227,7 @@ export default function ReportsPage() {
             {(["ALL","BACHELOR","SCHOLARSHIP"] as const).map((pt) => (
               <button key={pt} onClick={() => { setProgType(pt); resetFilters(); }}
                 className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-                  progType === pt ? "bg-[#273C97] text-white border-[#273C97]" : "bg-white text-gray-600 border-gray-200"
+                  progType === pt ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border"
                 }`}>
                 {pt === "ALL" ? "All" : pt === "BACHELOR" ? "Bachelor" : "Scholarship"}
               </button>
@@ -255,27 +255,27 @@ export default function ReportsPage() {
           )}
 
           {/* Classroom list */}
-          <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+          <div className="border border-border rounded-xl overflow-hidden bg-card">
             {loadingCls ? (
               <div className="flex justify-center py-8">
-                <LoaderCircleIcon className="size-5 animate-spin text-[#273C97]" />
+                <LoaderCircleIcon className="size-5 animate-spin text-primary" />
               </div>
             ) : filteredCls.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-6">No classes found.</p>
+              <p className="text-xs text-muted-foreground/70 text-center py-6">No classes found.</p>
             ) : (
               <div className="divide-y divide-gray-100 max-h-[480px] overflow-y-auto">
                 {filteredCls.map((c) => (
                   <button key={c.id} onClick={() => loadReports(c)}
-                    className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
-                      selectedCls?.id === c.id ? "bg-[#273C97]/5 border-l-2 border-[#273C97]" : ""
+                    className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${
+                      selectedCls?.id === c.id ? "bg-primary/5 border-l-2 border-primary" : ""
                     }`}>
-                    <p className={`text-sm font-semibold leading-tight ${selectedCls?.id === c.id ? "text-[#273C97]" : "text-gray-800"}`}>
+                    <p className={`text-sm font-semibold leading-tight ${selectedCls?.id === c.id ? "text-primary" : "text-foreground"}`}>
                       {c.className}
                     </p>
-                    <p className="text-[10px] text-gray-400 mt-0.5 font-mono">{c.classCode}</p>
+                    <p className="text-[10px] text-muted-foreground/70 mt-0.5 font-mono">{c.classCode}</p>
                     <div className="flex gap-1.5 mt-1 flex-wrap">
-                      <span className="text-[10px] text-gray-400">{c.programTypeName}</span>
-                      {c.shift && <span className="text-[10px] text-gray-300">· {SHIFT_LABEL[c.shift] ?? c.shift}</span>}
+                      <span className="text-[10px] text-muted-foreground/70">{c.programTypeName}</span>
+                      {c.shift && <span className="text-[10px] text-muted-foreground/40">· {SHIFT_LABEL[c.shift] ?? c.shift}</span>}
                     </div>
                   </button>
                 ))}
@@ -287,17 +287,17 @@ export default function ReportsPage() {
         {/* ── Right: reports panel ─────────────────────────────── */}
         <div>
           {!selectedCls ? (
-            <div className="flex flex-col items-center justify-center py-24 text-gray-300 bg-white rounded-2xl border border-dashed border-gray-200">
+            <div className="flex flex-col items-center justify-center py-24 text-muted-foreground/40 bg-card rounded-2xl border border-dashed border-border">
               <FileChartColumnIcon className="size-12 mb-3 opacity-40" />
-              <p className="font-medium text-gray-400">Select a classroom</p>
+              <p className="font-medium text-muted-foreground/70">Select a classroom</p>
               <p className="text-sm">to view attendance reports</p>
             </div>
           ) : (
             <div className="flex flex-col gap-4">
               {/* Generate bar */}
-              <div className="bg-white rounded-2xl border border-gray-200 px-5 py-4 flex flex-wrap items-end gap-3">
+              <div className="bg-card rounded-2xl border border-border px-5 py-4 flex flex-wrap items-end gap-3">
                 <div>
-                  <p className="text-xs text-gray-500 mb-1.5 font-medium">
+                  <p className="text-xs text-muted-foreground mb-1.5 font-medium">
                     {isBachelor(selectedCls.programTypeName) ? "Generate Semester Report" : "Generate Monthly Report"}
                   </p>
                   <div className="flex gap-2 flex-wrap">
@@ -314,7 +314,7 @@ export default function ReportsPage() {
                 </div>
                 <Button
                   size="sm"
-                  className="bg-[#273C97] hover:bg-[#1e2e7a] gap-1.5"
+                  className="bg-primary hover:bg-primary/90 gap-1.5"
                   onClick={handleGenerate}
                   disabled={generating}
                 >
@@ -324,11 +324,11 @@ export default function ReportsPage() {
               </div>
 
               {/* Tabs */}
-              <div className="flex gap-1 border-b border-gray-200">
+              <div className="flex gap-1 border-b border-border">
                 {(["reports","warnings"] as const).map((t) => (
                   <button key={t} onClick={() => setTab(t)}
                     className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                      tab === t ? "border-[#273C97] text-[#273C97]" : "border-transparent text-gray-500 hover:text-gray-700"
+                      tab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground/80"
                     }`}>
                     {t === "reports" ? `All Reports (${reports.length})` : (
                       <span className="flex items-center gap-1.5">
@@ -343,52 +343,52 @@ export default function ReportsPage() {
               {/* Table */}
               {loadingReps ? (
                 <div className="flex justify-center py-12">
-                  <LoaderCircleIcon className="size-6 animate-spin text-[#273C97]" />
+                  <LoaderCircleIcon className="size-6 animate-spin text-primary" />
                 </div>
               ) : visibleReports.length === 0 ? (
-                <div className="text-center py-16 text-gray-400 bg-white rounded-2xl border border-gray-200">
+                <div className="text-center py-16 text-muted-foreground/70 bg-card rounded-2xl border border-border">
                   <FileChartColumnIcon className="size-10 mx-auto mb-3 opacity-40" />
                   <p className="font-medium">No {tab === "warnings" ? "warnings" : "reports"} found.</p>
                   {tab === "reports" && <p className="text-sm mt-1">Click Generate to create reports for this class.</p>}
                 </div>
               ) : (
-                <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                <div className="rounded-xl border border-border bg-card overflow-hidden">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-gray-50 hover:bg-gray-50">
-                        <TableHead className="px-4 py-3 font-semibold text-gray-600">Student</TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-gray-600 hidden sm:table-cell">Period</TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-gray-600">Present</TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-gray-600 hidden md:table-cell">Late</TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-gray-600 hidden md:table-cell">Absent</TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-gray-600">Rate</TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-gray-600 hidden lg:table-cell">Score</TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-gray-600">Exam</TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-gray-600 hidden lg:table-cell">Status</TableHead>
-                        {isAdmin && <TableHead className="px-4 py-3 text-right font-semibold text-gray-600">Lock</TableHead>}
+                      <TableRow className="bg-muted/50 hover:bg-muted/50">
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Student</TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">Period</TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Present</TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">Late</TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">Absent</TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Rate</TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">Score</TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Exam</TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">Status</TableHead>
+                        {isAdmin && <TableHead className="px-4 py-3 text-right font-semibold text-muted-foreground">Lock</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {visibleReports.map((r, i) => (
                         <TableRow key={r.id}
-                          className={`hover:bg-gray-50 transition-colors ${i === visibleReports.length - 1 ? "" : ""}`}>
+                          className={`hover:bg-muted/50 transition-colors ${i === visibleReports.length - 1 ? "" : ""}`}>
                           <TableCell className="px-4 py-3">
-                            <p className="font-medium text-gray-900 text-sm">{r.student?.name ?? "—"}</p>
-                            <p className="text-[10px] text-gray-400 font-mono">{r.student?.studentNo ?? ""}</p>
+                            <p className="font-medium text-foreground text-sm">{r.student?.name ?? "—"}</p>
+                            <p className="text-[10px] text-muted-foreground/70 font-mono">{r.student?.studentNo ?? ""}</p>
                           </TableCell>
-                          <TableCell className="px-4 py-3 text-xs text-gray-500 hidden sm:table-cell">
+                          <TableCell className="px-4 py-3 text-xs text-muted-foreground hidden sm:table-cell">
                             {r.reportType === "MONTHLY"
                               ? `${MONTHS[(r.reportMonth ?? 1) - 1]} ${r.reportYear}`
                               : `Sem ${r.semester} / ${r.reportYear}`}
                           </TableCell>
-                          <TableCell className="px-4 py-3 text-sm font-semibold text-gray-800">
+                          <TableCell className="px-4 py-3 text-sm font-semibold text-foreground">
                             {r.presentCount}/{r.totalSessions}
                           </TableCell>
                           <TableCell className="px-4 py-3 text-sm text-yellow-600 hidden md:table-cell">{r.lateCount}</TableCell>
                           <TableCell className="px-4 py-3 text-sm text-red-500 hidden md:table-cell">{r.absentCount}</TableCell>
                           <TableCell className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              <div className="h-1.5 w-16 bg-gray-100 rounded-full overflow-hidden hidden sm:block">
+                              <div className="h-1.5 w-16 bg-muted rounded-full overflow-hidden hidden sm:block">
                                 <div
                                   className={`h-full rounded-full ${r.attendancePercentage >= 75 ? "bg-green-500" : r.attendancePercentage >= 50 ? "bg-yellow-400" : "bg-red-400"}`}
                                   style={{ width: `${Math.min(r.attendancePercentage, 100)}%` }}
@@ -399,7 +399,7 @@ export default function ReportsPage() {
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="px-4 py-3 text-sm font-semibold text-gray-700 hidden lg:table-cell">
+                          <TableCell className="px-4 py-3 text-sm font-semibold text-foreground/80 hidden lg:table-cell">
                             {r.attendanceScore.toFixed(1)}
                           </TableCell>
                           <TableCell className="px-4 py-3">
@@ -418,7 +418,7 @@ export default function ReportsPage() {
                                 </Badge>
                               )}
                               {r.locked && (
-                                <Badge className="bg-gray-100 text-gray-500 hover:bg-gray-100 text-[10px] gap-0.5">
+                                <Badge className="bg-muted text-muted-foreground hover:bg-muted text-[10px] gap-0.5">
                                   <LockIcon className="size-2.5" /> Locked
                                 </Badge>
                               )}
@@ -428,7 +428,7 @@ export default function ReportsPage() {
                             <TableCell className="px-4 py-3 text-right">
                               {!r.locked ? (
                                 <Button size="sm" variant="ghost"
-                                  className="h-7 px-2 text-xs text-gray-400 hover:text-gray-700 hover:bg-gray-100 gap-1"
+                                  className="h-7 px-2 text-xs text-muted-foreground/70 hover:text-foreground/80 hover:bg-muted gap-1"
                                   onClick={() => handleLock(r.id)}
                                   disabled={lockingId === r.id}
                                 >
@@ -439,7 +439,7 @@ export default function ReportsPage() {
                                   Lock
                                 </Button>
                               ) : (
-                                <span className="text-xs text-gray-300">Locked</span>
+                                <span className="text-xs text-muted-foreground/40">Locked</span>
                               )}
                             </TableCell>
                           )}
@@ -466,12 +466,12 @@ function FilterSel({ label, value, onChange, options }: {
     <div className="relative">
       <select value={value} onChange={(e) => onChange(e.target.value)}
         className={`appearance-none pl-2.5 pr-6 py-1 text-xs rounded-lg border focus:outline-none ${
-          value ? "border-[#273C97] bg-[#273C97]/5 text-[#273C97] font-semibold" : "border-gray-200 bg-white text-gray-600"
+          value ? "border-primary bg-primary/5 text-primary font-semibold" : "border-border bg-card text-muted-foreground"
         }`}>
         <option value="">{label}</option>
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
-      <ChevronDownIcon className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 size-3 text-gray-400" />
+      <ChevronDownIcon className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground/70" />
     </div>
   );
 }
@@ -483,10 +483,10 @@ function SmSelect({ label, value, onChange, options }: {
   return (
     <div className="relative">
       <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="appearance-none pl-3 pr-7 py-1.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#273C97]/30">
+        className="appearance-none pl-3 pr-7 py-1.5 text-sm rounded-lg border border-border bg-card text-foreground/80 focus:outline-none focus:ring-2 focus:ring-primary/30">
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
-      <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
+      <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/70" />
     </div>
   );
 }

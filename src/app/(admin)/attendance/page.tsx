@@ -35,7 +35,7 @@ const SCHOLARSHIP_COURSES = ["Fullstack", "Foundation", "Pre-Uni", "ITP", "ITE"]
 const statusColor: Record<string, string> = {
   SCHEDULED: "bg-blue-100 text-blue-700",
   ACTIVE:    "bg-green-100 text-green-700",
-  COMPLETED: "bg-gray-100 text-gray-600",
+  COMPLETED: "bg-muted text-muted-foreground",
   CANCELLED: "bg-red-100 text-red-600",
 };
 
@@ -113,8 +113,8 @@ export default function AttendancePage() {
   return (
     <div className="px-5 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-black">Attendance</h1>
-        <span className="text-sm text-gray-500">{filtered.length} of {sessions.length} sessions</span>
+        <h1 className="text-3xl font-bold text-foreground">Attendance</h1>
+        <span className="text-sm text-muted-foreground">{filtered.length} of {sessions.length} sessions</span>
       </div>
 
       {/* Program type tabs */}
@@ -125,8 +125,8 @@ export default function AttendancePage() {
             onClick={() => { setProgramType(pt); resetFilters(); }}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all border ${
               programType === pt
-                ? "bg-[#273C97] text-white border-[#273C97]"
-                : "bg-white text-gray-600 border-gray-200 hover:border-[#273C97]/50"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-card text-muted-foreground border-border hover:border-primary/50"
             }`}
           >
             {pt === "ALL" ? "All" : pt === "BACHELOR" ? "Bachelor" : "Scholarship"}
@@ -154,7 +154,7 @@ export default function AttendancePage() {
           <FilterSelect label="Shift" value={filterShift} onChange={setFilterShift}
             options={SHIFTS.map((s) => ({ label: SHIFT_LABEL[s], value: s }))} />
           {(filterYear || filterSemester || filterShift || filterGeneration || filterCourse) && (
-            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600" onClick={resetFilters}>
+            <Button variant="ghost" size="sm" className="text-muted-foreground/70 hover:text-muted-foreground" onClick={resetFilters}>
               Clear
             </Button>
           )}
@@ -162,43 +162,43 @@ export default function AttendancePage() {
       )}
 
       {loading ? (
-        <div className="text-center py-16 text-gray-400">Loading sessions…</div>
+        <div className="text-center py-16 text-muted-foreground/70">Loading sessions…</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-gray-400 bg-white rounded-2xl border border-gray-200">
+        <div className="text-center py-16 text-muted-foreground/70 bg-card rounded-2xl border border-border">
           <ClipboardCheckIcon className="size-10 mx-auto mb-3 opacity-40" />
           <p className="font-medium">No sessions match your filters.</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
+        <div className="rounded-xl border border-border overflow-hidden bg-card">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Subject</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden md:table-cell">Class</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden sm:table-cell">Date</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden lg:table-cell">Time</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Status</th>
-                <th className="text-right px-4 py-3 font-semibold text-gray-600">Details</th>
+              <tr className="bg-muted/50 border-b border-border">
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Subject</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">Class</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">Date</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">Time</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Status</th>
+                <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Details</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((s, index) => (
                 <tr key={s.id}
-                  className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${index === filtered.length - 1 ? "border-b-0" : ""}`}>
-                  <td className="px-4 py-3 font-medium text-gray-900">{s.subjectName}</td>
-                  <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{s.classroomName}</td>
-                  <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{s.sessionDate}</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs hidden lg:table-cell">
+                  className={`border-b border-border/50 hover:bg-muted/50 transition-colors ${index === filtered.length - 1 ? "border-b-0" : ""}`}>
+                  <td className="px-4 py-3 font-medium text-foreground">{s.subjectName}</td>
+                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{s.classroomName}</td>
+                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{s.sessionDate}</td>
+                  <td className="px-4 py-3 text-muted-foreground/70 text-xs hidden lg:table-cell">
                     {s.startTime?.slice(0, 5)} – {s.endTime?.slice(0, 5)}
                   </td>
                   <td className="px-4 py-3">
-                    <Badge className={`text-xs ${statusColor[s.status] ?? "bg-gray-100 text-gray-500"}`}>
+                    <Badge className={`text-xs ${statusColor[s.status] ?? "bg-muted text-muted-foreground"}`}>
                       {s.status}
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Link href={`/attendance/${s.id}`}
-                      className="inline-flex items-center gap-1 text-[#273C97] hover:underline text-xs font-medium">
+                      className="inline-flex items-center gap-1 text-primary hover:underline text-xs font-medium">
                       View <ChevronRightIcon className="size-3.5" />
                     </Link>
                   </td>
@@ -219,13 +219,13 @@ function FilterSelect({ label, value, onChange, options }: {
   return (
     <div className="relative">
       <select value={value} onChange={(e) => onChange(e.target.value)}
-        className={`appearance-none pl-3 pr-7 py-1.5 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-[#273C97]/30 ${
-          value ? "border-[#273C97] bg-[#273C97]/5 text-[#273C97] font-medium" : "border-gray-200 bg-white text-gray-600"
+        className={`appearance-none pl-3 pr-7 py-1.5 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+          value ? "border-primary bg-primary/5 text-primary font-medium" : "border-border bg-card text-muted-foreground"
         }`}>
         <option value="">{label}</option>
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
-      <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
+      <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/70" />
     </div>
   );
 }

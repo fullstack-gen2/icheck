@@ -12,10 +12,10 @@ export default function StudentHomePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-foreground">
           Welcome, {user?.name}
         </h1>
-        <p className="text-gray-500 mt-1">
+        <p className="text-muted-foreground mt-1">
           Tap <strong>Check In</strong> and scan the QR code your teacher shows on screen.
         </p>
       </div>
@@ -24,7 +24,7 @@ export default function StudentHomePage() {
         {/* Check In */}
         <button
           onClick={() => setShowScanner(true)}
-          className="bg-[#273C97] text-white rounded-2xl p-6 text-left hover:bg-[#1e2e7a] active:scale-95 transition-all shadow-md"
+          className="bg-primary text-primary-foreground rounded-2xl p-6 text-left hover:bg-primary/90 active:scale-95 transition-all shadow-md"
         >
           <QrCodeIcon className="size-8 mb-3 opacity-90" />
           <h2 className="text-lg font-semibold mb-1">Check In</h2>
@@ -34,12 +34,12 @@ export default function StudentHomePage() {
         </button>
 
         {/* My Attendance */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-          <ClipboardListIcon className="size-8 mb-3 text-[#273C97] opacity-80" />
-          <h2 className="text-lg font-semibold text-gray-800 mb-1">
+        <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
+          <ClipboardListIcon className="size-8 mb-3 text-primary opacity-80" />
+          <h2 className="text-lg font-semibold text-foreground mb-1">
             My Attendance
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             View your attendance history and status.
           </p>
         </div>

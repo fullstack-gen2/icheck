@@ -5,7 +5,7 @@ export default function StudentDetailPage({
 }) {
   return (
     <div className="px-5 py-8">
-      <h1 className="text-3xl font-bold text-black mb-4">
+      <h1 className="text-3xl font-bold text-foreground mb-4">
         Student #{params.id}
       </h1>
     </div>
