@@ -27,24 +27,19 @@ import { useUser } from "@/components/user-provider"
 function initials(name: string) {
   if (!name) return "?";
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  // Multi-word names → first letter of each word (max 2)
   if (parts.length >= 2) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
-  // Single word (e.g. "chanthorn") → first two letters
   return name.slice(0, 2).toUpperCase();
 }
 
 async function handleLogout() {
   try {
-    // Spring Cloud Gateway BFF exposes POST /logout at the gateway root
     await fetch("/logout", { method: "POST", credentials: "include" });
   } catch {
-    // ignore network errors — still redirect
   }
-  // Redirect to IAM which will ask user to re-authenticate
   window.location.href =
-    // process.env.NEXT_PUBLIC_LOGIN_URL ?? "https://iam.istad.co/login";
+    // process.env.NEXT_PUBLIC_LOGIN_URL ?? "https://iam.istad.co";
     process.env.NEXT_PUBLIC_LOGIN_URL ?? "https://iam.istad.co/login";
 }
 
@@ -54,7 +49,7 @@ export function NavUser({
   user: { name: string; email: string; role: string }
 }) {
   const { isMobile } = useSidebar()
-  // Prefer live client-side user; fall back to server-rendered prop during SSR.
+  
   const liveUser = useUser()
   const user = liveUser ?? serverUser
 
