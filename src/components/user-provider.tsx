@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-
 export interface AppUser {
   id: string;
   name: string;
@@ -12,12 +11,10 @@ export interface AppUser {
 const UserContext = createContext<AppUser | null>(null);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
+
   const [user, setUser] = useState<AppUser | null>(null);
 
   useEffect(() => {
-    // Gateway BFF exposes the OIDC identity at /api/v1/auth/me (flat shape,
-    // no `payload` wrapper). The browser is same-origin with the gateway,
-    // so a relative path is enough — cookies travel automatically.
     fetch("/api/v1/auth/me", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((p) => {
