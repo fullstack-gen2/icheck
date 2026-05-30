@@ -30,7 +30,7 @@ interface AttendanceRecord {
 
 async function fetchSession(id: string): Promise<Session | null> {
   try {
-    const res = await backendFetch(`/sessions/${id}`);
+    const res = await backendFetch(`/api/v1/attendances/sessions/${id}`);
     if (!res.ok) return null;
     const json = await res.json();
     return json?.payload ?? null;
@@ -41,7 +41,7 @@ async function fetchSession(id: string): Promise<Session | null> {
 
 async function fetchAttendances(sessionId: string): Promise<AttendanceRecord[]> {
   try {
-    const res = await backendFetch(`/attendances/sessions/${sessionId}?size=100`);
+    const res = await backendFetch(`/api/v1/attendances/sessions/${sessionId}?size=100`);
     if (!res.ok) return [];
     const json = await res.json();
     return json?.payload?.content ?? [];
@@ -80,7 +80,7 @@ export default async function AttendanceDetailPage({
       {/* Back */}
       <Link
         href="/attendance"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground/80 mb-6"
+        className="mb-6 inline-flex items-center gap-1.5 text-base text-muted-foreground hover:text-foreground/80"
       >
         <ArrowLeftIcon className="size-4" />
         Back to Attendance
@@ -93,7 +93,7 @@ export default async function AttendanceDetailPage({
             <div>
               <h1 className="text-2xl font-bold text-foreground">{session.subjectName}</h1>
               <p className="text-muted-foreground mt-1">{session.classroomName} &nbsp;·&nbsp; {session.teacherName}</p>
-              <p className="text-sm text-muted-foreground/70 mt-0.5">
+              <p className="mt-0.5 text-sm text-muted-foreground/70">
                 {session.sessionDate} &nbsp;·&nbsp; {session.startTime?.slice(0, 5)} – {session.endTime?.slice(0, 5)}
               </p>
             </div>
@@ -108,7 +108,7 @@ export default async function AttendanceDetailPage({
 
       {/* Attendance records */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-foreground">Attendance Records</h2>
+        <h2 className="text-xl font-semibold text-foreground">Attendance Records</h2>
         <span className="text-sm text-muted-foreground/70">{records.length} students</span>
       </div>
 
@@ -116,11 +116,11 @@ export default async function AttendanceDetailPage({
         <div className="text-center py-16 text-muted-foreground/70 bg-card rounded-2xl border border-border">
           <ClipboardCheckIcon className="size-10 mx-auto mb-3 opacity-40" />
           <p className="font-medium">No attendance records yet</p>
-          <p className="text-sm mt-1">Students check in via QR code during the session.</p>
+          <p className="mt-1 text-base">Students check in via QR code during the session.</p>
         </div>
       ) : (
         <div className="rounded-xl border border-border overflow-hidden bg-card">
-          <table className="w-full text-sm">
+          <table className="w-full text-base">
             <thead>
               <tr className="bg-muted/50 border-b border-border">
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Student</th>
@@ -148,10 +148,10 @@ export default async function AttendanceDetailPage({
                       {r.status}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell text-xs">
+                  <td className="hidden px-4 py-3 text-sm text-muted-foreground sm:table-cell">
                     {r.method?.replace("_", " ") ?? "—"}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground/70 text-xs hidden md:table-cell">
+                  <td className="hidden px-4 py-3 text-sm text-muted-foreground/70 md:table-cell">
                     {r.checkInTime
                       ? new Date(r.checkInTime).toLocaleTimeString([], {
                           hour: "2-digit",
@@ -168,7 +168,7 @@ export default async function AttendanceDetailPage({
                         <Badge className="bg-orange-50 text-orange-500 text-[10px]">Off-site</Badge>
                       )}
                       {!r.isSuspicious && r.isValidLocation !== false && (
-                        <span className="text-muted-foreground/40 text-xs">—</span>
+                        <span className="text-sm text-muted-foreground/40">—</span>
                       )}
                     </div>
                   </td>

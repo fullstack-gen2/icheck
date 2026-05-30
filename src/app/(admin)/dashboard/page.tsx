@@ -1,4 +1,4 @@
-import { getServerUser } from "@/auth";
+import { getServerUser } from "@/auth-server";
 import { backendFetch } from "@/lib/api-fetch";
 import Link from "next/link";
 import { ClassCard } from "@/components/ui/class-card";
@@ -85,7 +85,7 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="px-5 py-8">
+    <div className="px-7 ">
       <h1 className="text-3xl font-bold text-foreground mb-8">Dashboard</h1>
 
       {!isTeacher && (
@@ -97,7 +97,7 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{s.value.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
+                <p className="mt-0.5 text-base text-muted-foreground">{s.label}</p>
               </div>
             </div>
           ))}
@@ -108,7 +108,7 @@ export default async function DashboardPage() {
         <h2 className="text-xl font-semibold text-foreground">
           {isTeacher ? "My Classes" : "Class Info"}
         </h2>
-        <span className="text-sm text-muted-foreground/70">{classrooms.length} classes</span>
+        <span className="text-sm pr-2 text-muted-foreground/70">{classrooms.length} classes</span>
       </div>
 
       {classrooms.length === 0 ? (
@@ -117,7 +117,7 @@ export default async function DashboardPage() {
           <p>{isTeacher ? "You have no classes assigned." : "No classes found."}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           {classrooms.map((c) => (
             <Link
               key={c.id}
@@ -129,8 +129,9 @@ export default async function DashboardPage() {
                 status={c.status ? "Active" : "Inactive"}
                 classNameValue={c.className}
                 shift={shiftLabel[c.shift] ?? c.shift ?? "—"}
-                time={`${c.startDate ?? "?"} – ${c.endDate ?? "?"}`}
-                students={`Year ${c.year ?? "?"} / Sem ${c.semester ?? "?"}`}
+                time={"8:00 - 10:00 PM"}
+                lab="Data Analytics"
+                students={`24/4`}
                 code={c.classCode ?? String(c.id)}
               />
             </Link>

@@ -64,12 +64,11 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
             <SidebarMenuButton
               asChild
               size="lg"
-              className="h-14 data-[slot=sidebar-menu-button]:p-2!"
-            >
+              className="h-14 data-[slot=sidebar-menu-button]:p-2! border-b border-l">
               <Link href="/dashboard" className="flex items-center gap-2 py-2">
                 {/* Combined logo + "i-Check" wordmark */}
                 <LogoWordmark height={40} />
-                <span className="text-xs text-muted-foreground capitalize ml-auto pr-1 font-medium">
+                <span className="ml-auto pr-1 text-sm font-medium capitalize text-muted-foreground">
                   {role === "ADMIN" ? "Admin" : role === "TEACHER" ? "Teacher" : role}
                 </span>
               </Link>

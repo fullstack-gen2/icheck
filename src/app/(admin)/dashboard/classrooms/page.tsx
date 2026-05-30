@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { BookOpenIcon } from "lucide-react";
 import { ClassCard } from "@/components/ui/class-card";
-import { getServerUser } from "@/auth";
+import { getServerUser } from "@/auth-server";
 import { backendFetch } from "@/lib/api-fetch";
-
+import { IoMdAddCircleOutline } from "react-icons/io";
 interface Classroom {
   id: number;
   className: string;
@@ -23,10 +23,10 @@ interface Schedule {
   className: string;
 }
 
-const SHIFT_LABEL: Record<string, string> = {
-  MORNING:   "Morning",
+const shiftLabel: Record<string, string> = {
+  MORNING: "Morning",
   AFTERNOON: "Afternoon",
-  EVENING:   "Evening",
+  EVENING: "Evening",
 };
 
 async function fetchAllClassrooms(): Promise<Classroom[]> {
@@ -34,7 +34,9 @@ async function fetchAllClassrooms(): Promise<Classroom[]> {
     const res = await backendFetch(`/classrooms?size=200`);
     if (!res.ok) return [];
     return (await res.json())?.payload?.content ?? [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 async function fetchTeacherClassrooms(teacherId: string): Promise<Classroom[]> {
@@ -43,18 +45,22 @@ async function fetchTeacherClassrooms(teacherId: string): Promise<Classroom[]> {
       backendFetch(`/schedules/teachers/${teacherId}?size=200`),
       backendFetch(`/classrooms?size=200`),
     ]);
-    const schedules:  Schedule[]  = (await schedRes.json())?.payload?.content ?? [];
-    const classrooms: Classroom[] = (await clsRes.json())?.payload?.content  ?? [];
+    const schedules: Schedule[] =
+      (await schedRes.json())?.payload?.content ?? [];
+    const classrooms: Classroom[] =
+      (await clsRes.json())?.payload?.content ?? [];
 
     const teacherClassNames = new Set(schedules.map((s) => s.className));
     return classrooms.filter((c) => teacherClassNames.has(c.className));
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 export default async function ClassroomsPage() {
-  const user      = await getServerUser();
-  const role      = user?.role ?? "ADMIN";
-  const userId    = user?.id ?? "";
+  const user = await getServerUser();
+  const role = user?.role ?? "ADMIN";
+  const userId = user?.id ?? "";
   const isTeacher = role === "TEACHER";
 
   const classrooms = isTeacher
@@ -71,19 +77,28 @@ export default async function ClassroomsPage() {
   const groupNames = Object.keys(grouped).sort();
 
   return (
-    <div className="px-5 py-8">
+    <div className="px-7">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Classes</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="mt-1 text-sm text-muted-foreground">
             {isTeacher
               ? "Classes you are scheduled to teach."
               : "All classrooms across programs."}
           </p>
         </div>
-        <span className="text-sm text-muted-foreground">
-          {classrooms.length} {classrooms.length === 1 ? "class" : "classes"}
-        </span>
+        <div className="flex flex-col  items-end sm:items-end gap-2">
+          <Link href={"/dashboard/classrooms/create_class"}>
+           <button className="flex justify-center items-center py-3 px-3 bg-accent border-primary rounded-xl  text-sm font-medium text-foreground hover:text-primary transition-colors">
+              <IoMdAddCircleOutline className="size-5 mr-1" />
+              Add Class
+            </button>
+          </Link>
+
+          <span className="text-sm pr-2 text-muted-foreground">
+            ({classrooms.length}) {classrooms.length === 1 ? "class" : "classes"}
+          </span>
+        </div>
       </div>
 
       {classrooms.length === 0 ? (
@@ -97,9 +112,9 @@ export default async function ClassroomsPage() {
         <div className="flex flex-col gap-8">
           {groupNames.map((group) => (
             <section key={group}>
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+              <h2 className="mb-3 text-base font-semibold uppercase tracking-wider text-muted-foreground">
                 {group}
-                <span className="ml-2 text-xs font-normal text-muted-foreground/60">
+                <span className="ml-2 text-sm font-normal text-muted-foreground/60">
                   ({grouped[group].length})
                 </span>
               </h2>
@@ -114,9 +129,10 @@ export default async function ClassroomsPage() {
                       title={c.programTypeName ?? "Class"}
                       status={c.status ? "Active" : "Inactive"}
                       classNameValue={c.className}
-                      shift={SHIFT_LABEL[c.shift] ?? c.shift ?? "—"}
-                      time={`${c.startDate ?? "?"} – ${c.endDate ?? "?"}`}
-                      students={`Year ${c.year ?? "?"} / Sem ${c.semester ?? "?"}`}
+                      shift={shiftLabel[c.shift] ?? c.shift ?? "—"}
+                      time={"8:00 - 10:00 PM"}
+                      lab="Data Analytics"
+                      students={`24/4`}
                       code={c.classCode ?? String(c.id)}
                     />
                   </Link>

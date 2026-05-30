@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeftIcon, UsersIcon, CalendarIcon, BookOpenIcon } from "lucide-react";
 
 import { backendFetch } from "@/lib/api-fetch";
+import { API_URL } from "@/auth";
+import AlertDialogDemo from "@/components/popup/start_session";
 
 interface Classroom {
   id: number;
@@ -67,52 +69,29 @@ export default async function ClassroomDetailPage({
   if (!classroom) notFound();
 
   return (
-    <div className="px-5 py-8">
-      {/* Back */}
-      <Link
-        href="/dashboard"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground/80 mb-6"
-      >
-        <ArrowLeftIcon className="size-4" />
-        Back to Dashboard
-      </Link>
-
-      {/* Classroom info card */}
-          <div className="bg-card rounded-2xl border border-border overflow-hidden mb-8">
-            <div className="h-1.5 bg-primary" />
-            <div className="px-6 py-5">
-              <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-primary/70 mb-1">
-                    {classroom.programTypeName}
-                  </p>
-                  <h1 className="text-2xl font-bold text-foreground">{classroom.className}</h1>
-                  <p className="text-sm font-mono text-muted-foreground/70 mt-0.5">{classroom.classCode}</p>
-                </div>
-                <Badge
-                  className={`shrink-0 ${
-                    classroom.status
-                      ? "bg-green-100 text-green-700 hover:bg-green-100"
-                      : "bg-muted text-muted-foreground/70 hover:bg-muted"
-                  }`}
-                >
-                  {classroom.status ? "Active" : "Inactive"}
-                </Badge>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-5 border-t border-border/50">
-                <InfoItem icon={CalendarIcon} label="Shift" value={SHIFT_LABEL[classroom.shift] ?? classroom.shift ?? "—"} />
-                <InfoItem icon={BookOpenIcon} label="Generation" value={classroom.generation ? `Gen ${classroom.generation}` : "—"} />
-                <InfoItem icon={BookOpenIcon} label="Year / Sem" value={`Year ${classroom.year ?? "?"} · Sem ${classroom.semester ?? "?"}`} />
-                <InfoItem icon={CalendarIcon} label="Academic Year" value={String(classroom.academicYear ?? "—")} />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-border/50 text-sm text-muted-foreground">
-                <div><span className="text-muted-foreground/70 text-xs">Start</span><p>{classroom.startDate ?? "—"}</p></div>
-                <div><span className="text-muted-foreground/70 text-xs">End</span><p>{classroom.endDate ?? "—"}</p></div>
-              </div>
-            </div>
+    <div className="px-7 ">
+      <section className="mx-auto px-7 mb-2 w-full ">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="mb-3 text-3xl font-semibold tracking-tight text-black dark:text-white">
+              {classroom.className}
+            </h1>
           </div>
+        </div>
+        <div className="flex justify-between">
+          <div>
+            
+            <h2 className="text-2xl leading-tight text-black dark:text-white">
+              បញ្ជីរាយវត្តមានសិស្ស-Student Attendance List-Today
+            </h2>
+          </div>
+          <AlertDialogDemo
+              btnName="Start Session"
+              title="Start Session Now"
+              firstTime="8:00"
+              secondTime="12:00"/>
+        </div>
+      </section>
 
           {/* Students */}
           <div className="flex items-center justify-between mb-5">
@@ -130,7 +109,7 @@ export default async function ClassroomDetailPage({
             </div>
           ) : (
             <div className="rounded-xl border border-border overflow-hidden bg-card">
-              <table className="w-full text-sm">
+              <table className="w-full text-base">
                 <thead>
                   <tr className="bg-muted/50 border-b border-border">
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">#</th>
@@ -149,12 +128,12 @@ export default async function ClassroomDetailPage({
                         index === students.length - 1 ? "border-b-0" : ""
                       }`}
                     >
-                      <td className="px-4 py-3 text-muted-foreground/70 text-xs w-10">{index + 1}</td>
+                      <td className="w-10 px-4 py-3 text-sm text-muted-foreground/70">{index + 1}</td>
                       <td className="px-4 py-3">
                         <p className="font-medium text-foreground">{s.name}</p>
-                        <p className="text-xs text-muted-foreground/70">{s.email}</p>
+                        <p className="text-sm text-muted-foreground/70">{s.email}</p>
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground hidden sm:table-cell">
+                      <td className="hidden px-4 py-3 font-mono text-sm text-muted-foreground sm:table-cell">
                         {s.studentNo}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
@@ -197,8 +176,8 @@ function InfoItem({
     <div className="flex items-start gap-2">
       <Icon className="size-4 text-muted-foreground/70 mt-0.5 shrink-0" />
       <div>
-        <p className="text-xs text-muted-foreground/70">{label}</p>
-        <p className="text-sm font-medium text-foreground/80">{value}</p>
+        <p className="text-sm text-muted-foreground/70">{label}</p>
+        <p className="text-base font-medium text-foreground/80">{value}</p>
       </div>
     </div>
   );

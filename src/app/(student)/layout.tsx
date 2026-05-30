@@ -1,4 +1,4 @@
-import { getServerUser } from "@/auth";
+import { getServerUser } from "@/auth-server";
 import { redirect } from "next/navigation";
 import { Logo } from "@/components/logo";
 

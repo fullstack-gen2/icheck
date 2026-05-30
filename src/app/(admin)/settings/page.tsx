@@ -74,7 +74,7 @@ function ValueField({
       <select
         value={value === "true" ? "true" : "false"}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full border border-input rounded-lg px-3 py-2 text-sm text-foreground/80 focus:outline-none focus:ring-2 focus:ring-primary/30 bg-card"
+        className="w-full rounded-lg border border-input bg-card px-3 py-2 text-base text-foreground/80 focus:outline-none focus:ring-2 focus:ring-primary/30"
       >
         <option value="true">true</option>
         <option value="false">false</option>
@@ -107,7 +107,7 @@ export default function SettingsPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API_URL}/settings`); // iam/users
+      const res = await fetch(`https://attendance.icheck.today/api/v1/attendance/settings`); // iam/users
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         
@@ -126,7 +126,13 @@ export default function SettingsPage() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
 
   function openAdd() {
     setForm(defaultForm);
@@ -152,13 +158,13 @@ export default function SettingsPage() {
     try {
       let res: Response;
       if (sheetMode === "add") {
-        res = await fetch(`${API_URL}/settings`, {
+        res = await fetch(`https://attendance.icheck.today/${API_URL}/settings`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ key: form.key.trim(), value: form.value.trim(), type: form.type, description: form.description }),
         });
       } else {
-        res = await fetch(`${API_URL}/settings/${encodeURIComponent(form.key)}`, {
+        res = await fetch(`https://attendance.icheck.today/api/v1/attendance/settings/${encodeURIComponent(form.key)}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ value: form.value.trim() }),
@@ -177,7 +183,7 @@ export default function SettingsPage() {
     if (!confirm(`Delete setting "${key}"? This cannot be undone.`)) return;
     setDeletingKey(key);
     try {
-      const res = await fetch(`${API_URL}/settings/${encodeURIComponent(key)}`, { method: "DELETE" });
+      const res = await fetch(`https://attendance.icheck.today/api/v1/attendance/settings/${encodeURIComponent(key)}`, { method: "DELETE" });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         setError(json?.payload?.message ?? json?.message ?? "Delete failed.");
@@ -194,7 +200,7 @@ export default function SettingsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-foreground">System Settings</h1>
-          <p className="text-sm text-muted-foreground mt-1">Global configuration keys used across all sessions.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Global configuration keys used across all sessions.</p>
         </div>
         <Button className="bg-primary hover:bg-primary/90 gap-2" onClick={openAdd}>
           <PlusIcon className="size-4" />
@@ -216,7 +222,7 @@ export default function SettingsPage() {
         <div className="text-center py-20 text-muted-foreground/70 bg-card rounded-2xl border border-border">
           <Settings2Icon className="size-10 mx-auto mb-3 opacity-40" />
           <p className="font-medium">No settings configured.</p>
-          <p className="text-sm mt-1">Click `Add Setting` to create the first one.</p>
+          <p className="mt-1 text-base">Click `Add Setting` to create the first one.</p>
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -237,7 +243,7 @@ export default function SettingsPage() {
                     {/* Friendly label first, raw key as a small caption underneath
                         so admins who know the key by name still recognize it. */}
                     <div className="font-medium text-foreground">{humanizeKey(s.settingKey)}</div>
-                    <div className="font-mono text-[11px] text-muted-foreground/70 mt-0.5">{s.settingKey}</div>
+                    <div className="mt-0.5 font-mono text-sm text-muted-foreground/70">{s.settingKey}</div>
                   </TableCell>
                   <TableCell className="px-4 py-3">
                     {s.type === "BOOLEAN" ? (
@@ -251,10 +257,10 @@ export default function SettingsPage() {
                       <span className="font-semibold text-foreground">{s.settingValue}</span>
                     )}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-muted-foreground text-sm hidden md:table-cell">
+                  <TableCell className="hidden px-4 py-3 text-base text-muted-foreground md:table-cell">
                     <span className="block max-w-xs">{s.description ?? "—"}</span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-muted-foreground/70 text-xs hidden lg:table-cell whitespace-nowrap">
+                  <TableCell className="hidden whitespace-nowrap px-4 py-3 text-sm text-muted-foreground/70 lg:table-cell">
                     {s.updatedAt
                       ? new Date(s.updatedAt).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" })
                       : "—"}
@@ -300,7 +306,7 @@ export default function SettingsPage() {
             {/* Show the underlying database key on edit so the admin still
                 knows which row they're touching. */}
             {sheetMode === "edit" && (
-              <p className="font-mono text-xs text-muted-foreground/70">{form.key}</p>
+              <p className="font-mono text-sm text-muted-foreground/70">{form.key}</p>
             )}
           </SheetHeader>
 
@@ -331,7 +337,7 @@ export default function SettingsPage() {
                     const t = e.target.value;
                     setForm((f) => ({ ...f, type: t, value: t === "BOOLEAN" ? "true" : "" }));
                   }}
-                  className="w-full border border-input rounded-lg px-3 py-2 text-sm text-foreground/80 focus:outline-none focus:ring-2 focus:ring-primary/30 bg-card"
+                  className="w-full rounded-lg border border-input bg-card px-3 py-2 text-base text-foreground/80 focus:outline-none focus:ring-2 focus:ring-primary/30"
                 >
                   <option value="STRING">STRING</option>
                   <option value="INT">INT</option>
