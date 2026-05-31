@@ -158,9 +158,9 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="px-5 py-8">
+    <div className="px-4 sm:px-5 py-6 sm:py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">System Settings</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">System Settings</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Global configuration used across all sessions. Admins can edit the
           values below — keys themselves are fixed by the system.

@@ -39,10 +39,10 @@ export default async function ClassroomsPage() {
     : await fetchAllClassrooms();
 
   return (
-    <div className="px-5 py-8">
+    <div className="px-4 sm:px-5 py-6 sm:py-8">
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Classes</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Classes</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {isTeacher
               ? "Classes you are scheduled to teach."
@@ -56,6 +56,7 @@ export default async function ClassroomsPage() {
 
       <ClassroomsList
         classrooms={classrooms}
+        canManage={role === "ADMIN"}
         emptyMessage={
           isTeacher ? "You have no classes assigned." : "No classes found."
         }

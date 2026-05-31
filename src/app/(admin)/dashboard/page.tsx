@@ -85,8 +85,8 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="px-5 py-8">
-      <h1 className="text-3xl font-bold text-foreground mb-8">Dashboard</h1>
+    <div className="px-4 sm:px-5 py-6 sm:py-8">
+      <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-8">Dashboard</h1>
 
       {!isTeacher && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
