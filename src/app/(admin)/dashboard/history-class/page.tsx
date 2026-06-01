@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { BookOpenIcon } from "lucide-react";
-import { ClassCard } from "@/components/ui/class-card";
+import { ArchiveIcon } from "lucide-react";
 import { getServerUser } from "@/auth-server";
 import { backendFetch } from "@/lib/api-fetch";
 import { MyDropdownMenuCheckboxes } from "@/components/drop-donw";
+import { ClassCard } from "@/components/ui/class-card";
+
 interface Classroom {
   id: number;
   className: string;
@@ -57,7 +58,7 @@ async function fetchTeacherClassrooms(teacherId: string): Promise<Classroom[]> {
   }
 }
 
-export default async function ClassroomsPage() {
+export default async function HistoryClassPage() {
   const user = await getServerUser();
   const role = user?.role ?? "ADMIN";
   const userId = user?.id ?? "";
@@ -67,43 +68,36 @@ export default async function ClassroomsPage() {
     ? await fetchTeacherClassrooms(userId)
     : await fetchAllClassrooms();
 
-  const activeClassrooms = classrooms.filter((c) => c.status);
-
-  // Group by program type so admins/students see Bachelor vs Scholarship at a glance
-  const grouped = activeClassrooms.reduce<Record<string, Classroom[]>>((acc, c) => {
+  const historyClassrooms = classrooms.filter((c) => !c.status);
+  const grouped = historyClassrooms.reduce<Record<string, Classroom[]>>((acc, c) => {
     const key = c.programTypeName ?? "Other";
     (acc[key] ??= []).push(c);
     return acc;
   }, {});
-
   const groupNames = Object.keys(grouped).sort();
 
   return (
     <div className="px-7">
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Classes</h1>
+          <h1 className="text-3xl font-bold text-foreground">History Classes</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {isTeacher
-              ? "Classes you are scheduled to teach."
-              : "All classrooms across programs."}
+            Classes that are no longer active.
           </p>
         </div>
-        <div className="flex flex-col  items-end sm:items-end gap-2">
+        <div className="flex flex-col items-end gap-2 sm:items-end">
           <MyDropdownMenuCheckboxes />
 
-          <span className="text-sm pr-2 text-muted-foreground">
-            ({activeClassrooms.length}) {activeClassrooms.length === 1 ? "class" : "classes"}
+          <span className="pr-2 text-sm text-muted-foreground">
+            ({historyClassrooms.length}) {historyClassrooms.length === 1 ? "class" : "classes"}
           </span>
         </div>
       </div>
 
-      {activeClassrooms.length === 0 ? (
-        <div className="text-center py-20 text-muted-foreground bg-card rounded-2xl border">
-          <BookOpenIcon className="size-10 mx-auto mb-3 opacity-40" />
-          <p className="font-medium">
-            {isTeacher ? "You have no classes assigned." : "No classes found."}
-          </p>
+      {historyClassrooms.length === 0 ? (
+        <div className="rounded-2xl border bg-card py-20 text-center text-muted-foreground">
+          <ArchiveIcon className="mx-auto mb-3 size-10 opacity-40" />
+          <p className="font-medium">No history classes found.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-8">
@@ -119,17 +113,18 @@ export default async function ClassroomsPage() {
                 {grouped[group].map((c) => (
                   <Link
                     key={c.id}
-                    href={`/dashboard/classrooms/${c.id}`}
+                    href={`/dashboard/history-class/${c.id}`}
                     className="block hover:scale-[1.01] transition-transform"
                   >
                     <ClassCard
                       title={c.programTypeName ?? "Class"}
-                      status={c.status ? "Active" : "Inactive"}
+                      status="History"
+                      variant="history"
                       classNameValue={c.className}
-                      shift={shiftLabel[c.shift] ?? c.shift ?? "—"}
-                      time={"8:00 - 10:00 PM"}
-                      lab="Data Analytics"
-                      students={`24/4`}
+                      shift={shiftLabel[c.shift] ?? c.shift ?? "-"}
+                      time="Completed"
+                      lab="Archived"
+                      students="24/4"
                       code={c.classCode ?? String(c.id)}
                     />
                   </Link>

@@ -6,6 +6,7 @@ import { LuUsers } from "react-icons/lu";
 interface ClassCardProps {
   title: string; // program type (Bachelor / Scholarship)
   status?: string; // Active / Inactive
+  variant?: "active" | "history";
   classNameValue: string;
   shift: string;
   time: string;
@@ -18,6 +19,7 @@ interface ClassCardProps {
 export function ClassCard({
   title,
   status = "Active",
+  variant = "active",
   classNameValue,
   shift,
   time,
@@ -26,16 +28,25 @@ export function ClassCard({
   code,
 }: ClassCardProps) {
   const isActive = status === "Active";
+  const isHistory = variant === "history";
+  const headerClass = isHistory
+    ? "bg-zinc-600 dark:bg-zinc-700"
+    : isActive
+      ? "bg-primary"
+      : "bg-gray-400";
+  const cardClass = isHistory
+    ? "border-zinc-300 bg-zinc-50/70 shadow-none grayscale-[0.15] dark:border-zinc-700 dark:bg-zinc-900/40"
+    : "border-border bg-card shadow-sm hover:shadow-md";
 
   return (
-    <div className="group relative flex w-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow duration-200 hover:shadow-md">
+    <div className={`group relative flex w-full flex-col overflow-hidden rounded-2xl border transition-shadow duration-200 ${cardClass}`}>
       {/* Top accent strip */}
       {/* <div
         className={`h-1.5 w-full ${isActive ? "bg-primary" : "bg-gray-300"}`}
       /> */}
 
       {/* Header */}
-      <div className={`flex items-start justify-between px-5 pt-4 pb-3 ${isActive ? "bg-primary" : "bg-gray-300"}`}>
+      <div className={`flex items-start justify-between px-5 pt-4 pb-3 ${headerClass}`}>
         <div className="flex-1 min-w-0">
           <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-white">
             {title}
@@ -48,7 +59,7 @@ export function ClassCard({
           className={`ml-3 shrink-0 text-[11px] px-2 py-0.5 rounded-full border ${
             isActive
               ? "bg-green-50 text-green-700 border-green-200"
-              : "bg-muted text-muted-foreground/70 border-border"
+              : "bg-zinc-100 text-zinc-700 border-zinc-200"
           }`}
         >
           {status}
@@ -90,9 +101,9 @@ export function ClassCard({
         <div className="flex justify-between items-center gap-2">
           <CalendarIcon className="size-3.5 text-muted-foreground/70 shrink-0" />
           <Badge
-            className={`text-[11px] border "bg-muted/50 text-muted-foreground border-border"}`}
+            className="text-[11px] border bg-muted/50 text-muted-foreground border-border"
           >
-            <span className="text-white">{shift}</span>
+            {shift}
           </Badge>
         </div>
       </div>

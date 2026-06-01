@@ -150,6 +150,7 @@
   --sidebar-primary: oklch(0.62 0.20 45);
   --sidebar-primary-foreground: oklch(0.98 0 0);
 }
+
 [data-theme="supabase"] {
   --primary: oklch(0.50 0.16 145);
   --primary-foreground: oklch(0.98 0 0);

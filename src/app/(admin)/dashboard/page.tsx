@@ -117,13 +117,12 @@ export default async function DashboardPage() {
           <p>{isTeacher ? "You have no classes assigned." : "No classes found."}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-6">
           {classrooms.map((c) => (
             <Link
               key={c.id}
               href={`/dashboard/classrooms/${c.id}`}
-              className="block hover:scale-[1.01] transition-transform"
-            >
+              className="block hover:scale-[1.01] transition-transform">
               <ClassCard
                 title={c.programTypeName ?? "Class"}
                 status={c.status ? "Active" : "Inactive"}
