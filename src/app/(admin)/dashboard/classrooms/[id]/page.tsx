@@ -1,11 +1,10 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeftIcon, UsersIcon, CalendarIcon, BookOpenIcon } from "lucide-react";
+import { UsersIcon } from "lucide-react";
 
 import { backendFetch } from "@/lib/api-fetch";
-import { API_URL } from "@/auth";
 import AlertDialogDemo from "@/components/popup/start_session";
+import { columns } from "@/components/classdetail/column";
+import { DataTableList } from "@/components/classdetail/data-table";
+import type { AttendanceList } from "@/types/attendance";
 
 interface Classroom {
   id: number;
@@ -22,20 +21,78 @@ interface Classroom {
   status: boolean;
 }
 
-interface Student {
-  id: number;
-  studentNo: string;
-  name: string;
-  gender: string;
-  email: string;
-  phone: string | null;
-  className: string;
-  status: string;
-}
-
-const SHIFT_LABEL: Record<string, string> = {
-  MORNING: "Morning", AFTERNOON: "Afternoon", EVENING: "Evening",
+const mockClassroom: Classroom = {
+  id: 1,
+  className: "Bachelor",
+  classCode: "A001",
+  programTypeName: "Bachelor",
+  generation: 1,
+  year: 1,
+  semester: 1,
+  shift: "MORNING",
+  academicYear: 2026,
+  startDate: "2026-01-01",
+  endDate: "2026-12-31",
+  status: true,
 };
+
+const mockAttendanceData: AttendanceList[] = [
+  {
+    order: 1,
+    id: "INV001",
+    profile:
+      "https://i.pinimg.com/736x/25/60/e1/2560e1cbf27a9cfa78faccde40971482.jpg",
+    name: "Chan Thorn",
+    gender: "Male",
+    phoneNumber: "(555) 214-9087",
+    dateOfBirth: "2002-04-17",
+    status: "pending",
+  },
+  {
+    order: 2,
+    id: "INV002",
+    profile:
+      "https://i.pinimg.com/1200x/90/74/a6/9074a68f86e0f006a9ec7183530e66c0.jpg",
+    name: "Dara",
+    gender: "Male",
+    phoneNumber: "(555) 673-1204",
+    dateOfBirth: "2001-11-29",
+    status: "pending",
+  },
+  {
+    order: 3,
+    id: "INV003",
+    profile:
+      "https://i.pinimg.com/736x/5f/79/ea/5f79eae006365020a1cf50534a1b4314.jpg",
+    name: "Sokha",
+    gender: "Female",
+    phoneNumber: "(555) 398-4412",
+    dateOfBirth: "2003-07-08",
+    status: "present",
+  },
+  {
+    order: 4,
+    id: "INV004",
+    profile:
+      "https://i.pinimg.com/1200x/75/42/fe/7542fec761bbb72957ccae0839476c4a.jpg",
+    name: "Nita",
+    gender: "Female",
+    phoneNumber: "(555) 887-2301",
+    dateOfBirth: "2002-01-14",
+    status: "late",
+  },
+  {
+    order: 5,
+    id: "INV005",
+    profile:
+      "https://i.pinimg.com/736x/12/d9/b4/12d9b479ee8cb5200d7d285e27408d5f.jpg",
+    name: "Sreypov",
+    gender: "Female",
+    phoneNumber: "(555) 542-7769",
+    dateOfBirth: "2004-09-03",
+    status: "present",
+  },
+];
 
 async function fetchClassroom(id: string): Promise<Classroom | null> {
   try {
@@ -46,31 +103,17 @@ async function fetchClassroom(id: string): Promise<Classroom | null> {
   } catch { return null; }
 }
 
-async function fetchStudents(id: string): Promise<Student[]> {
-  try {
-    const res = await backendFetch(`/classrooms/${id}/students?size=200`);
-    if (!res.ok) return [];
-    const json = await res.json();
-    return json?.payload?.content ?? [];
-  } catch { return []; }
-}
-
 export default async function ClassroomDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [classroom, students] = await Promise.all([fetchClassroom(id), fetchStudents(id)]);
-
-  // No such classroom → fall through to the app-wide 404 page so the URL
-  // bar shows a real 404 status, search engines see it, and the friendly
-  // not-found.tsx renders.
-  if (!classroom) notFound();
+  const classroom = (await fetchClassroom(id)) ?? mockClassroom;
 
   return (
-    <div className="px-7 ">
-      <section className="mx-auto px-7 mb-2 w-full ">
+    <div className="px-7 py-7">
+      <section className="mx-auto mb-2 w-full ">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="mb-3 text-3xl font-semibold tracking-tight text-black dark:text-white">
@@ -96,13 +139,16 @@ export default async function ClassroomDetailPage({
           {/* Students */}
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-              <UsersIcon className="size-5 text-primary" />
-              Students
+              {/* <UsersIcon className="size-5 text-primary" />
+              Students */}
             </h2>
-            <span className="text-sm text-muted-foreground/70">{students.length} enrolled</span>
+            <span className="text-sm text-muted-foreground/70">total students ({mockAttendanceData.length})</span>
           </div>
 
-          {students.length === 0 ? (
+        <DataTableList columns={columns} data={mockAttendanceData} showStudentActions />
+
+
+          {/* {students.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground/70 bg-card rounded-2xl border border-border">
               <UsersIcon className="size-10 mx-auto mb-3 opacity-40" />
               <p className="font-medium">No students enrolled yet.</p>
@@ -158,27 +204,7 @@ export default async function ClassroomDetailPage({
                 </tbody>
               </table>
             </div>
-          )}
-    </div>
-  );
-}
-
-function InfoItem({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-start gap-2">
-      <Icon className="size-4 text-muted-foreground/70 mt-0.5 shrink-0" />
-      <div>
-        <p className="text-sm text-muted-foreground/70">{label}</p>
-        <p className="text-base font-medium text-foreground/80">{value}</p>
-      </div>
+          )} */}
     </div>
   );
 }

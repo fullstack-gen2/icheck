@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -13,7 +14,7 @@ import { ChevronRightIcon, BellIcon } from "lucide-react";
 import { DarkModeToggle, ThemeSelector } from "@/components/theme-toggle";
 
 const ROUTE_LABELS: Record<string, string> = {
-  "/dashboard":            "Attendance",
+  "/dashboard":            "Dashboard",
   "/dashboard/classrooms": "Classes",
   "/students":             "Students",
   "/attendance":           "Sessions",
@@ -41,7 +42,11 @@ function getSegments(pathname: string): { label: string; path: string }[] {
 }
 
 function capitalize(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  return s
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 export function SiteHeader() {
@@ -65,13 +70,20 @@ export function SiteHeader() {
                 <ChevronRightIcon className="size-3.5 text-muted-foreground/50" />
               )}
               <span
-                className={
-                  i === segments.length - 1
-                    ? "font-semibold text-foreground"
-                    : "text-muted-foreground"
-                }
+                className="contents"
               >
-                {seg.label}
+                {i === segments.length - 1 ? (
+                  <span className="font-semibold text-foreground">
+                    {seg.label}
+                  </span>
+                ) : (
+                  <Link
+                    href={seg.path}
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    {seg.label}
+                  </Link>
+                )}
               </span>
             </span>
           ))}

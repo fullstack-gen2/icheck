@@ -85,7 +85,7 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="px-7 ">
+    <div className="px-7 py-7">
       <h1 className="text-3xl font-bold text-foreground mb-8">Dashboard</h1>
 
       {!isTeacher && (

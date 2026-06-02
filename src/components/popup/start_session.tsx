@@ -23,7 +23,7 @@ const AlertDialogDemo = ({btnName,title, firstTime, secondTime}: AlertType) => {
   return (
     <AlertDialog >
       <AlertDialogTrigger asChild>
-        <Button className='bg-blue-600 p-5'>{btnName}</Button>
+        <Button className='bg-primary p-5'>{btnName}</Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
