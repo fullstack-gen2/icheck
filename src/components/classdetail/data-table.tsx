@@ -113,14 +113,14 @@ export function DataTableList<TData, TValue>({
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-3 pb-4">
+      <div className="flex items-center justify-between pb-4">
         <Input
           placeholder="Search name..."
           value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("name")?.setFilterValue(event.target.value)
           }
-          className="max-w-sm"
+          className="max-w-sm py-5"
         />
         {showReportActions && (
           <div className="flex items-center gap-4">

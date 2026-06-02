@@ -16,10 +16,11 @@ type  AlertType ={
     btnName: string,
     title: string,
     firstTime: string,
-    secondTime: string
+    secondTime: string,
+    id: string
 }
 
-const AlertDialogDemo = ({btnName,title, firstTime, secondTime}: AlertType) => {
+const AlertDialogDemo = ({btnName,title, firstTime, secondTime, id}: AlertType) => {
   return (
     <AlertDialog >
       <AlertDialogTrigger asChild>
@@ -37,9 +38,8 @@ const AlertDialogDemo = ({btnName,title, firstTime, secondTime}: AlertType) => {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction>
-            
-            <Link href={"/class/001/attendance_taking"}>
+          <AlertDialogAction asChild>
+            <Link href={`/dashboard/classrooms/${id}/take-attendance`}>
                 Start
             </Link>
             </AlertDialogAction>
