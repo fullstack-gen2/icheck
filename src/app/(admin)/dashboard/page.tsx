@@ -1,4 +1,4 @@
-import { getServerUser } from "@/auth";
+import { getServerUser } from "@/auth-server";
 import { backendFetch } from "@/lib/api-fetch";
 import Link from "next/link";
 import { ClassCard } from "@/components/ui/class-card";
@@ -85,8 +85,8 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="px-4 sm:px-5 py-6 sm:py-8">
-      <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-8">Dashboard</h1>
+    <div className="px-7 py-7">
+      <h1 className="text-3xl font-bold text-foreground mb-8">Dashboard</h1>
 
       {!isTeacher && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
@@ -97,7 +97,7 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{s.value.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
+                <p className="mt-0.5 text-base text-muted-foreground">{s.label}</p>
               </div>
             </div>
           ))}
@@ -108,7 +108,7 @@ export default async function DashboardPage() {
         <h2 className="text-xl font-semibold text-foreground">
           {isTeacher ? "My Classes" : "Class Info"}
         </h2>
-        <span className="text-sm text-muted-foreground/70">{classrooms.length} classes</span>
+        <span className="text-sm pr-2 text-muted-foreground/70">{classrooms.length} classes</span>
       </div>
 
       {classrooms.length === 0 ? (
@@ -122,14 +122,15 @@ export default async function DashboardPage() {
             <Link
               key={c.id}
               href={`/dashboard/classrooms/${c.id}`}
-              className="block hover:scale-[1.01] transition-transform"
-            >
+              className="block hover:scale-[1.01] transition-transform">
               <ClassCard
                 title={c.programTypeName ?? "Class"}
                 status={c.status ? "Active" : "Inactive"}
                 classNameValue={c.className}
                 shift={shiftLabel[c.shift] ?? c.shift ?? "—"}
-                time={`${c.startDate ?? "?"} – ${c.endDate ?? "?"}`}
+                time={"8:00 - 10:00 PM"}
+                lab="Data Analytics"
+                students={`24/4`}
                 code={c.classCode ?? String(c.id)}
                 year={c.year}
                 semester={c.semester}

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -13,7 +14,7 @@ import { ChevronRightIcon, BellIcon } from "lucide-react";
 import { DarkModeToggle, ThemeSelector } from "@/components/theme-toggle";
 
 const ROUTE_LABELS: Record<string, string> = {
-  "/dashboard":            "Attendance",
+  "/dashboard":            "Dashboard",
   "/dashboard/classrooms": "Classes",
   "/students":             "Students",
   "/attendance":           "Sessions",
@@ -41,7 +42,11 @@ function getSegments(pathname: string): { label: string; path: string }[] {
 }
 
 function capitalize(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  return s
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 export function SiteHeader() {
@@ -58,20 +63,27 @@ export function SiteHeader() {
         />
 
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-1 text-sm">
+        <nav className="flex items-center gap-1 text-base">
           {segments.map((seg, i) => (
             <span key={seg.path} className="flex items-center gap-1">
               {i > 0 && (
                 <ChevronRightIcon className="size-3.5 text-muted-foreground/50" />
               )}
               <span
-                className={
-                  i === segments.length - 1
-                    ? "font-semibold text-foreground"
-                    : "text-muted-foreground"
-                }
+                className="contents"
               >
-                {seg.label}
+                {i === segments.length - 1 ? (
+                  <span className="font-semibold text-foreground">
+                    {seg.label}
+                  </span>
+                ) : (
+                  <Link
+                    href={seg.path}
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    {seg.label}
+                  </Link>
+                )}
               </span>
             </span>
           ))}
@@ -100,14 +112,14 @@ export function SiteHeader() {
             <DropdownMenuContent align="end" className="w-72 p-0">
               <div className="flex items-center justify-between px-4 py-3 border-b">
                 <span className="text-sm font-semibold">Notifications</span>
-                <span className="text-xs text-muted-foreground">0 new</span>
+                <span className="text-sm text-muted-foreground">0 new</span>
               </div>
               <div className="flex flex-col items-center justify-center py-10 text-center">
                 <BellIcon className="size-8 text-muted-foreground/20 mb-2" />
-                <p className="text-sm text-muted-foreground">
+                <p className="text-base text-muted-foreground">
                   No notifications yet
                 </p>
-                <p className="text-xs text-muted-foreground/60 mt-0.5">
+                <p className="mt-0.5 text-sm text-muted-foreground/60">
                   You&apos;re all caught up!
                 </p>
               </div>

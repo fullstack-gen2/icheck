@@ -39,6 +39,7 @@ function CheckInContent() {
   const [state, setState] = useState<State>("loading");
   const [message, setMessage] = useState("");
   const didSubmit = useRef(false);
+  const viewState: State = token ? state : "noToken";
 
   const doCheckIn = async (qrToken: string) => {
     if (didSubmit.current) return;
@@ -95,8 +96,11 @@ function CheckInContent() {
   };
 
   useEffect(() => {
-    if (!token) { setState("noToken"); return; }
-    doCheckIn(token);
+    if (!token) return;
+    const timer = window.setTimeout(() => {
+      doCheckIn(token);
+    }, 0);
+    return () => window.clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
@@ -109,7 +113,7 @@ function CheckInContent() {
           <span className="text-xl font-bold tracking-tight">i-Check</span>
         </div>
 
-        {state === "loading" && (
+        {viewState === "loading" && (
           <div className="flex flex-col items-center gap-4 py-6">
             <LoaderCircleIcon className="size-12 text-primary animate-spin" />
             <p className="text-muted-foreground font-medium">Recording attendance…</p>
@@ -117,7 +121,7 @@ function CheckInContent() {
           </div>
         )}
 
-        {state === "success" && (
+        {viewState === "success" && (
           <div className="flex flex-col items-center gap-4 py-4">
             <CheckCircleIcon className="size-16 text-green-500" />
             <h2 className="text-xl font-bold text-foreground">Check-in Successful!</h2>
@@ -131,14 +135,18 @@ function CheckInContent() {
           </div>
         )}
 
-        {state === "error" && (
+        {viewState === "error" && (
           <div className="flex flex-col items-center gap-4 py-4">
             <AlertCircleIcon className="size-16 text-red-400" />
             <h2 className="text-xl font-bold text-foreground">Check-in Failed</h2>
             <p className="text-muted-foreground text-sm">{message}</p>
             <Button
               className="mt-2 w-full bg-primary hover:bg-primary/90"
-              onClick={() => { didSubmit.current = false; token && doCheckIn(token); }}
+              onClick={() => {
+                if (!token) return;
+                didSubmit.current = false;
+                doCheckIn(token);
+              }}
             >
               Try Again
             </Button>
@@ -152,7 +160,7 @@ function CheckInContent() {
           </div>
         )}
 
-        {state === "noToken" && (
+        {viewState === "noToken" && (
           <div className="flex flex-col items-center gap-4 py-4">
             <AlertCircleIcon className="size-16 text-yellow-400" />
             <h2 className="text-xl font-bold text-foreground">Invalid QR Code</h2>

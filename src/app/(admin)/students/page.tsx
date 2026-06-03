@@ -57,8 +57,8 @@ export default function StudentsPage() {
     async function load() {
       setLoading(true);
       const [sRes, cRes] = await Promise.all([
-        fetch("/api/v1/attendance/students?size=300"),
-        fetch("/api/v1/attendance/classrooms?size=200"),
+        fetch("https://attendance.icheck.today/api/v1/attendance/users"),
+        fetch("https://attendance.icheck.today/api/v1/attendance/classrooms"),
       ]);
       const sJson = await sRes.json();
       const cJson = await cRes.json();
@@ -167,7 +167,7 @@ export default function StudentsPage() {
           <button
             key={pt}
             onClick={() => { setProgramType(pt); resetFilters(); }}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all border ${
+            className={`px-4 py-1.5 rounded-full text-base font-medium transition-all border ${
               programType === pt
                 ? "bg-primary text-primary-foreground border-primary"
                 : "bg-card text-muted-foreground border-border hover:border-primary/50"
@@ -239,7 +239,7 @@ export default function StudentsPage() {
         </div>
       ) : (
         <div className="rounded-xl border border-border overflow-hidden bg-card">
-          <table className="w-full text-sm">
+          <table className="w-full text-base">
             <thead>
               <tr className="bg-muted/50 border-b border-border">
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Student</th>
@@ -261,12 +261,12 @@ export default function StudentsPage() {
                 >
                   <td className="px-4 py-3">
                     <div className="font-medium text-foreground">{student.name}</div>
-                    <div className="text-xs text-muted-foreground/70">{student.email}</div>
+                    <div className="text-sm text-muted-foreground/70">{student.email}</div>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
                     {student.className ?? "—"}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell font-mono text-xs">
+                  <td className="hidden px-4 py-3 font-mono text-sm text-muted-foreground sm:table-cell">
                     {student.studentNo}
                   </td>
                   <td className="px-4 py-3">
@@ -312,7 +312,7 @@ function FilterSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`appearance-none pl-3 pr-7 py-1.5 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+        className={`appearance-none pl-3 pr-7 py-1.5 text-base rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${
           value
             ? "border-primary bg-primary/5 text-primary font-medium"
             : "border-border bg-card text-muted-foreground"

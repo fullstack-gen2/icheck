@@ -55,8 +55,8 @@ export default function AttendancePage() {
     async function load() {
       setLoading(true);
       const [sesRes, clsRes] = await Promise.all([
-        fetch("/api/v1/attendance/sessions?size=100"),
-        fetch("/api/v1/attendance/classrooms?size=200"),
+        fetch("https://attendance.icheck.today/api/v1/attendance/sessions?size=100"),
+        fetch("https://attendance.icheck.today/api/v1/attendance/classrooms?size=200"),
       ]);
       const sesJson = await sesRes.json();
       const clsJson = await clsRes.json();
@@ -123,7 +123,7 @@ export default function AttendancePage() {
           <button
             key={pt}
             onClick={() => { setProgramType(pt); resetFilters(); }}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all border ${
+            className={`px-4 py-1.5 rounded-full text-base font-medium transition-all border ${
               programType === pt
                 ? "bg-primary text-primary-foreground border-primary"
                 : "bg-card text-muted-foreground border-border hover:border-primary/50"
@@ -170,7 +170,7 @@ export default function AttendancePage() {
         </div>
       ) : (
         <div className="rounded-xl border border-border overflow-hidden bg-card">
-          <table className="w-full text-sm">
+          <table className="w-full text-base">
             <thead>
               <tr className="bg-muted/50 border-b border-border">
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Subject</th>
@@ -188,7 +188,7 @@ export default function AttendancePage() {
                   <td className="px-4 py-3 font-medium text-foreground">{s.subjectName}</td>
                   <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{s.classroomName}</td>
                   <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{s.sessionDate}</td>
-                  <td className="px-4 py-3 text-muted-foreground/70 text-xs hidden lg:table-cell">
+                  <td className="hidden px-4 py-3 text-sm text-muted-foreground/70 lg:table-cell">
                     {s.startTime?.slice(0, 5)} – {s.endTime?.slice(0, 5)}
                   </td>
                   <td className="px-4 py-3">
@@ -198,7 +198,7 @@ export default function AttendancePage() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Link href={`/attendance/${s.id}`}
-                      className="inline-flex items-center gap-1 text-primary hover:underline text-xs font-medium">
+                      className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
                       View <ChevronRightIcon className="size-3.5" />
                     </Link>
                   </td>
@@ -219,7 +219,7 @@ function FilterSelect({ label, value, onChange, options }: {
   return (
     <div className="relative">
       <select value={value} onChange={(e) => onChange(e.target.value)}
-        className={`appearance-none pl-3 pr-7 py-1.5 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+        className={`appearance-none pl-3 pr-7 py-1.5 text-base rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${
           value ? "border-primary bg-primary/5 text-primary font-medium" : "border-border bg-card text-muted-foreground"
         }`}>
         <option value="">{label}</option>

@@ -10,7 +10,7 @@ export default function StudentHomePage() {
   const [showScanner, setShowScanner] = useState(false);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-7 py-7">
       <div>
         <h1 className="text-2xl font-bold text-foreground">
           Welcome, {user?.name}

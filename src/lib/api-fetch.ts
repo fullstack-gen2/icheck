@@ -1,7 +1,7 @@
 
 import { cookies } from "next/headers";
 import { GATEWAY_URL } from "@/auth";
-import { API_URL } from "@/lib/api-config";
+import { API_URL, ICHECK_URL } from "@/lib/api-config";
 
 export async function backendFetch(
   path: string,
@@ -18,7 +18,7 @@ export async function backendFetch(
     ...(init?.headers as Record<string, string> | undefined),
   };
 
-  return fetch(`${GATEWAY_URL}${API_URL}${path}`, {
+  return fetch(`${ICHECK_URL}${API_URL}${path}`, {
     cache: "no-store",
     ...init,
     headers,

@@ -1,4 +1,4 @@
-import { getServerUser } from "@/auth";
+import { getServerUser } from "@/auth-server";
 import { backendFetch } from "@/lib/api-fetch";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -138,7 +138,7 @@ export default async function SchedulePage({
       <div className="flex items-center gap-1 mb-6 bg-muted p-1 rounded-xl w-fit">
         <Link
           href="/schedule"
-          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+          className={`px-4 py-1.5 rounded-lg text-base font-medium transition-colors ${
             !selectedDay
               ? "bg-card text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground/80"
@@ -153,7 +153,7 @@ export default async function SchedulePage({
             <Link
               key={day}
               href={`/schedule?day=${day}`}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors relative ${
+              className={`px-4 py-1.5 rounded-lg text-base font-medium transition-colors relative ${
                 isActive
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : isToday
@@ -174,7 +174,7 @@ export default async function SchedulePage({
       {totalSchedules === 0 ? (
         <div className="text-center py-20 bg-card rounded-2xl border border-border text-muted-foreground/70">
           <p className="font-medium">No schedules found.</p>
-          <p className="text-sm mt-1">{role === "TEACHER" ? "You have no scheduled classes." : "No schedules have been created yet."}</p>
+          <p className="mt-1 text-base">{role === "TEACHER" ? "You have no scheduled classes." : "No schedules have been created yet."}</p>
         </div>
       ) : selectedDay ? (
         <div>
@@ -233,15 +233,15 @@ export default async function SchedulePage({
                     className={`rounded-xl border border-border/50 border-l-4 px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 ${cardBg} ${!item.status ? "opacity-50" : ""}`}
                   >
                     <div className="shrink-0 w-28 text-center bg-white/70 rounded-lg py-2 px-3 border border-border/50">
-                      <p className="text-sm font-bold text-foreground">{item.startTime?.slice(0, 5)}</p>
-                      <p className="text-xs text-muted-foreground/70">–</p>
-                      <p className="text-sm font-bold text-foreground">{item.endTime?.slice(0, 5)}</p>
+                      <p className="text-base font-bold text-foreground">{item.startTime?.slice(0, 5)}</p>
+                      <p className="text-sm text-muted-foreground/70">–</p>
+                      <p className="text-base font-bold text-foreground">{item.endTime?.slice(0, 5)}</p>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-foreground">{item.subjectName}</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">{item.className}</p>
+                      <p className="text-base font-semibold text-foreground">{item.subjectName}</p>
+                      <p className="mt-0.5 text-sm text-muted-foreground">{item.className}</p>
                       {role === "ADMIN" && (
-                        <p className="text-xs text-muted-foreground/70 mt-0.5">{item.teacherName}</p>
+                        <p className="mt-0.5 text-sm text-muted-foreground/70">{item.teacherName}</p>
                       )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -260,7 +260,7 @@ export default async function SchedulePage({
                       )}
                       {todaySession && (todaySession.status === "SCHEDULED" || todaySession.status === "ACTIVE") && (
                         <Link href={`/sessions/${todaySession.id}`}>
-                          <Button size="sm" className="h-7 px-2 text-xs bg-primary hover:bg-primary/90 gap-1">
+                          <Button size="sm" className="h-7 gap-1 bg-primary px-2 text-sm hover:bg-primary/90">
                             <QrCodeIcon className="size-3" />
                             QR
                           </Button>
@@ -288,11 +288,11 @@ export default async function SchedulePage({
                   <div className={`text-center py-2 px-1 rounded-xl transition-opacity hover:opacity-80 cursor-pointer ${
                     isToday ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-gray-200"
                   }`}>
-                    <p className={`text-xs font-semibold uppercase tracking-wider ${isToday ? "text-white/70" : "text-muted-foreground/70"}`}>
+                    <p className={`text-sm font-semibold uppercase tracking-wider ${isToday ? "text-white/70" : "text-muted-foreground/70"}`}>
                       <span className="hidden md:inline">{DAY_FULL[day]}</span>
                       <span className="md:hidden">{DAY_SHORT[day]}</span>
                     </p>
-                    {isToday && <p className="text-[10px] text-white/60 mt-0.5">Today</p>}
+                    {isToday && <p className="mt-0.5 text-xs text-white/60">Today</p>}
                   </div>
                 </Link>
                 <div className="flex flex-col gap-2 flex-1">
@@ -300,7 +300,7 @@ export default async function SchedulePage({
                     <div className={`flex-1 rounded-xl border border-dashed flex items-center justify-center min-h-[80px] ${
                       isToday ? "border-primary/30 bg-primary/5" : "border-border"
                     }`}>
-                      <span className="text-xs text-muted-foreground/40">Free</span>
+                      <span className="text-sm text-muted-foreground/40">Free</span>
                     </div>
                   ) : (
                     items.map((item) => {
@@ -315,12 +315,12 @@ export default async function SchedulePage({
                           key={item.id}
                           className={`rounded-xl border border-border/50 border-l-4 p-3 flex flex-col gap-1.5 ${cardBg} ${!item.status ? "opacity-50" : ""}`}
                         >
-                          <p className="text-xs font-bold text-foreground leading-tight line-clamp-2">{item.subjectName}</p>
-                          <p className="text-[10px] text-muted-foreground truncate">{item.className}</p>
+                          <p className="line-clamp-2 text-sm font-bold leading-tight text-foreground">{item.subjectName}</p>
+                          <p className="truncate text-xs text-muted-foreground">{item.className}</p>
                           {role === "ADMIN" && (
-                            <p className="text-[10px] text-muted-foreground/70 truncate">{item.teacherName}</p>
+                            <p className="truncate text-xs text-muted-foreground/70">{item.teacherName}</p>
                           )}
-                          <p className="text-[10px] font-medium text-muted-foreground mt-0.5">
+                          <p className="mt-0.5 text-xs font-medium text-muted-foreground">
                             {item.startTime?.slice(0, 5)} – {item.endTime?.slice(0, 5)}
                           </p>
                           <div className="flex items-center justify-between gap-1 mt-0.5">

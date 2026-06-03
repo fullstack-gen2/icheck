@@ -25,15 +25,17 @@ import {
   BookOpenIcon,
 } from "lucide-react"
 import { LogoWordmark } from "@/components/logo"
+import { GrSchedules } from "react-icons/gr";
+
 
 // All possible nav items — filtered by role below.
-// STUDENT role sees only Attendance (dashboard overview) and Students.
+// STUDENT role sees the student home plus student/class shortcuts.
 const ALL_MAIN = [
-  { title: "Attendance", url: "/dashboard",             icon: <LayoutDashboardIcon />, roles: ["ADMIN", "TEACHER", "STUDENT"] },
-  { title: "Classes",    url: "/dashboard/classrooms",  icon: <BookOpenIcon />,        roles: ["ADMIN", "TEACHER", "STUDENT"] },
+  { title: "Dashboard", url: "/dashboard",             icon: <LayoutDashboardIcon />, roles: ["ADMIN", "TEACHER"] },
+  { title: "Dashboard", url: "/student",               icon: <LayoutDashboardIcon />, roles: ["STUDENT"] },
+  { title: "Classes",    url: "/dashboard/classrooms",  icon: <BookOpenIcon />,        roles: ["ADMIN", "TEACHER"] },
   { title: "Students",   url: "/students",              icon: <UsersIcon />,           roles: ["ADMIN", "TEACHER", "STUDENT"] },
-  { title: "Sessions",   url: "/attendance",            icon: <CameraIcon />,          roles: ["ADMIN", "TEACHER"] },
-  { title: "Schedule",   url: "/schedule",              icon: <ListIcon />,            roles: ["ADMIN", "TEACHER"] },
+  { title: "Schedule",   url: "/schedule",              icon: <GrSchedules />,            roles: ["ADMIN", "TEACHER"] },
   { title: "Reports",    url: "/reports",               icon: <FileChartColumnIcon />, roles: ["ADMIN", "TEACHER"] },
 ];
 
@@ -64,12 +66,11 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
             <SidebarMenuButton
               asChild
               size="lg"
-              className="h-14 data-[slot=sidebar-menu-button]:p-2!"
-            >
-              <Link href="/dashboard" className="flex items-center gap-2 py-2">
+              className="h-14 data-[slot=sidebar-menu-button]:p-2! border-b border-l">
+              <Link href={role === "STUDENT" ? "/student" : "/dashboard"} className="flex items-center gap-2 py-2">
                 {/* Combined logo + "i-Check" wordmark */}
                 <LogoWordmark height={40} />
-                <span className="text-xs text-muted-foreground capitalize ml-auto pr-1 font-medium">
+                <span className="ml-auto pr-1 text-sm font-medium capitalize text-muted-foreground">
                   {role === "ADMIN" ? "Admin" : role === "TEACHER" ? "Teacher" : role}
                 </span>
               </Link>
