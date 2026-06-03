@@ -8,13 +8,44 @@ interface ClassCardProps {
   status?: string; // Active / Inactive
   variant?: "active" | "history";
   classNameValue: string;
+  /** Shift label (Morning / Afternoon / Evening). */
   shift: string;
+  /** Date range string (e.g. "2024-09-01 – 2025-06-30"). */
   time: string;
   lab: string;
   students: string;
   code: string;
+
+  /* Optional program-specific fields — pass only the ones that apply. */
+  /** Bachelor: e.g. 1, 2, 3, 4 */
+  year?: number | null;
+  /** Bachelor: e.g. 1, 2 */
+  semester?: number | null;
+  /** Generation / cohort number (Bachelor + Scholarship). */
+  generation?: number | null;
+  /** Scholarship: course family (Fullstack, Foundation, Pre-Uni, ITP, ITE). */
+  course?: string | null;
 }
 
+
+/** Tiny row of "icon · label · value". */
+function Row({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof ClockIcon;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <Icon className="size-3.5 text-muted-foreground/70 shrink-0" />
+      <span className="text-xs text-muted-foreground/70 mr-1 shrink-0">{label}</span>
+      <span className="text-sm text-foreground/80 truncate">{value}</span>
+    </div>
+  );
+}
 
 export function ClassCard({
   title,
@@ -26,6 +57,10 @@ export function ClassCard({
   lab,
   students,
   code,
+  year,
+  semester,
+  generation,
+  course,
 }: ClassCardProps) {
   const isActive = status === "Active";
   const isHistory = variant === "history";
@@ -66,7 +101,6 @@ export function ClassCard({
         </Badge>
       </div>
 
-      {/* Divider */}
       <div className="mx-5 border-t border-border/50" />
 
       {/* Body */}

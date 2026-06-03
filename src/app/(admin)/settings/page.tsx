@@ -76,8 +76,7 @@ const KEY_HELP: Record<string, string> = {
 const defaultForm = { key: "", value: "", type: "STRING", description: "" };
 
 function humanizeKey(key: string): string {
-  if (KEY_LABELS[key]) return KEY_LABELS[key];
-  return key
+  return KEY_LABELS[key] ?? key
     .replace(/_/g, " ")
     .replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
@@ -414,9 +413,11 @@ export default function SettingsPage() {
     );
   }
 
-  async function handleSubmit() {
-    if (!form.key.trim() || !form.value.trim()) {
-      setFormError("Key and value are required.");
+  /** Save a non-boolean value via the edit sheet. */
+  async function handleSave() {
+    if (!editing) return;
+    if (!editValue.trim()) {
+      setFormError("Value is required.");
       return;
     }
     setSubmitting(true);
@@ -444,21 +445,29 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleDelete(key: string) {
-    if (!confirm(`Delete setting "${key}"? This cannot be undone.`)) return;
-    setDeletingKey(key);
+  /** Inline boolean toggle — flips the value immediately. */
+  async function toggleBoolean(s: Setting, next: boolean) {
+    // Optimistic update
+    setSettings((arr) =>
+      arr.map((row) => (row.id === s.id ? { ...row, settingValue: String(next) } : row))
+    );
     try {
       const res = await fetch(`${SETTINGS_ENDPOINT}/${encodeURIComponent(key)}`, {
         method: "DELETE",
       });
       if (!res.ok) {
+        // Revert on failure
+        setSettings((arr) =>
+          arr.map((row) => (row.id === s.id ? { ...row, settingValue: s.settingValue } : row))
+        );
         const json = await res.json().catch(() => ({}));
-        setError(json?.payload?.message ?? json?.message ?? "Delete failed.");
-        return;
+        setError(json?.payload?.message ?? json?.message ?? "Failed to update.");
       }
-      await load();
-    } finally {
-      setDeletingKey(null);
+    } catch {
+      setSettings((arr) =>
+        arr.map((row) => (row.id === s.id ? { ...row, settingValue: s.settingValue } : row))
+      );
+      setError("Network error.");
     }
   }
 
@@ -606,7 +615,7 @@ export default function SettingsPage() {
                 Create
               </Button>
             </div>
-          </div>
+          )}
         </SheetContent>
       </Sheet>
     </div>

@@ -132,6 +132,12 @@ export default async function DashboardPage() {
                 lab="Data Analytics"
                 students={`24/4`}
                 code={c.classCode ?? String(c.id)}
+                year={c.year}
+                semester={c.semester}
+                generation={c.generation}
+                course={/scholarship/i.test(c.programTypeName ?? "")
+                  ? (c.className.match(/Fullstack|Foundation|Pre-?Uni|ITP|ITE/i)?.[0] ?? null)
+                  : null}
               />
             </Link>
           ))}

@@ -4,6 +4,18 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { QrCodeIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { ScheduleAddButton, ScheduleRowActions } from "@/components/schedule-actions";
+
+interface ClassroomLite { id: number; className: string; }
+
+async function fetchClassroomsForPicker(): Promise<ClassroomLite[]> {
+  try {
+    const res = await backendFetch(`/classrooms?size=200`);
+    if (!res.ok) return [];
+    const list = (await res.json())?.payload?.content ?? [];
+    return list.map((c: { id: number; className: string }) => ({ id: c.id, className: c.className }));
+  } catch { return []; }
+}
 
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] as const;
 type Day = typeof DAYS[number];
@@ -85,9 +97,12 @@ export default async function SchedulePage({
   const { day: dayParam } = await searchParams;
   const selectedDay = DAYS.find((d) => d === dayParam?.toUpperCase()) ?? null;
 
-  const [schedules, todaySessions] = await Promise.all([
+  const isAdmin = role === "ADMIN";
+
+  const [schedules, todaySessions, classroomOptions] = await Promise.all([
     role === "TEACHER" ? fetchTeacherSchedules(userId) : fetchAllSchedules(),
     role === "TEACHER" ? fetchTodaySessions(userId) : Promise.resolve([]),
+    isAdmin ? fetchClassroomsForPicker() : Promise.resolve([] as ClassroomLite[]),
   ]);
 
   const byDay: Record<string, ScheduleItem[]> = Object.fromEntries(DAYS.map((d) => [d, []]));
@@ -108,10 +123,13 @@ export default async function SchedulePage({
   const nextDay = selectedIdx >= 0 && selectedIdx < DAYS.length - 1 ? DAYS[selectedIdx + 1] : null;
 
   return (
-    <div className="px-5 py-8">
-      <div className="flex items-center justify-between mb-2">
-        <h1 className="text-3xl font-bold text-foreground">Schedule</h1>
-        <span className="text-sm text-muted-foreground">{totalSchedules} schedule{totalSchedules !== 1 ? "s" : ""}</span>
+    <div className="px-4 sm:px-5 py-6 sm:py-8">
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-3">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Schedule</h1>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">{totalSchedules} schedule{totalSchedules !== 1 ? "s" : ""}</span>
+          {isAdmin && <ScheduleAddButton classrooms={classroomOptions} />}
+        </div>
       </div>
       <p className="text-sm text-muted-foreground/70 mb-6">
         {role === "ADMIN" ? "All teachers · weekly view" : "Your weekly timetable"}
@@ -247,6 +265,9 @@ export default async function SchedulePage({
                             QR
                           </Button>
                         </Link>
+                      )}
+                      {isAdmin && (
+                        <ScheduleRowActions schedule={item} classrooms={classroomOptions} />
                       )}
                     </div>
                   </div>

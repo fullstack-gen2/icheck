@@ -1,9 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useUser } from "@/components/user-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -13,31 +21,40 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   FileChartColumnIcon,
-  RefreshCwIcon,
-  LockIcon,
-  AlertTriangleIcon,
-  ChevronDownIcon,
+  PlayIcon,
+  DownloadIcon,
   LoaderCircleIcon,
+  AlertTriangleIcon,
+  LockIcon,
 } from "lucide-react";
+import { toast } from "sonner";
+import { api } from "@/lib/api-client";
 
-// ── Types ───────────────────────────────────────────────────────────────────
 interface Classroom {
   id: number;
   className: string;
   classCode: string;
   programTypeName: string;
-  generation: number;
-  year: number | null;
-  semester: number | null;
-  shift: string;
 }
-
+interface Student {
+  id: number;
+  studentNo: string;
+  name: string;
+  className: string;
+}
 interface Report {
   id: number;
   student?: { id: number; name: string; studentNo?: string };
   aClassroom?: { id: number; className: string };
-  reportType: string;        // MONTHLY | SEMESTER
+  reportType: string;
   reportMonth: number | null;
   reportYear: number;
   semester: number | null;
@@ -48,176 +65,178 @@ interface Report {
   attendancePercentage: number;
   attendanceScore: number;
   warningStatus: boolean;
-  examEligible: boolean;
-  locked: boolean;
-  generatedAt: string;
+  isLocked?: boolean;
 }
 
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const SHIFTS  = ["MORNING","AFTERNOON","EVENING"];
-const SHIFT_LABEL: Record<string,string> = { MORNING:"Morning", AFTERNOON:"Afternoon", EVENING:"Evening" };
-const SCHOLARSHIP_COURSES = ["Fullstack","Foundation","Pre-Uni","ITP","ITE"];
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function isBachelor(name: string) { return name?.toUpperCase().includes("BACHELOR"); }
-function isScholarship(name: string) { return name?.toUpperCase().includes("SCHOLARSHIP"); }
-function getCourse(name: string) {
-  return SCHOLARSHIP_COURSES.find((c) => name?.toLowerCase().includes(c.toLowerCase())) ?? null;
-}
-function pct(n: number) { return `${n.toFixed(1)}%`; }
-
-// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function ReportsPage() {
-  const user = useUser();
-  const isAdmin = user?.role === "ADMIN";
-
+  // Pickers
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-  const [reports,    setReports]    = useState<Report[]>([]);
-  const [warnings,   setWarnings]   = useState<Report[]>([]);
+  const [students,   setStudents]   = useState<Student[]>([]);
 
-  const [loadingCls,  setLoadingCls]  = useState(true);
-  const [loadingReps, setLoadingReps] = useState(false);
-  const [generating,  setGenerating]  = useState(false);
-  const [lockingId,   setLockingId]   = useState<number | null>(null);
-  const [error, setError] = useState("");
+  const [classId,   setClassId]   = useState<string>("");
+  const [studentId, setStudentId] = useState<string>("ALL");
+  const [reportType,  setReportType]  = useState<"MONTHLY" | "SEMESTER">("MONTHLY");
+  const [reportYear,  setReportYear]  = useState<number>(new Date().getFullYear());
+  const [reportMonth, setReportMonth] = useState<number>(new Date().getMonth() + 1);
 
-  // Classroom filters
-  const [progType, setProgType]             = useState<"ALL"|"BACHELOR"|"SCHOLARSHIP">("ALL");
-  const [filterGeneration, setFilterGen]    = useState("");
-  const [filterYear, setFilterYear]         = useState("");
-  const [filterSemester, setFilterSemester] = useState("");
-  const [filterShift, setFilterShift]       = useState("");
-  const [filterCourse, setFilterCourse]     = useState("");
-
-  // Selected classroom
-  const [selectedCls, setSelectedCls] = useState<Classroom | null>(null);
-
-  // Report generation params
-  const [genMonth,    setGenMonth]    = useState(String(new Date().getMonth() + 1));
-  const [genSemester, setGenSemester] = useState("1");
-  const [genYear,     setGenYear]     = useState(String(new Date().getFullYear()));
-
-  // Active tab: reports | warnings
-  const [tab, setTab] = useState<"reports"|"warnings">("reports");
+  // Results
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   // Load classrooms once
   useEffect(() => {
     fetch("/api/v1/attendance/classrooms?size=200")
       .then((r) => r.json())
-      .then((j) => { setClassrooms(j?.payload?.content ?? []); setLoadingCls(false); })
-      .catch(() => setLoadingCls(false));
+      .then((j) => setClassrooms(j?.payload?.content ?? []))
+      .catch(() => {});
   }, []);
 
-  // Classroom filters
-  const bachCls = useMemo(() => classrooms.filter((c) => isBachelor(c.programTypeName)), [classrooms]);
-  const schoCls = useMemo(() => classrooms.filter((c) => isScholarship(c.programTypeName)), [classrooms]);
-  const gens    = useMemo(() => [...new Set(
-    (progType === "BACHELOR" ? bachCls : progType === "SCHOLARSHIP" ? schoCls : classrooms)
-      .map((c) => c.generation).filter(Boolean)
-  )].sort() as number[], [progType, bachCls, schoCls, classrooms]);
-  const years   = useMemo(() => [...new Set(bachCls.map((c) => c.year).filter(Boolean))].sort() as number[], [bachCls]);
-  const sems    = useMemo(() => [...new Set(bachCls.map((c) => c.semester).filter(Boolean))].sort() as number[], [bachCls]);
+  // Load students whenever class changes
+  useEffect(() => {
+    if (!classId) { setStudents([]); return; }
+    fetch(`/api/v1/attendance/classrooms/${classId}/students?size=500`)
+      .then((r) => r.json())
+      .then((j) => setStudents(j?.payload?.content ?? []))
+      .catch(() => setStudents([]));
+    setStudentId("ALL");
+  }, [classId]);
 
-  const filteredCls = useMemo(() => classrooms.filter((c) => {
-    if (progType === "BACHELOR"   && !isBachelor(c.programTypeName))   return false;
-    if (progType === "SCHOLARSHIP"&& !isScholarship(c.programTypeName)) return false;
-    if (filterGeneration && String(c.generation) !== filterGeneration)  return false;
-    if (filterYear       && String(c.year)        !== filterYear)        return false;
-    if (filterSemester   && String(c.semester)    !== filterSemester)    return false;
-    if (filterShift      && c.shift               !== filterShift)       return false;
-    if (filterCourse     && !getCourse(c.className)?.toLowerCase().includes(filterCourse.toLowerCase())) return false;
-    return true;
-  }), [classrooms, progType, filterGeneration, filterYear, filterSemester, filterShift, filterCourse]);
+  const selectedClass   = useMemo(() => classrooms.find((c) => String(c.id) === classId), [classrooms, classId]);
+  const selectedStudent = useMemo(() => students.find((s) => String(s.id) === studentId), [students, studentId]);
 
-  function resetFilters() {
-    setFilterGen(""); setFilterYear(""); setFilterSemester("");
-    setFilterShift(""); setFilterCourse(""); setSelectedCls(null);
-    setReports([]); setWarnings([]);
-  }
-
-  // Load reports for selected classroom
-  async function loadReports(cls: Classroom) {
-    setSelectedCls(cls);
-    setLoadingReps(true);
-    setReports([]); setWarnings([]); setError("");
-    try {
-      const [repRes, warnRes] = await Promise.all([
-        fetch(`/api/v1/attendance/reports/classrooms/${cls.id}?size=100`),
-        fetch(`/api/v1/attendance/reports/classrooms/${cls.id}/warnings`),
-      ]);
-      const repJson  = await repRes.json();
-      const warnJson = await warnRes.json();
-      setReports(repJson?.payload?.content   ?? []);
-      setWarnings(warnJson?.payload?.content ?? []);
-    } catch {
-      setError("Failed to load reports.");
-    } finally {
-      setLoadingReps(false);
-    }
-  }
-
-  // Generate report
   async function handleGenerate() {
-    if (!selectedCls) return;
-    setGenerating(true); setError("");
+    if (!classId) { toast.error("Please pick a class first."); return; }
+    setGenerating(true);
+    setLoading(true);
     try {
-      const isBach = isBachelor(selectedCls.programTypeName);
-      const body   = isBach
-        ? { type: "semester", studentId: null, classId: selectedCls.id, semester: Number(genSemester), year: Number(genYear) }
-        : { type: "monthly",  studentId: null, classId: selectedCls.id, month: Number(genMonth),       year: Number(genYear) };
+      // 1) Try to trigger generation (idempotent). Some backends auto-generate
+      //    on read — if this 404s we still try to load below.
+      const body = {
+        classroomId: Number(classId),
+        reportType,
+        reportYear,
+        reportMonth: reportType === "MONTHLY" ? reportMonth : null,
+        ...(studentId !== "ALL" ? { studentId: Number(studentId) } : {}),
+      };
+      try { await api.post(`/reports`, body); } catch { /* fall through */ }
 
-      const stuRes  = await fetch(`/api/v1/attendance/classrooms/${selectedCls.id}/students`);
-      const stuJson = await stuRes.json();
-      const students: { id: number }[] = stuJson?.payload?.content ?? [];
+      // 2) Fetch the rows to display.
+      const url = studentId !== "ALL"
+        ? `/reports/students/${studentId}?size=100`
+        : `/reports/classrooms/${classId}?size=200`;
+      const res  = await fetch(`/api/v1/attendance${url}`);
+      const json = await res.json();
+      const rows: Report[] = json?.payload?.content ?? [];
 
-      await Promise.all(students.map((stu) =>
-        fetch("/api/v1/attendance/reports", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...body, studentId: stu.id }),
-        })
-      ));
-      await loadReports(selectedCls);
-    } catch {
-      setError("Report generation failed.");
+      // Filter to the chosen period.
+      const filtered = rows.filter((r) => {
+        if (r.reportYear !== reportYear) return false;
+        if (reportType === "MONTHLY" && r.reportMonth !== reportMonth) return false;
+        if (reportType === "SEMESTER" && r.reportType !== "SEMESTER") return false;
+        return true;
+      });
+      setReports(filtered);
+      if (filtered.length === 0) toast.info("No data for the selected period yet.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to load reports.");
     } finally {
+      setLoading(false);
       setGenerating(false);
     }
   }
 
-  // Lock a report
-  async function handleLock(reportId: number) {
-    setLockingId(reportId); setError("");
-    try {
-      const res  = await fetch(`/api/v1/attendance/reports/${reportId}/lock`, { method: "POST" });
-      const json = await res.json();
-      if (!res.ok) { setError(json?.message ?? "Lock failed."); return; }
-      if (selectedCls) await loadReports(selectedCls);
-    } finally {
-      setLockingId(null);
-    }
+  function periodLabel(): string {
+    const m = ["", "January","February","March","April","May","June","July","August","September","October","November","December"];
+    return reportType === "MONTHLY" ? `${m[reportMonth]} ${reportYear}` : `Year ${reportYear} · Semester`;
   }
 
-  const visibleReports = tab === "warnings" ? warnings : reports;
+  function buildTableData() {
+    const head = ["Student","Student No.","Class","Total","Present","Late","Absent","Attendance %","Score","Warning"];
+    const body = reports.map((r) => [
+      r.student?.name ?? "—",
+      r.student?.studentNo ?? "—",
+      r.aClassroom?.className ?? selectedClass?.className ?? "—",
+      r.totalSessions,
+      r.presentCount,
+      r.lateCount,
+      r.absentCount,
+      `${r.attendancePercentage?.toFixed?.(1) ?? r.attendancePercentage}%`,
+      r.attendanceScore,
+      r.warningStatus ? "Yes" : "",
+    ]);
+    return { head, body };
+  }
+
+  async function exportExcel() {
+    if (reports.length === 0) { toast.error("Nothing to export."); return; }
+    const XLSX = await import("xlsx");
+    const { head, body } = buildTableData();
+    const ws = XLSX.utils.aoa_to_sheet([head, ...body]);
+    ws["!cols"] = head.map((h) => ({ wch: Math.max(h.length, 12) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Attendance");
+    const fname = `attendance-${selectedClass?.classCode ?? classId}-${periodLabel().replace(/\s+/g, "-")}.xlsx`;
+    XLSX.writeFile(wb, fname);
+    toast.success("Excel file downloaded.");
+  }
+
+  async function exportPdf() {
+    if (reports.length === 0) { toast.error("Nothing to export."); return; }
+    const [{ jsPDF }, autoTableMod] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
+    const autoTable = (autoTableMod as { default?: unknown }).default ?? autoTableMod;
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    doc.setFontSize(16);
+    doc.text("Attendance Report", 40, 40);
+    doc.setFontSize(10);
+    doc.setTextColor(120);
+    doc.text(
+      `${selectedClass?.className ?? ""}${selectedStudent ? " · " + selectedStudent.name : ""} · ${periodLabel()}`,
+      40, 58
+    );
+    const { head, body } = buildTableData();
+    (autoTable as unknown as (d: unknown, opts: unknown) => void)(doc, {
+      head: [head],
+      body,
+      startY: 76,
+      styles: { fontSize: 9, cellPadding: 5 },
+      headStyles: { fillColor: [39, 60, 151], textColor: 255 },
+      alternateRowStyles: { fillColor: [248, 249, 252] },
+    });
+    const fname = `attendance-${selectedClass?.classCode ?? classId}-${periodLabel().replace(/\s+/g, "-")}.pdf`;
+    doc.save(fname);
+    toast.success("PDF file downloaded.");
+  }
 
   return (
     <div className="px-5 py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <h1 className="text-3xl font-bold text-foreground">Reports</h1>
-        {selectedCls && (
-          <span className="text-sm text-muted-foreground">
-            {reports.length} reports · {warnings.length} warnings
-          </span>
-        )}
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Reports</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Pick a class (and optionally one student), then generate to view & export.
+        </p>
       </div>
-      <p className="text-sm text-muted-foreground/70 mb-8">Select a classroom to view or generate attendance reports.</p>
 
-      {error && (
-        <div className="bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl px-4 py-3 mb-5">
-          {error}
-        </div>
-      )}
+      {/* Filter bar */}
+      <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="space-y-1.5 lg:col-span-2">
+            <Label className="text-xs">Class</Label>
+            <Select value={classId} onValueChange={setClassId}>
+              <SelectTrigger><SelectValue placeholder="Select a class" /></SelectTrigger>
+              <SelectContent>
+                {classrooms.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    {c.className}{" "}
+                    <span className="text-muted-foreground/60 text-xs ml-1">{c.classCode}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6">
         {/* ── Left: classroom picker ──────────────────────────── */}
@@ -234,31 +253,29 @@ export default function ReportsPage() {
             ))}
           </div>
 
-          {/* Sub-filters */}
-          {progType !== "ALL" && (
-            <div className="flex flex-wrap gap-1.5">
-              <FilterSel label="Gen"      value={filterGeneration} onChange={setFilterGen}
-                options={gens.map((g) => ({ label: `Gen ${g}`, value: String(g) }))} />
-              {progType === "BACHELOR" && <>
-                <FilterSel label="Year"  value={filterYear}      onChange={setFilterYear}
-                  options={years.map((y) => ({ label: `Year ${y}`, value: String(y) }))} />
-                <FilterSel label="Sem"   value={filterSemester}  onChange={setFilterSemester}
-                  options={sems.map((s) => ({ label: `Sem ${s}`, value: String(s) }))} />
-              </>}
-              {progType === "SCHOLARSHIP" && (
-                <FilterSel label="Course" value={filterCourse}   onChange={setFilterCourse}
-                  options={SCHOLARSHIP_COURSES.map((c) => ({ label: c, value: c }))} />
-              )}
-              <FilterSel label="Shift" value={filterShift} onChange={setFilterShift}
-                options={SHIFTS.map((s) => ({ label: SHIFT_LABEL[s], value: s }))} />
-            </div>
-          )}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Period</Label>
+            <Select value={reportType} onValueChange={(v) => setReportType(v as "MONTHLY" | "SEMESTER")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="MONTHLY">Monthly</SelectItem>
+                <SelectItem value="SEMESTER">Semester</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          {/* Classroom list */}
-          <div className="border border-border rounded-xl overflow-hidden bg-card">
-            {loadingCls ? (
-              <div className="flex justify-center py-8">
-                <LoaderCircleIcon className="size-5 animate-spin text-primary" />
+          {reportType === "MONTHLY" ? (
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Month</Label>
+                <Select value={String(reportMonth)} onValueChange={(v) => setReportMonth(Number(v))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <SelectItem key={m} value={String(m)}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             ) : filteredCls.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground/70">No classes found.</p>
@@ -452,10 +469,30 @@ export default function ReportsPage() {
             </div>
           )}
         </div>
+
+        <div className="flex items-center justify-end gap-2 mt-4 flex-wrap">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" disabled={reports.length === 0} className="gap-1.5">
+                <DownloadIcon className="size-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Format</DropdownMenuLabel>
+              <DropdownMenuItem onClick={exportExcel}>Excel (.xlsx)</DropdownMenuItem>
+              <DropdownMenuItem onClick={exportPdf}>PDF (.pdf)</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button onClick={handleGenerate} disabled={!classId || generating} className="gap-1.5">
+            {generating
+              ? <LoaderCircleIcon className="size-4 animate-spin" />
+              : <PlayIcon className="size-4" />}
+            Generate
+          </Button>
+        </div>
       </div>
-    </div>
-  );
-}
 
 // ── Small reusable components ────────────────────────────────────────────────
 function FilterSel({ label, value, onChange, options }: {

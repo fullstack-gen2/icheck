@@ -18,6 +18,9 @@ interface Classroom {
   endDate: string;
   status: boolean;
 }
+import { getServerUser } from "@/auth";
+import { backendFetch } from "@/lib/api-fetch";
+import { ClassroomsList, type ClassroomItem } from "@/components/classrooms-list";
 
 interface Schedule {
   className: string;
@@ -39,7 +42,7 @@ async function fetchAllClassrooms(): Promise<Classroom[]> {
   }
 }
 
-async function fetchTeacherClassrooms(teacherId: string): Promise<Classroom[]> {
+async function fetchTeacherClassrooms(teacherId: string): Promise<ClassroomItem[]> {
   try {
     const [schedRes, clsRes] = await Promise.all([
       backendFetch(`/schedules/teachers/${teacherId}?size=200`),

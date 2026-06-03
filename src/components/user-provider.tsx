@@ -9,6 +9,20 @@ export interface AppUser {
   role: string;
 }
 
+// Same normalization the server uses (auth.ts) — SUPER_ADMIN = ADMIN,
+// pick the highest-privilege role if the user has several.
+const ROLE_PRIORITY = ["ADMIN", "TEACHER", "STUDENT"] as const;
+function normalizeRole(raw: string): string {
+  const upper = raw?.toUpperCase?.() ?? "";
+  if (upper === "SUPER_ADMIN" || upper === "SUPERADMIN") return "ADMIN";
+  return upper || "USER";
+}
+function pickRole(roles: string[] | undefined, fallback?: string): string {
+  const all = (roles ?? []).map(String).map(normalizeRole);
+  if (fallback && all.length === 0) return normalizeRole(fallback);
+  return ROLE_PRIORITY.find((r) => all.includes(r)) ?? all[0] ?? "USER";
+}
+
 const UserContext = createContext<AppUser | null>(null);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
@@ -28,10 +42,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           id:    String(username || email),
           name:  String(username || email),
           email: String(email),
-          role:
-            Array.isArray(p.roles) && p.roles.length > 0
-              ? String(p.roles[0])
-              : (p.role ?? "USER"),
+          role:  pickRole(p.roles, p.role),
         });
       })
       .catch(() => {});

@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ResetDeviceButton } from "@/components/reset-device-button";
 import { useUser } from "@/components/user-provider";
-import { UsersIcon, ChevronDownIcon } from "lucide-react";
+import { UsersIcon, ChevronDownIcon, SearchIcon, XIcon } from "lucide-react";
 
 interface Student {
   id: number;
@@ -44,6 +45,7 @@ export default function StudentsPage() {
   const [loading, setLoading]     = useState(true);
 
   // Filters
+  const [search, setSearch] = useState("");
   const [programType, setProgramType] = useState<"ALL" | "BACHELOR" | "SCHOLARSHIP">("ALL");
   const [filterYear, setFilterYear]         = useState("");
   const [filterSemester, setFilterSemester] = useState("");
@@ -94,9 +96,11 @@ export default function StudentsPage() {
 
   // Filtered students
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return students.filter((s) => {
       const cls = classMap.get(s.className);
 
+      // Program-type-specific filters
       if (programType === "BACHELOR") {
         if (!cls?.programTypeName?.toUpperCase().includes("BACHELOR")) return false;
         if (filterYear && String(cls?.year) !== filterYear) return false;
@@ -109,9 +113,19 @@ export default function StudentsPage() {
         if (filterShift && cls?.shift !== filterShift) return false;
         if (filterGeneration && String(cls?.generation) !== filterGeneration) return false;
       }
+
+      // Free-text search across name / studentNo / email / class
+      if (q) {
+        const haystack = [s.name, s.studentNo, s.email, s.className]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+
       return true;
     });
-  }, [students, classMap, programType, filterYear, filterSemester, filterShift, filterGeneration, filterCourse]);
+  }, [students, classMap, search, programType, filterYear, filterSemester, filterShift, filterGeneration, filterCourse]);
 
   function resetFilters() {
     setFilterYear(""); setFilterSemester(""); setFilterShift("");
@@ -121,10 +135,30 @@ export default function StudentsPage() {
   const isAdmin = user?.role === "ADMIN";
 
   return (
-    <div className="px-5 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-foreground">Students</h1>
+    <div className="px-4 sm:px-5 py-6 sm:py-8">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Students</h1>
         <span className="text-sm text-muted-foreground">{filtered.length} of {students.length}</span>
+      </div>
+
+      {/* Search */}
+      <div className="relative max-w-md mb-4">
+        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name, student no., email, class…"
+          className="pl-9 pr-9"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted"
+            aria-label="Clear search"
+          >
+            <XIcon className="size-4" />
+          </button>
+        )}
       </div>
 
       {/* Program Type Tabs */}
