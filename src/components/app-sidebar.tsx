@@ -29,10 +29,11 @@ import { GrSchedules } from "react-icons/gr";
 
 
 // All possible nav items — filtered by role below.
-// STUDENT role sees only Attendance (dashboard overview) and Students.
+// STUDENT role sees the student home plus student/class shortcuts.
 const ALL_MAIN = [
-  { title: "Dashboard", url: "/dashboard",             icon: <LayoutDashboardIcon />, roles: ["ADMIN", "TEACHER", "STUDENT"] },
-  { title: "Classes",    url: "/dashboard/classrooms",  icon: <BookOpenIcon />,        roles: ["ADMIN", "TEACHER", "STUDENT"] },
+  { title: "Dashboard", url: "/dashboard",             icon: <LayoutDashboardIcon />, roles: ["ADMIN", "TEACHER"] },
+  { title: "Dashboard", url: "/student",               icon: <LayoutDashboardIcon />, roles: ["STUDENT"] },
+  { title: "Classes",    url: "/dashboard/classrooms",  icon: <BookOpenIcon />,        roles: ["ADMIN", "TEACHER"] },
   { title: "Students",   url: "/students",              icon: <UsersIcon />,           roles: ["ADMIN", "TEACHER", "STUDENT"] },
   { title: "Schedule",   url: "/schedule",              icon: <GrSchedules />,            roles: ["ADMIN", "TEACHER"] },
   { title: "Reports",    url: "/reports",               icon: <FileChartColumnIcon />, roles: ["ADMIN", "TEACHER"] },
@@ -66,7 +67,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
               asChild
               size="lg"
               className="h-14 data-[slot=sidebar-menu-button]:p-2! border-b border-l">
-              <Link href="/dashboard" className="flex items-center gap-2 py-2">
+              <Link href={role === "STUDENT" ? "/student" : "/dashboard"} className="flex items-center gap-2 py-2">
                 {/* Combined logo + "i-Check" wordmark */}
                 <LogoWordmark height={40} />
                 <span className="ml-auto pr-1 text-sm font-medium capitalize text-muted-foreground">
