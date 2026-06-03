@@ -1,9 +1,6 @@
-import AttendanceCheckingList from "@/components/table/check_attendance";
+import ReportToday from "@/components/table/report_today";
 import { backendFetch } from "@/lib/api-fetch";
 import { Classroom, mockClassroom } from "@/lib/data/mockData/test-with-table/mock-table";
-import Link from "next/link";
-import { AiOutlineQrcode } from "react-icons/ai";
-
 
 async function fetchClassroom(id: string): Promise<Classroom | null> {
   try {
@@ -14,7 +11,7 @@ async function fetchClassroom(id: string): Promise<Classroom | null> {
   } catch { return null; }
 }
 
-export default async function TakeAttendance({
+export default async function CheckedAttendance({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -33,23 +30,13 @@ export default async function TakeAttendance({
                     បញ្ជីរាយវត្តមានសិស្ស-Student Attendance List-Today
                   </h2>
                 </div>
-        </div>
-        <div className="flex justify-between">     
-          <Link href={`/dashboard/classrooms/${id}/take-attendance/qr-code`} className="flex items-center gap-2 rounded-md border border-gray-300 bg-white dark:bg-black px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-            <AiOutlineQrcode className="size-18" />
-          </Link>
-
-          {/* <AlertDialogDemo
-              btnName="Start Session"
-              title="Start Session Now"
-              firstTime="8:00"
-              secondTime="12:00"
-              id={id}/> */}
-        </div>
+                </div>
+                <div className="flex justify-between">     
+                </div>
             </section>
             <section>
-                <AttendanceCheckingList />
+                <ReportToday />
             </section>
         </main>
-    )
+    );
 }

@@ -8,10 +8,16 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { cn } from "@/lib/utils";
+
 export function Modal({
   children,
+  className,
+  closeButtonClassName,
 }: {
   children: React.ReactNode;
+  className?: string;
+  closeButtonClassName?: string;
 }) {
   const router = useRouter();
 
@@ -21,7 +27,10 @@ export function Modal({
       open
       onOpenChange={() => router.back()}
     >
-      <DialogContent className="sm:max-w-4xl px-10 py-8">
+      <DialogContent
+        className={cn("sm:max-w-4xl px-10 py-8", className)}
+        closeButtonClassName={closeButtonClassName}
+      >
         <DialogHeader>
           <VisuallyHidden>
             <DialogTitle>Create Class Modal</DialogTitle>

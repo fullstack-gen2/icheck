@@ -10,60 +10,51 @@ import {
 } from "@/components/ui/table";
 import { data } from "@/lib/data/mockData/student";
 import { AttendanceStatus, Student } from "@/types/student";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { CheckIcon, ChevronDown, ChevronUp } from "lucide-react";
 import Image from "next/image";
 import { Fragment, useState } from "react";
 import { Input } from "../ui/input";
 
-type AttendanceCheckingListProps = {
+type ReportTodayProps = {
   students?: Student[];
 };
 
-export default function AttendanceCheckingList({
-  students = data,
-}: AttendanceCheckingListProps) {
-  const [attendanceByStudentId, setAttendanceByStudentId] = useState<
-    Record<string, AttendanceStatus | null>
-  >(() =>
-    students.reduce(
-      (acc, student) => {
-        acc[student.id] = null;
-        return acc;
-      },
-      {} as Record<string, AttendanceStatus | null>,
-    ),
+function AttendanceMark({
+  checked,
+}: {
+  checked: boolean;
+  className?: string;
+}) {
+  if (!checked) {
+    return <span className="text-gray-400">-</span>;
+  }
+
+  return (
+    <span className={`inline-flex justify-center`}>
+      <CheckIcon className="size-5" />
+    </span>
   );
+}
+
+export default function ReportToday({
+  students = data,
+}: ReportTodayProps) {
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
-
-  const updateAttendance = (studentId: string, status: AttendanceStatus) => {
-    setAttendanceByStudentId((prev) => ({
-      ...prev,
-      [studentId]: status,
-    }));
-    if (status === AttendanceStatus.PRESENT) {
-      setExpandedRowId((prev) => (prev === studentId ? null : prev));
-    }
-  };
-
-  const clearAttendance = (studentId: string) => {
-    setAttendanceByStudentId((prev) => ({
-      ...prev,
-      [studentId]: null,
-    }));
-    setExpandedRowId((prev) => (prev === studentId ? null : prev));
-  };
+  const presentCount = students.filter(
+    (student) => student.status === AttendanceStatus.PRESENT,
+  ).length;
+  const permissionCount = students.filter(
+    (student) => student.status === AttendanceStatus.PENDING,
+  ).length;
+  const lateCount = students.filter(
+    (student) => student.status === AttendanceStatus.LATE,
+  ).length;
 
   const toggleExpanded = (studentId: string) => {
     setExpandedRowId((prev) => (prev === studentId ? null : studentId));
   };
 
-  const renderStatus = (studentId: string) => {
-    const rawStatus = attendanceByStudentId[studentId];
-    if (rawStatus === null) {
-      return <span className="text-gray-400">{AttendanceStatus.PENDING}</span>;
-    }
-
-    const status = rawStatus;
+  const renderStatus = (studentId: string, status: AttendanceStatus) => {
     if (status === AttendanceStatus.PRESENT) {
       return <span className="text-black dark:text-white">{AttendanceStatus.PRESENT}</span>;
     }
@@ -119,18 +110,35 @@ export default function AttendanceCheckingList({
               <TableHead>Profile</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Gender</TableHead>
-              <TableHead className="flex justify-between items-center w-37.5">
+              <TableHead className="w-37.5">
+                <div className="grid grid-cols-3 text-center">
                 <span>P</span>
                 <span>PM</span>
                 <span>L</span>
+                </div>
               </TableHead>
               <TableHead className="text-center">Status</TableHead>
+            </TableRow>
+            <TableRow className="bg-primary/15 font-semibold">
+              <TableHead colSpan={5} className="text-right font-bold text-lg text-foreground">
+                Total: 
+              </TableHead>
+              <TableHead className="w-37.5 text-foreground">
+                <div className="grid text-lg grid-cols-3 text-center">
+                  <span>{presentCount}</span>
+                  <span>{permissionCount}</span>
+                  <span>{lateCount}</span>
+                </div>
+              </TableHead>
+              <TableHead className="text-center text-muted-foreground">
+                
+              </TableHead>
             </TableRow>
           </TableHeader>
 
           <TableBody>
             {students.map((student, index) => {
-              const status = attendanceByStudentId[student.id];
+              const status = student.status;
               const isExpanded = expandedRowId === student.id;
               const hasDetails =
                 status === AttendanceStatus.PENDING || status === AttendanceStatus.LATE;
@@ -163,51 +171,21 @@ export default function AttendanceCheckingList({
                     <TableCell>{student.gender}</TableCell>
 
                     <TableCell className="w-37.5">
-                      <div className="flex justify-between items-center ">
-                        <input
-                          type="radio"
-                          className="size-5"
-                          name={student.id}
-                          checked={
-                            attendanceByStudentId[student.id] ===
-                            AttendanceStatus.PRESENT
-                          }
-                          onChange={() =>
-                            updateAttendance(student.id, AttendanceStatus.PRESENT)
-                          }
-                          onDoubleClick={() => clearAttendance(student.id)}
+                      <div className="grid grid-cols-3 items-center text-center">
+                        <AttendanceMark
+                          checked={status === AttendanceStatus.PRESENT}
                         />
-                        <input
-                          type="radio"
-                          className="size-5"
-                          name={student.id}
-                          checked={
-                            attendanceByStudentId[student.id] ===
-                            AttendanceStatus.PENDING
-                          }
-                          onChange={() =>
-                            updateAttendance(student.id, AttendanceStatus.PENDING)
-                          }
-                          onDoubleClick={() => clearAttendance(student.id)}
+                        <AttendanceMark
+                          checked={status === AttendanceStatus.PENDING}
                         />
-
-                        <input
-                          type="radio"
-                          className="size-5"
-                          name={student.id}
-                          checked={
-                            attendanceByStudentId[student.id] === AttendanceStatus.LATE
-                          }
-                          onChange={() =>
-                            updateAttendance(student.id, AttendanceStatus.LATE)
-                          }
-                          onDoubleClick={() => clearAttendance(student.id)}
+                        <AttendanceMark
+                          checked={status === AttendanceStatus.LATE}
                         />
                       </div>
                     </TableCell>
 
                     <TableCell className="text-center">
-                      {renderStatus(student.id)}
+                      {renderStatus(student.id, status)}
                     </TableCell>
                   </TableRow>
                   {isExpanded && hasDetails && (

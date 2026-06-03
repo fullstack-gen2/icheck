@@ -1,18 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Sheet,
   SheetContent,
@@ -20,13 +20,20 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
-  Settings2Icon,
-  PencilIcon,
-  TrashIcon,
-  PlusIcon,
+  BellIcon,
+  CalendarDaysIcon,
+  ClockIcon,
   LoaderCircleIcon,
+  MapPinIcon,
+  MinusIcon,
+  NetworkIcon,
+  PlusIcon,
+  QrCodeIcon,
+  SaveIcon,
+  Settings2Icon,
+  ShieldCheckIcon,
+  TrashIcon,
 } from "lucide-react";
-import { API_URL } from "@/lib/api-config";
 
 interface Setting {
   id: number;
@@ -37,18 +44,37 @@ interface Setting {
   updatedAt: string | null;
 }
 
+const SETTINGS_ENDPOINT =
+  "https://attendance.icheck.today/api/v1/attendance/settings";
+
 const KEY_LABELS: Record<string, string> = {
-  early_checkin_minutes:             "Early check-in window (minutes)",
-  late_threshold_minutes:            "Late threshold (minutes)",
-  student_attendance_cutoff_minutes: "Student attendance cut-off (minutes)",
-  teacher_edit_deadline_minutes:     "Teacher correction deadline (minutes)",
-  qr_expire_seconds:                 "QR code expiry (seconds)",
-  gps_allowed_radius_meters:         "GPS allowed radius (meters)",
-  max_sessions_per_day:              "Maximum sessions per day",
-  attendance_reminder_enabled:       "Attendance reminder enabled",
+  early_checkin_minutes: "Early check-in window",
+  late_threshold_minutes: "Late threshold",
+  student_attendance_cutoff_minutes: "Student attendance cut-off",
+  teacher_edit_deadline_minutes: "Teacher correction deadline",
+  qr_expire_seconds: "QR code expiry",
+  gps_allowed_radius_meters: "GPS allowed radius",
+  max_sessions_per_day: "Maximum sessions per day",
+  attendance_reminder_enabled: "Attendance reminder",
+  ip_validation_enabled: "IP validation",
+  school_ip_cidrs: "School IP ranges",
 };
 
-/** Best-effort prettifier for keys not in the explicit map. */
+const KEY_HELP: Record<string, string> = {
+  early_checkin_minutes: "How early students can check in before a session starts.",
+  late_threshold_minutes: "Minutes after session start before attendance becomes late.",
+  student_attendance_cutoff_minutes: "Latest time students can still submit attendance.",
+  teacher_edit_deadline_minutes: "How long teachers can correct attendance after class.",
+  qr_expire_seconds: "How long a generated QR code stays valid.",
+  gps_allowed_radius_meters: "Allowed distance from the school location.",
+  max_sessions_per_day: "Maximum sessions allowed for one class in a day.",
+  attendance_reminder_enabled: "Enable or disable attendance reminders.",
+  ip_validation_enabled: "Require check-ins to come from school IP ranges.",
+  school_ip_cidrs: "Comma-separated school network ranges.",
+};
+
+const defaultForm = { key: "", value: "", type: "STRING", description: "" };
+
 function humanizeKey(key: string): string {
   if (KEY_LABELS[key]) return KEY_LABELS[key];
   return key
@@ -56,10 +82,83 @@ function humanizeKey(key: string): string {
     .replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
 
-type SheetMode = "add" | "edit";
-const defaultForm = { key: "", value: "", type: "STRING", description: "" };
+function unitForSetting(key: string) {
+  if (key.includes("minutes")) return "minutes";
+  if (key.includes("seconds")) return "seconds";
+  if (key.includes("meters")) return "meters";
+  if (key.includes("per_day")) return "per day";
+  return "";
+}
 
-/** Value field — renders a boolean select or plain text input depending on type */
+function stepForSetting(key: string) {
+  if (key.includes("seconds")) return 30;
+  return 1;
+}
+
+function isNumberSetting(setting: Setting) {
+  const type = setting.type.toUpperCase();
+  return (
+    type === "INT" ||
+    setting.settingKey.includes("minutes") ||
+    setting.settingKey.includes("seconds") ||
+    setting.settingKey.includes("meters") ||
+    setting.settingKey.includes("per_day")
+  );
+}
+
+function settingGroup(key: string) {
+  if (
+    key.includes("minutes") ||
+    key.includes("seconds") ||
+    key.includes("sessions")
+  ) {
+    return "Session Timing";
+  }
+
+  if (key.includes("gps") || key.includes("ip") || key.includes("cidrs")) {
+    return "Check-in Rules";
+  }
+
+  return "General Options";
+}
+
+function SettingIcon({ settingKey }: { settingKey: string }) {
+  if (settingKey === "late_threshold_minutes") {
+    return <ClockIcon className="size-5" />;
+  }
+
+  if (settingKey.includes("qr")) {
+    return <QrCodeIcon className="size-5" />;
+  }
+
+  if (settingKey.includes("gps")) {
+    return <MapPinIcon className="size-5" />;
+  }
+
+  if (settingKey.includes("ip") || settingKey.includes("cidrs")) {
+    return <NetworkIcon className="size-5" />;
+  }
+
+  if (settingKey.includes("reminder")) {
+    return <BellIcon className="size-5" />;
+  }
+
+  if (settingKey.includes("sessions")) {
+    return <CalendarDaysIcon className="size-5" />;
+  }
+
+  return <ShieldCheckIcon className="size-5" />;
+}
+
+function formatUpdated(date: string | null) {
+  if (!date) return "Not updated";
+  return new Date(date).toLocaleDateString([], {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 function ValueField({
   type,
   value,
@@ -76,11 +175,12 @@ function ValueField({
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg border border-input bg-card px-3 py-2 text-base text-foreground/80 focus:outline-none focus:ring-2 focus:ring-primary/30"
       >
-        <option value="true">true</option>
-        <option value="false">false</option>
+        <option value="true">Enabled</option>
+        <option value="false">Disabled</option>
       </select>
     );
   }
+
   return (
     <Input
       placeholder={type === "INT" ? "e.g. 10" : "e.g. some_value"}
@@ -90,32 +190,189 @@ function ValueField({
   );
 }
 
+function SettingOptionCard({
+  setting,
+  deleting,
+  onSave,
+  onDelete,
+}: {
+  setting: Setting;
+  deleting: boolean;
+  onSave: (setting: Setting, value: string) => Promise<void>;
+  onDelete: (key: string) => void;
+}) {
+  const [draftValue, setDraftValue] = useState(setting.settingValue);
+  const [saving, setSaving] = useState(false);
+  const isBoolean = setting.type.toUpperCase() === "BOOLEAN";
+  const isNumeric = isNumberSetting(setting);
+  const unit = unitForSetting(setting.settingKey);
+  const changed = draftValue.trim() !== setting.settingValue;
+
+  async function save() {
+    if (!draftValue.trim() || !changed) return;
+    setSaving(true);
+    try {
+      await onSave(setting, draftValue.trim());
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function nudge(delta: number) {
+    const current = Number.parseInt(draftValue || "0", 10);
+    const next = Number.isFinite(current) ? Math.max(0, current + delta) : 0;
+    setDraftValue(String(next));
+  }
+
+  return (
+    <Card className="min-h-56 rounded-lg">
+      <CardHeader className="gap-2">
+        <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <SettingIcon settingKey={setting.settingKey} />
+        </div>
+        <CardTitle>{humanizeKey(setting.settingKey)}</CardTitle>
+        <CardDescription>
+          {setting.description || KEY_HELP[setting.settingKey] || "Custom system option."}
+        </CardDescription>
+        <CardAction className="flex items-center gap-1">
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            className="text-red-400 hover:bg-red-50 hover:text-red-600"
+            onClick={() => onDelete(setting.settingKey)}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <LoaderCircleIcon className="size-4 animate-spin" />
+            ) : (
+              <TrashIcon className="size-4" />
+            )}
+          </Button>
+        </CardAction>
+      </CardHeader>
+
+      <CardContent className="mt-auto space-y-4">
+        {isBoolean ? (
+          <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-1">
+            <Button
+              type="button"
+              variant={draftValue === "true" ? "default" : "ghost"}
+              className={draftValue === "true" ? "bg-green-600 text-white hover:bg-green-700" : ""}
+              onClick={() => setDraftValue("true")}
+            >
+              Enabled
+            </Button>
+            <Button
+              type="button"
+              variant={draftValue === "false" ? "default" : "ghost"}
+              className={draftValue === "false" ? "bg-muted-foreground text-background hover:bg-muted-foreground/80" : ""}
+              onClick={() => setDraftValue("false")}
+            >
+              Disabled
+            </Button>
+          </div>
+        ) : isNumeric ? (
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              onClick={() => nudge(-stepForSetting(setting.settingKey))}
+            >
+              <MinusIcon className="size-4" />
+            </Button>
+            <div className="relative flex-1">
+              <Input
+                type="number"
+                min={0}
+                value={draftValue}
+                onChange={(e) => setDraftValue(e.target.value)}
+                className="h-12 pr-20 text-center text-2xl font-semibold tabular-nums"
+              />
+              {unit && (
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
+                  {unit}
+                </span>
+              )}
+            </div>
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              onClick={() => nudge(stepForSetting(setting.settingKey))}
+            >
+              <PlusIcon className="size-4" />
+            </Button>
+          </div>
+        ) : (
+          <Input
+            value={draftValue}
+            onChange={(e) => setDraftValue(e.target.value)}
+            className="h-12 font-mono"
+          />
+        )}
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            {/* <p className="truncate font-mono text-xs text-muted-foreground">
+              {setting.settingKey}
+            </p> */}
+            <p className="text-xs text-muted-foreground/70">
+              Updated {formatUpdated(setting.updatedAt)}
+            </p>
+          </div>
+          <Button
+            type="button"
+            className="gap-2 bg-primary hover:bg-primary/90"
+            onClick={save}
+            disabled={!changed || saving || !draftValue.trim()}
+          >
+            {saving ? (
+              <LoaderCircleIcon className="size-4 animate-spin" />
+            ) : (
+              <SaveIcon className="size-4" />
+            )}
+            Save
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Setting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [sheetMode, setSheetMode] = useState<SheetMode>("add");
   const [form, setForm] = useState(defaultForm);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
-
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
+
+  const groupedSettings = useMemo(() => {
+    return settings.reduce<Record<string, Setting[]>>((groups, setting) => {
+      const group = settingGroup(setting.settingKey);
+      groups[group] = [...(groups[group] ?? []), setting];
+      return groups;
+    }, {});
+  }, [settings]);
 
   async function load() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`https://attendance.icheck.today/api/v1/attendance/settings`); // iam/users
+      const res = await fetch(SETTINGS_ENDPOINT);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        
         const reason =
-          res.status === 401 ? "Your session expired. Please log in again." :
-          res.status === 403 ? "You don't have permission to view settings." :
-          json?.message ?? json?.error ?? `HTTP ${res.status}`;
-        setError(`Failed to load settings — ${reason}`);
+          res.status === 401
+            ? "Your session expired. Please log in again."
+            : res.status === 403
+              ? "You don't have permission to view settings."
+              : json?.message ?? json?.error ?? `HTTP ${res.status}`;
+        setError(`Failed to load settings - ${reason}`);
         return;
       }
       setSettings(json?.payload ?? []);
@@ -134,18 +391,27 @@ export default function SettingsPage() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  function openAdd() {
-    setForm(defaultForm);
-    setFormError("");
-    setSheetMode("add");
-    setSheetOpen(true);
-  }
-
-  function openEdit(s: Setting) {
-    setForm({ key: s.settingKey, value: s.settingValue, type: s.type, description: s.description ?? "" });
-    setFormError("");
-    setSheetMode("edit");
-    setSheetOpen(true);
+  async function updateSettingValue(setting: Setting, value: string) {
+    const res = await fetch(
+      `${SETTINGS_ENDPOINT}/${encodeURIComponent(setting.settingKey)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value }),
+      },
+    );
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(json?.payload?.message ?? json?.message ?? "Update failed.");
+      return;
+    }
+    setSettings((current) =>
+      current.map((item) =>
+        item.id === setting.id
+          ? { ...item, settingValue: value, updatedAt: new Date().toISOString() }
+          : item,
+      ),
+    );
   }
 
   async function handleSubmit() {
@@ -156,22 +422,21 @@ export default function SettingsPage() {
     setSubmitting(true);
     setFormError("");
     try {
-      let res: Response;
-      if (sheetMode === "add") {
-        res = await fetch(`https://attendance.icheck.today/${API_URL}/settings`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: form.key.trim(), value: form.value.trim(), type: form.type, description: form.description }),
-        });
-      } else {
-        res = await fetch(`https://attendance.icheck.today/api/v1/attendance/settings/${encodeURIComponent(form.key)}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ value: form.value.trim() }),
-        });
+      const res = await fetch(SETTINGS_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: form.key.trim(),
+          value: form.value.trim(),
+          type: form.type,
+          description: form.description,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setFormError(json?.payload?.message ?? json?.message ?? "Operation failed.");
+        return;
       }
-      const json = await res.json();
-      if (!res.ok) { setFormError(json?.payload?.message ?? json?.message ?? "Operation failed."); return; }
       setSheetOpen(false);
       await load();
     } finally {
@@ -183,7 +448,9 @@ export default function SettingsPage() {
     if (!confirm(`Delete setting "${key}"? This cannot be undone.`)) return;
     setDeletingKey(key);
     try {
-      const res = await fetch(`https://attendance.icheck.today/api/v1/attendance/settings/${encodeURIComponent(key)}`, { method: "DELETE" });
+      const res = await fetch(`${SETTINGS_ENDPOINT}/${encodeURIComponent(key)}`, {
+        method: "DELETE",
+      });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         setError(json?.payload?.message ?? json?.message ?? "Delete failed.");
@@ -197,19 +464,20 @@ export default function SettingsPage() {
 
   return (
     <div className="px-5 py-8">
-      <div className="flex items-center justify-between mb-8">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">System Settings</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Global configuration keys used across all sessions.</p>
+          <div className="flex items-center gap-2">
+            <Settings2Icon className="size-7 text-primary" />
+            <h1 className="text-3xl font-bold text-foreground">System Settings</h1>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Tune attendance rules with simple controls. Changes apply across all sessions.
+          </p>
         </div>
-        <Button className="bg-primary hover:bg-primary/90 gap-2" onClick={openAdd}>
-          <PlusIcon className="size-4" />
-          Add Setting
-        </Button>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl px-4 py-3 mb-5">
+        <div className="mb-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
           {error}
         </div>
       )}
@@ -219,99 +487,42 @@ export default function SettingsPage() {
           <LoaderCircleIcon className="size-8 animate-spin text-primary" />
         </div>
       ) : settings.length === 0 ? (
-        <div className="text-center py-20 text-muted-foreground/70 bg-card rounded-2xl border border-border">
-          <Settings2Icon className="size-10 mx-auto mb-3 opacity-40" />
+        <div className="rounded-2xl border border-border bg-card py-20 text-center text-muted-foreground/70">
+          <Settings2Icon className="mx-auto mb-3 size-10 opacity-40" />
           <p className="font-medium">No settings configured.</p>
-          <p className="mt-1 text-base">Click `Add Setting` to create the first one.</p>
+          <p className="mt-1 text-base">Click Add Setting to create the first one.</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="px-4 py-3 text-muted-foreground font-semibold">Setting</TableHead>
-                <TableHead className="px-4 py-3 text-muted-foreground font-semibold">Value</TableHead>
-                <TableHead className="px-4 py-3 text-muted-foreground font-semibold hidden md:table-cell">Description</TableHead>
-                <TableHead className="px-4 py-3 text-muted-foreground font-semibold hidden lg:table-cell">Updated</TableHead>
-                <TableHead className="px-4 py-3 text-right text-muted-foreground font-semibold">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {settings.map((s) => (
-                <TableRow key={s.id} className="hover:bg-muted/50 transition-colors">
-                  <TableCell className="px-4 py-3">
-                    {/* Friendly label first, raw key as a small caption underneath
-                        so admins who know the key by name still recognize it. */}
-                    <div className="font-medium text-foreground">{humanizeKey(s.settingKey)}</div>
-                    <div className="mt-0.5 font-mono text-sm text-muted-foreground/70">{s.settingKey}</div>
-                  </TableCell>
-                  <TableCell className="px-4 py-3">
-                    {s.type === "BOOLEAN" ? (
-                      <Badge className={s.settingValue === "true"
-                        ? "bg-green-100 text-green-700 hover:bg-green-100"
-                        : "bg-muted text-muted-foreground hover:bg-muted"
-                      }>
-                        {s.settingValue === "true" ? "Enabled" : "Disabled"}
-                      </Badge>
-                    ) : (
-                      <span className="font-semibold text-foreground">{s.settingValue}</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="hidden px-4 py-3 text-base text-muted-foreground md:table-cell">
-                    <span className="block max-w-xs">{s.description ?? "—"}</span>
-                  </TableCell>
-                  <TableCell className="hidden whitespace-nowrap px-4 py-3 text-sm text-muted-foreground/70 lg:table-cell">
-                    {s.updatedAt
-                      ? new Date(s.updatedAt).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" })
-                      : "—"}
-                  </TableCell>
-                  <TableCell className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="size-8 text-primary hover:bg-primary/10"
-                        onClick={() => openEdit(s)}
-                      >
-                        <PencilIcon className="size-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="size-8 text-red-400 hover:bg-red-50 hover:text-red-600"
-                        onClick={() => handleDelete(s.settingKey)}
-                        disabled={deletingKey === s.settingKey}
-                      >
-                        {deletingKey === s.settingKey
-                          ? <LoaderCircleIcon className="size-4 animate-spin" />
-                          : <TrashIcon className="size-4" />
-                        }
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <div className="space-y-8">
+          {Object.entries(groupedSettings).map(([group, groupSettings]) => (
+            <section key={group} className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-foreground">{group}</h2>
+                <Badge variant="outline">{groupSettings.length} options</Badge>
+              </div>
+              <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                {groupSettings.map((setting) => (
+                  <SettingOptionCard
+                    key={`${setting.id}-${setting.settingValue}`}
+                    setting={setting}
+                    deleting={deletingKey === setting.settingKey}
+                    onSave={updateSettingValue}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
       )}
 
-      {/* Add / Edit Sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="right" className="w-full sm:max-w-md">
           <SheetHeader className="mb-6">
-            <SheetTitle>
-              {sheetMode === "add" ? "Add New Setting" : `Edit — ${humanizeKey(form.key)}`}
-            </SheetTitle>
-            {/* Show the underlying database key on edit so the admin still
-                knows which row they're touching. */}
-            {sheetMode === "edit" && (
-              <p className="font-mono text-sm text-muted-foreground/70">{form.key}</p>
-            )}
+            <SheetTitle>Add New Setting</SheetTitle>
           </SheetHeader>
 
           <div className="flex flex-col gap-4">
-            {/* Key — read-only when editing */}
             <div className="space-y-1.5">
               <Label htmlFor="s-key">
                 Key <span className="text-red-500">*</span>
@@ -321,32 +532,31 @@ export default function SettingsPage() {
                 placeholder="e.g. late_threshold_minutes"
                 value={form.key}
                 onChange={(e) => setForm((f) => ({ ...f, key: e.target.value }))}
-                readOnly={sheetMode === "edit"}
-                className={`font-mono ${sheetMode === "edit" ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : ""}`}
+                className="font-mono"
               />
             </div>
 
-            {/* Type — only for add */}
-            {sheetMode === "add" && (
-              <div className="space-y-1.5">
-                <Label htmlFor="s-type">Type</Label>
-                <select
-                  id="s-type"
-                  value={form.type}
-                  onChange={(e) => {
-                    const t = e.target.value;
-                    setForm((f) => ({ ...f, type: t, value: t === "BOOLEAN" ? "true" : "" }));
-                  }}
-                  className="w-full rounded-lg border border-input bg-card px-3 py-2 text-base text-foreground/80 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                >
-                  <option value="STRING">STRING</option>
-                  <option value="INT">INT</option>
-                  <option value="BOOLEAN">BOOLEAN</option>
-                </select>
-              </div>
-            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="s-type">Type</Label>
+              <select
+                id="s-type"
+                value={form.type}
+                onChange={(e) => {
+                  const t = e.target.value;
+                  setForm((f) => ({
+                    ...f,
+                    type: t,
+                    value: t === "BOOLEAN" ? "true" : "",
+                  }));
+                }}
+                className="w-full rounded-lg border border-input bg-card px-3 py-2 text-base text-foreground/80 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="STRING">STRING</option>
+                <option value="INT">INT</option>
+                <option value="BOOLEAN">BOOLEAN</option>
+              </select>
+            </div>
 
-            {/* Value — boolean gets select, others get input */}
             <div className="space-y-1.5">
               <Label htmlFor="s-value">
                 Value <span className="text-red-500">*</span>
@@ -358,25 +568,31 @@ export default function SettingsPage() {
               />
             </div>
 
-            {/* Description */}
             <div className="space-y-1.5">
               <Label htmlFor="s-desc">Description</Label>
               <Input
                 id="s-desc"
                 placeholder="Optional description"
                 value={form.description}
-                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, description: e.target.value }))
+                }
               />
             </div>
 
             {formError && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
                 {formError}
               </p>
             )}
 
-            <div className="flex gap-2 mt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setSheetOpen(false)} disabled={submitting}>
+            <div className="mt-2 flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setSheetOpen(false)}
+                disabled={submitting}
+              >
                 Cancel
               </Button>
               <Button
@@ -384,8 +600,10 @@ export default function SettingsPage() {
                 onClick={handleSubmit}
                 disabled={submitting}
               >
-                {submitting && <LoaderCircleIcon className="size-4 animate-spin mr-2" />}
-                {sheetMode === "add" ? "Create" : "Save Changes"}
+                {submitting && (
+                  <LoaderCircleIcon className="mr-2 size-4 animate-spin" />
+                )}
+                Create
               </Button>
             </div>
           </div>

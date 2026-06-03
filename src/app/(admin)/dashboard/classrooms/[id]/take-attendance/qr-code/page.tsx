@@ -1,33 +1,19 @@
-"use client";
+import { TakeAttendanceQrCode } from "@/components/take-attendance-qr-code";
 
-import Link from "next/link";
-import { QRCodeCanvas } from "qrcode.react";
+export default async function MyQR({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
 
-export default function MyQR() {
-  const qrUrl = "https://yourapp.com/checkin?token=abc123";
   return (
-    <>
-      <div>
-        <Link href={"/dashboard"}>
-          <button className="px-2 py-1 rounded-2xl">Back Dashboard</button>
-        </Link>
-      </div>
-      <div className="flex flex-col justify-center items-center h-screen">
-        <QRCodeCanvas
-          value={qrUrl}
-          size={1100}
-          level="H"
-          includeMargin={true}
-          imageSettings={{
-            src: "https://res.cloudinary.com/dsmqsivcj/image/upload/v1780286128/c4lgj7uipplt47mergga.png",
-            x: undefined,
-            y: undefined,
-            height: 300,
-            width: 300,
-            excavate: true,
-          }}
-        />
-      </div>
-    </>
+    <main className="flex h-screen items-center justify-center px-4 py-6">
+      <TakeAttendanceQrCode
+        closeHref={`/dashboard/classrooms/${id}/take-attendance/checked_attendance`}
+        qrSize="min(76vmin, calc(100vw - 4rem), calc(100vh - 12rem))"
+        logoSize={220}
+      />
+    </main>
   );
 }
