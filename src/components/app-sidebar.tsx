@@ -24,6 +24,7 @@ import {
 } from "lucide-react"
 import { LogoWordmark } from "@/components/logo"
 import { GrSchedules } from "react-icons/gr";
+import { FaWpforms } from "react-icons/fa";
 
 import { useUser } from "@/components/user-provider"
 
