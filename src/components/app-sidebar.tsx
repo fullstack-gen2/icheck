@@ -33,7 +33,7 @@ import { FaWpforms } from "react-icons/fa6";
 const ALL_MAIN = [
   { title: "Dashboard", url: "/dashboard",             icon: <LayoutDashboardIcon />, roles: ["ADMIN", "TEACHER"] },
   { title: "Dashboard", url: "/student",               icon: <LayoutDashboardIcon />, roles: ["STUDENT"] },
-  { title: "Require Permission", url: "/require-permission",  icon: <FaWpforms />, roles: ["STUDENT"] },
+  { title: "Require Permission", url: "/student/require-permission",  icon: <FaWpforms />, roles: ["STUDENT"] },
   { title: "Classes",    url: "/dashboard/classrooms",  icon: <BookOpenIcon />,        roles: ["ADMIN", "TEACHER"] },
   { title: "Students",   url: "/students",              icon: <UsersIcon />,           roles: ["ADMIN", "TEACHER"] },
   { title: "Schedule",   url: "/schedule",              icon: <GrSchedules />,            roles: ["ADMIN", "TEACHER"] },
@@ -61,7 +61,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="hidden md:flex">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton

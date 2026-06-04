@@ -7,13 +7,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 type StudentProfilePanelProps = {
-  classcode: string;
+  classroomId: string;
   studentId: string;
   mode?: "page" | "modal";
 };
 
 export function StudentProfilePanel({
-  classcode,
+  classroomId,
   studentId,
   mode = "page",
 }: StudentProfilePanelProps) {
@@ -107,7 +107,10 @@ export function StudentProfilePanel({
           asChild
           className="absolute right-4 top-4 z-10 rounded-full text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
         >
-          <Link href={`/class/${classcode}`} aria-label="Close student profile">
+          <Link
+            href={`/dashboard/classrooms/${classroomId}`}
+            aria-label="Close student profile"
+          >
             <X className="size-4" />
           </Link>
         </Button>
@@ -167,7 +170,7 @@ export function StudentProfilePanel({
           asChild
           className="mb-7 h-9 rounded-full border border-transparent px-4 text-sm font-semibold text-zinc-800 hover:border-zinc-300 hover:bg-white/70"
         >
-          <Link href={`/class/${classcode}`}>
+          <Link href={`/dashboard/classrooms/${classroomId}`}>
             <ArrowLeft className="size-4" />
             Back
           </Link>

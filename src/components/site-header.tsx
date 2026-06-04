@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronRightIcon, BellIcon } from "lucide-react";
 import { DarkModeToggle, ThemeSelector } from "@/components/theme-toggle";
+import { LogoWordmark } from "@/components/logo";
 
 const ROUTE_LABELS: Record<string, string> = {
   "/dashboard":            "Dashboard",
@@ -55,15 +56,20 @@ export function SiteHeader() {
 
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height) bg-background">
-      <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
-        <SidebarTrigger className="-ml-1" />
+      <div className="flex w-full items-center gap-2 px-3 sm:px-4 lg:gap-2 lg:px-6">
+        <div className="flex min-w-0 items-center gap-2">
+          <SidebarTrigger className="-ml-1 shrink-0" />
+          <Link href="/" className="flex shrink-0 items-center md:hidden">
+            <LogoWordmark height={30} />
+          </Link>
+        </div>
         <Separator
           orientation="vertical"
-          className="mx-2 data-[orientation=vertical]:h-4"
+          className="mx-2 hidden data-[orientation=vertical]:h-4 md:block"
         />
 
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-1 text-base">
+        <nav className="hidden items-center gap-1 text-base md:flex">
           {segments.map((seg, i) => (
             <span key={seg.path} className="flex items-center gap-1">
               {i > 0 && (
@@ -90,7 +96,7 @@ export function SiteHeader() {
         </nav>
 
         {/* ── Right-side controls (Insight-style) ── */}
-        <div className="ml-auto flex items-center gap-0.5">
+        <div className="ml-auto flex shrink-0 items-center gap-0.5">
 
           {/* 1. Dark / Light toggle */}
           <DarkModeToggle />
@@ -104,7 +110,7 @@ export function SiteHeader() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-8 text-muted-foreground hover:text-foreground"
+                className="hidden size-8 text-muted-foreground hover:text-foreground sm:inline-flex"
               >
                 <BellIcon className="size-4" />
               </Button>
