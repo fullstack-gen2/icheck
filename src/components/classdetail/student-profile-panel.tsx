@@ -7,13 +7,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 type StudentProfilePanelProps = {
-  classcode: string;
+  classroomId: string;
   studentId: string;
   mode?: "page" | "modal";
 };
 
 export function StudentProfilePanel({
-  classcode,
+  classroomId,
   studentId,
   mode = "page",
 }: StudentProfilePanelProps) {
@@ -48,10 +48,10 @@ export function StudentProfilePanel({
         />
       </div>
 
-      <div className="mt-5 space-y-1 text-base leading-6 text-zinc-900">
+      <div className="mt-5 space-y-1 text-base leading-6 dark:text-white text-zinc-900">
         <p>
           <span className="font-semibold">Username:</span>{" "}
-          <span className="font-light">{student.name}</span>
+          <span className="text-light">{student.name}</span>
         </p>
         <p>
           <span className="font-semibold">email: </span>{" "}
@@ -99,7 +99,7 @@ export function StudentProfilePanel({
   );
 
   const informationCard = (
-    <Card className="relative rounded-lg border-zinc-300 bg-white py-0 shadow-sm">
+    <Card className="relative rounded-lg border-zinc-300  py-0 shadow-sm">
       {mode === "modal" && (
         <Button
           variant="ghost"
@@ -107,7 +107,10 @@ export function StudentProfilePanel({
           asChild
           className="absolute right-4 top-4 z-10 rounded-full text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
         >
-          <Link href={`/class/${classcode}`} aria-label="Close student profile">
+          <Link
+            href={`/dashboard/classrooms/${classroomId}`}
+            aria-label="Close student profile"
+          >
             <X className="size-4" />
           </Link>
         </Button>
@@ -121,7 +124,7 @@ export function StudentProfilePanel({
         }
       >
         <div className="mb-5 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-zinc-800">
+          <h1 className="text-lg font-semibold text-zinc-800 dark:text-white">
             Personal Information
           </h1>
 
@@ -167,7 +170,7 @@ export function StudentProfilePanel({
           asChild
           className="mb-7 h-9 rounded-full border border-transparent px-4 text-sm font-semibold text-zinc-800 hover:border-zinc-300 hover:bg-white/70"
         >
-          <Link href={`/class/${classcode}`}>
+          <Link className="dark:text-white" href={`/dashboard/classrooms/${classroomId}`}>
             <ArrowLeft className="size-4" />
             Back
           </Link>
@@ -191,7 +194,7 @@ function ProfileField({ label, value, wide }: ProfileFieldProps) {
   return (
     <div className={wide ? "sm:col-span-2" : undefined}>
       <dt className="text-sm font-medium text-zinc-500">{label}</dt>
-      <dd className="text-sm font-semibold capitalize text-zinc-950">
+      <dd className="text-sm font-semibold capitalize text-zinc-950 dark:text-white">
         {value}
       </dd>
     </div>

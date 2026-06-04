@@ -12,16 +12,27 @@ import { data } from "@/lib/data/mockData/student";
 import { AttendanceStatus, Student } from "@/types/student";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Fragment, useState } from "react";
 import { Input } from "../ui/input";
 
 type AttendanceCheckingListProps = {
   students?: Student[];
+  studentProfileBasePath?: string;
 };
 
 export default function AttendanceCheckingList({
   students = data,
+  studentProfileBasePath,
 }: AttendanceCheckingListProps) {
+  const params = useParams<{ id?: string | string[] }>();
+  const classroomId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const resolvedStudentProfileBasePath =
+    studentProfileBasePath ??
+    (classroomId
+      ? `/dashboard/classrooms/${classroomId}/student-profile`
+      : undefined);
   const [attendanceByStudentId, setAttendanceByStudentId] = useState<
     Record<string, AttendanceStatus | null>
   >(() =>
@@ -149,13 +160,22 @@ export default function AttendanceCheckingList({
                     <TableCell>{student.id}</TableCell>
 
                     <TableCell>
-                      <Image
-                        src={student.profile}
-                        alt={student.name}
-                        width={50}
-                        height={50}
-                        className="rounded-xl object-cover w-12 h-12"
-                      />
+                      <Link
+                        href={
+                          resolvedStudentProfileBasePath
+                            ? `${resolvedStudentProfileBasePath}/${student.id}`
+                            : `/students/${student.id}`
+                        }
+                        aria-label={`View ${student.name} profile`}
+                      >
+                        <Image
+                          src={student.profile}
+                          alt={student.name}
+                          width={50}
+                          height={50}
+                          className="rounded-xl object-cover w-12 h-12"
+                        />
+                      </Link>
                     </TableCell>
 
                     <TableCell>{student.name}</TableCell>

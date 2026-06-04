@@ -12,11 +12,14 @@ import { data } from "@/lib/data/mockData/student";
 import { AttendanceStatus, Student } from "@/types/student";
 import { CheckIcon, ChevronDown, ChevronUp } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Fragment, useState } from "react";
 import { Input } from "../ui/input";
 
 type ReportTodayProps = {
   students?: Student[];
+  studentProfileBasePath?: string;
 };
 
 function AttendanceMark({
@@ -38,7 +41,15 @@ function AttendanceMark({
 
 export default function ReportToday({
   students = data,
+  studentProfileBasePath,
 }: ReportTodayProps) {
+  const params = useParams<{ id?: string | string[] }>();
+  const classroomId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const resolvedStudentProfileBasePath =
+    studentProfileBasePath ??
+    (classroomId
+      ? `/dashboard/classrooms/${classroomId}/student-profile`
+      : undefined);
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const presentCount = students.filter(
     (student) => student.status === AttendanceStatus.PRESENT,
@@ -157,13 +168,22 @@ export default function ReportToday({
                     <TableCell>{student.id}</TableCell>
 
                     <TableCell>
-                      <Image
-                        src={student.profile}
-                        alt={student.name}
-                        width={50}
-                        height={50}
-                        className="rounded-xl object-cover w-12 h-12"
-                      />
+                      <Link
+                        href={
+                          resolvedStudentProfileBasePath
+                            ? `${resolvedStudentProfileBasePath}/${student.id}`
+                            : `/students/${student.id}`
+                        }
+                        aria-label={`View ${student.name} profile`}
+                      >
+                        <Image
+                          src={student.profile}
+                          alt={student.name}
+                          width={50}
+                          height={50}
+                          className="rounded-xl object-cover w-12 h-12"
+                        />
+                      </Link>
                     </TableCell>
 
                     <TableCell>{student.name}</TableCell>

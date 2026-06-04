@@ -38,9 +38,11 @@ export const columns: ColumnDef<AttendanceList>[] = [
       const profileUrl = row.original.profile;
       const profileBasePath = table.options.meta?.studentProfileBasePath;
       const profileHref =
-        profileBasePath && row.original.id
-          ? `${profileBasePath}/${row.original.id}`
-          : "/dashboard/profile";
+        row.original.id
+          ? profileBasePath
+            ? `${profileBasePath}/${row.original.id}`
+            : `/students/${row.original.id}`
+          : "#";
 
       if (!profileUrl) {
         return <span>No image</span>;

@@ -51,7 +51,12 @@ export default async function ClassroomDetailPage({
 
         
 
-        <DataTableList columns={columns} data={mockAttendanceData} showStudentActions />
+        <DataTableList
+          columns={columns}
+          data={mockAttendanceData}
+          showStudentActions
+          studentProfileBasePath={`/dashboard/classrooms/${id}/student-profile`}
+        />
 
 
           {/* {students.length === 0 ? (
