@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { LoaderCircleIcon } from "lucide-react";
 import { api } from "@/lib/api-client";
+import { todayIso } from "@/lib/school-time";
 
 export interface ClassroomFormValue {
   id?: number;
@@ -57,8 +58,9 @@ const empty: ClassroomFormValue = {
   semester: 1,
   shift: "MORNING",
   academicYear: new Date().getFullYear(),
-  startDate: new Date().toISOString().slice(0, 10),
-  endDate: new Date().toISOString().slice(0, 10),
+  // school local date, not UTC — same reason as schedule/page.tsx
+  startDate: todayIso(),
+  endDate: todayIso(),
   status: true,
 };
 

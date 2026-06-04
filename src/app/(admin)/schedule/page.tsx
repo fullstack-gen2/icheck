@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { QrCodeIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { ScheduleAddButton, ScheduleRowActions } from "@/components/schedule-actions";
+import { schoolToday, todayIso } from "@/lib/school-time";
 
 interface ClassroomLite { id: number; className: string; }
 
@@ -67,7 +68,9 @@ async function fetchTodaySessions(teacherId: string): Promise<SessionItem[]> {
   try {
     const res = await backendFetch(`/sessions/teachers/${teacherId}/upcoming?size=20`);
     if (!res.ok) return [];
-    const today = new Date().toISOString().slice(0, 10);
+    // Compare against today in school local time, NOT the container's UTC clock,
+    // otherwise on Friday 00:30 +07 we'd ask for Thursday and get nothing.
+    const today = todayIso();
     return ((await res.json())?.payload?.content ?? []).filter((s: SessionItem) => s.sessionDate === today);
   } catch { return []; }
 }
@@ -115,7 +118,8 @@ export default async function SchedulePage({
   const todayMap = new Map<string, SessionItem>();
   for (const ts of todaySessions) todayMap.set(`${ts.subjectName}:${ts.classroomName}`, ts);
 
-  const todayDow = new Date().toLocaleDateString("en-US", { weekday: "long" }).toUpperCase() as Day;
+  // "Today" must reflect the school's wall clock, not the container's UTC clock.
+  const todayDow = schoolToday().weekday as Day;
   const totalSchedules = schedules.length;
 
   const selectedIdx = selectedDay ? DAYS.indexOf(selectedDay) : -1;
