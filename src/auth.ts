@@ -1,8 +1,7 @@
-export const BASE_API_URL = process.env.BASE_API_URL;
-
-  // process.env.BASE_API_URL ??
-  // process.env.BACKEND_URL;
-  //"https://attendance.icheck.today/api/v1";
+export const BASE_API_URL =
+  process.env.BASE_API_URL ??
+  process.env.BACKEND_URL ??
+  "https://attendance.icheck.today/api/v1";
 
 //=========================================
 // Re-exported from the client-safe module so server-only modules can also
@@ -19,15 +18,21 @@ export interface AppUser {
   id: string;
   name: string;
   email: string;
+  /** Normalized role used for permission gating: ADMIN | TEACHER | STUDENT | USER. */
   role: string;
+  /** Human-readable label that mirrors what the API actually returned,
+   *  so a SUPER_ADMIN sees "Super Admin" in the UI even though `role`
+   *  normalizes to ADMIN for access checks. */
+  displayRole: string;
+  /** All raw role strings from /auth/me, in original casing. */
+  rawRoles: string[];
 }
 
 /**
- * Maps the gateway's /auth/me response into our AppUser shape.
- *
- * Role normalization rules:
- *   - SUPER_ADMIN  →  ADMIN  (same privileges inside i-Check)
- *   - If the user has multiple roles, prefer ADMIN > TEACHER > STUDENT.
+ * Role rules:
+ *   - SUPER_ADMIN  → access-equivalent to ADMIN (normalized to "ADMIN")
+ *   - Multi-role users → highest privilege wins (ADMIN > TEACHER > STUDENT)
+ *   - `displayRole` always reflects the actual API role (Super Admin stays Super Admin).
  */
 const ROLE_PRIORITY = ["ADMIN", "TEACHER", "STUDENT"] as const;
 
@@ -37,6 +42,34 @@ function normalizeRole(raw: string): string {
   return upper || "USER";
 }
 
+/** Human title-case label for a raw role string. */
+function humanizeRole(raw: string): string {
+  const upper = raw?.toUpperCase?.() ?? "";
+  if (upper === "SUPER_ADMIN" || upper === "SUPERADMIN") return "Super Admin";
+  if (upper === "ADMIN")   return "Admin";
+  if (upper === "TEACHER") return "Teacher";
+  if (upper === "STUDENT") return "Student";
+  // Generic fallback: title-case + replace underscores with spaces
+  return upper
+    .split("_")
+    .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
+/**
+ * Pick which raw role drives `displayRole`. Highest privilege still wins,
+ * but "Super Admin" beats plain "Admin" when both are present so the
+ * elevated role is shown in the UI.
+ */
+function pickDisplayRoleRaw(rawRoles: string[]): string {
+  const upper = rawRoles.map((r) => r.toUpperCase());
+  if (upper.some((r) => r === "SUPER_ADMIN" || r === "SUPERADMIN")) return "SUPER_ADMIN";
+  if (upper.includes("ADMIN"))   return "ADMIN";
+  if (upper.includes("TEACHER")) return "TEACHER";
+  if (upper.includes("STUDENT")) return "STUDENT";
+  return rawRoles[0] ?? "USER";
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapAuthMe(p: any): AppUser | null {
   if (!p || typeof p !== "object") return null;
@@ -44,10 +77,11 @@ export function mapAuthMe(p: any): AppUser | null {
   const email    = p.email ?? "";
   if (!username && !email) return null;
 
-  const rolesRaw: string[] = Array.isArray(p.roles)
+  const rawRoles: string[] = Array.isArray(p.roles)
     ? p.roles.map(String)
     : p.role ? [String(p.role)] : [];
-  const normalized = rolesRaw.map(normalizeRole);
+
+  const normalized = rawRoles.map(normalizeRole);
   const role =
     ROLE_PRIORITY.find((r) => normalized.includes(r)) ??
     normalized[0] ??
@@ -58,5 +92,7 @@ export function mapAuthMe(p: any): AppUser | null {
     name:  String(username || email),
     email: String(email),
     role,
+    displayRole: humanizeRole(pickDisplayRoleRaw(rawRoles)),
+    rawRoles,
   };
 }

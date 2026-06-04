@@ -14,9 +14,11 @@ export default async function AdminLayout({
   // Students see a limited nav (Attendance + Students items) via role filtering in AppSidebar.
 
   const displayUser = {
-    name:  user?.name  ?? "",
-    email: user?.email ?? "",
-    role:  user?.role  ?? "ADMIN",
+    name:        user?.name  ?? "",
+    email:       user?.email ?? "",
+    role:        user?.role  ?? "ADMIN",
+    // Show the elevated label (Super Admin / …) straight from /auth/me.
+    displayRole: user?.displayRole ?? "Admin",
   };
 
   return (
