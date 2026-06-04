@@ -17,8 +17,6 @@ import {
 } from "@/components/ui/sidebar"
 import {
   LayoutDashboardIcon,
-  ListIcon,
-  CameraIcon,
   UsersIcon,
   Settings2Icon,
   FileChartColumnIcon,
@@ -26,6 +24,8 @@ import {
 } from "lucide-react"
 import { LogoWordmark } from "@/components/logo"
 import { GrSchedules } from "react-icons/gr";
+import { FaWpforms } from "react-icons/fa6";
+
 
 
 // All possible nav items — filtered by role below.
@@ -33,8 +33,9 @@ import { GrSchedules } from "react-icons/gr";
 const ALL_MAIN = [
   { title: "Dashboard", url: "/dashboard",             icon: <LayoutDashboardIcon />, roles: ["ADMIN", "TEACHER"] },
   { title: "Dashboard", url: "/student",               icon: <LayoutDashboardIcon />, roles: ["STUDENT"] },
+  { title: "Require Permission", url: "/require-permission",  icon: <FaWpforms />, roles: ["STUDENT"] },
   { title: "Classes",    url: "/dashboard/classrooms",  icon: <BookOpenIcon />,        roles: ["ADMIN", "TEACHER"] },
-  { title: "Students",   url: "/students",              icon: <UsersIcon />,           roles: ["ADMIN", "TEACHER", "STUDENT"] },
+  { title: "Students",   url: "/students",              icon: <UsersIcon />,           roles: ["ADMIN", "TEACHER"] },
   { title: "Schedule",   url: "/schedule",              icon: <GrSchedules />,            roles: ["ADMIN", "TEACHER"] },
   { title: "Reports",    url: "/reports",               icon: <FileChartColumnIcon />, roles: ["ADMIN", "TEACHER"] },
 ];
