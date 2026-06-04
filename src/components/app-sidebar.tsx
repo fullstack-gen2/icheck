@@ -24,8 +24,8 @@ import {
 } from "lucide-react"
 import { LogoWordmark } from "@/components/logo"
 import { GrSchedules } from "react-icons/gr";
-import { FaWpforms } from "react-icons/fa6";
 
+import { useUser } from "@/components/user-provider"
 
 
 // All possible nav items — filtered by role below.
@@ -45,11 +45,18 @@ const ALL_SECONDARY = [
 ];
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-  user: { name: string; email: string; role: string };
+  user: { name: string; email: string; role: string; displayRole?: string };
 }
 
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
   const role = user.role;
+  // Prefer the live client-side user (which always carries displayRole) so a
+  // SUPER_ADMIN sees "Super Admin" instead of the SSR fallback "Admin".
+  const liveUser = useUser();
+  const displayRole =
+    liveUser?.displayRole ??
+    user.displayRole ??
+    (role === "ADMIN" ? "Admin" : role === "TEACHER" ? "Teacher" : role === "STUDENT" ? "Student" : role);
 
   const mainItems = ALL_MAIN
     .filter((item) => item.roles.includes(role))
@@ -71,8 +78,8 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
               <Link href={role === "STUDENT" ? "/student" : "/dashboard"} className="flex items-center gap-2 py-2">
                 {/* Combined logo + "i-Check" wordmark */}
                 <LogoWordmark height={40} />
-                <span className="ml-auto pr-1 text-sm font-medium capitalize text-muted-foreground">
-                  {role === "ADMIN" ? "Admin" : role === "TEACHER" ? "Teacher" : role}
+                <span className="ml-auto pr-1 text-sm font-medium text-muted-foreground">
+                  {displayRole}
                 </span>
               </Link>
             </SidebarMenuButton>

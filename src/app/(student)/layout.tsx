@@ -15,9 +15,10 @@ export default async function StudentLayout({
   if (user && user.role !== "STUDENT") redirect("/dashboard");
 
   const displayUser = {
-    name: user?.name ?? "",
-    email: user?.email ?? "",
-    role: user?.role ?? "STUDENT",
+    name:        user?.name  ?? "",
+    email:       user?.email ?? "",
+    role:        user?.role  ?? "STUDENT",
+    displayRole: user?.displayRole ?? "Student",
   };
 
   return (

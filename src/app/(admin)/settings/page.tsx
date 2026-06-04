@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,6 +21,16 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   BellIcon,
   CalendarDaysIcon,
   ClockIcon,
@@ -34,6 +45,7 @@ import {
   ShieldCheckIcon,
   TrashIcon,
 } from "lucide-react";
+import { API_URL } from "@/lib/api-config";
 
 interface Setting {
   id: number;
@@ -44,8 +56,7 @@ interface Setting {
   updatedAt: string | null;
 }
 
-const SETTINGS_ENDPOINT =
-  "https://attendance.icheck.today/api/v1/attendance/settings";
+/* ─── Static metadata ──────────────────────────────────────────────────── */
 
 const KEY_LABELS: Record<string, string> = {
   early_checkin_minutes: "Early check-in window",
@@ -75,9 +86,10 @@ const KEY_HELP: Record<string, string> = {
 
 const defaultForm = { key: "", value: "", type: "STRING", description: "" };
 
+/* ─── Pure helpers ─────────────────────────────────────────────────────── */
+
 function humanizeKey(key: string): string {
-  if (KEY_LABELS[key]) return KEY_LABELS[key];
-  return key
+  return KEY_LABELS[key] ?? key
     .replace(/_/g, " ")
     .replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
@@ -107,62 +119,37 @@ function isNumberSetting(setting: Setting) {
 }
 
 function settingGroup(key: string) {
-  if (
-    key.includes("minutes") ||
-    key.includes("seconds") ||
-    key.includes("sessions")
-  ) {
+  if (key.includes("minutes") || key.includes("seconds") || key.includes("sessions")) {
     return "Session Timing";
   }
-
   if (key.includes("gps") || key.includes("ip") || key.includes("cidrs")) {
     return "Check-in Rules";
   }
-
   return "General Options";
 }
 
 function SettingIcon({ settingKey }: { settingKey: string }) {
-  if (settingKey === "late_threshold_minutes") {
-    return <ClockIcon className="size-5" />;
-  }
-
-  if (settingKey.includes("qr")) {
-    return <QrCodeIcon className="size-5" />;
-  }
-
-  if (settingKey.includes("gps")) {
-    return <MapPinIcon className="size-5" />;
-  }
-
-  if (settingKey.includes("ip") || settingKey.includes("cidrs")) {
+  if (settingKey === "late_threshold_minutes") return <ClockIcon className="size-5" />;
+  if (settingKey.includes("qr")) return <QrCodeIcon className="size-5" />;
+  if (settingKey.includes("gps")) return <MapPinIcon className="size-5" />;
+  if (settingKey.includes("ip") || settingKey.includes("cidrs"))
     return <NetworkIcon className="size-5" />;
-  }
-
-  if (settingKey.includes("reminder")) {
-    return <BellIcon className="size-5" />;
-  }
-
-  if (settingKey.includes("sessions")) {
-    return <CalendarDaysIcon className="size-5" />;
-  }
-
+  if (settingKey.includes("reminder")) return <BellIcon className="size-5" />;
+  if (settingKey.includes("sessions")) return <CalendarDaysIcon className="size-5" />;
   return <ShieldCheckIcon className="size-5" />;
 }
 
 function formatUpdated(date: string | null) {
   if (!date) return "Not updated";
   return new Date(date).toLocaleDateString([], {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
+    year: "numeric", month: "short", day: "numeric",
   });
 }
 
+/* ─── Value field used in the "Add new" sheet ─────────────────────────── */
+
 function ValueField({
-  type,
-  value,
-  onChange,
+  type, value, onChange,
 }: {
   type: string;
   value: string;
@@ -180,7 +167,6 @@ function ValueField({
       </select>
     );
   }
-
   return (
     <Input
       placeholder={type === "INT" ? "e.g. 10" : "e.g. some_value"}
@@ -190,11 +176,10 @@ function ValueField({
   );
 }
 
+/* ─── Single setting card ──────────────────────────────────────────────── */
+
 function SettingOptionCard({
-  setting,
-  deleting,
-  onSave,
-  onDelete,
+  setting, deleting, onSave, onDelete,
 }: {
   setting: Setting;
   deleting: boolean;
@@ -242,11 +227,9 @@ function SettingOptionCard({
             onClick={() => onDelete(setting.settingKey)}
             disabled={deleting}
           >
-            {deleting ? (
-              <LoaderCircleIcon className="size-4 animate-spin" />
-            ) : (
-              <TrashIcon className="size-4" />
-            )}
+            {deleting
+              ? <LoaderCircleIcon className="size-4 animate-spin" />
+              : <TrashIcon className="size-4" />}
           </Button>
         </CardAction>
       </CardHeader>
@@ -313,25 +296,18 @@ function SettingOptionCard({
         )}
 
         <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            {/* <p className="truncate font-mono text-xs text-muted-foreground">
-              {setting.settingKey}
-            </p> */}
-            <p className="text-xs text-muted-foreground/70">
-              Updated {formatUpdated(setting.updatedAt)}
-            </p>
-          </div>
+          <p className="text-xs text-muted-foreground/70">
+            Updated {formatUpdated(setting.updatedAt)}
+          </p>
           <Button
             type="button"
             className="gap-2 bg-primary hover:bg-primary/90"
             onClick={save}
             disabled={!changed || saving || !draftValue.trim()}
           >
-            {saving ? (
-              <LoaderCircleIcon className="size-4 animate-spin" />
-            ) : (
-              <SaveIcon className="size-4" />
-            )}
+            {saving
+              ? <LoaderCircleIcon className="size-4 animate-spin" />
+              : <SaveIcon className="size-4" />}
             Save
           </Button>
         </div>
@@ -339,6 +315,8 @@ function SettingOptionCard({
     </Card>
   );
 }
+
+/* ─── Page ─────────────────────────────────────────────────────────────── */
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Setting[]>([]);
@@ -349,7 +327,9 @@ export default function SettingsPage() {
   const [form, setForm] = useState(defaultForm);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
+
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
+  const [confirmDeleteKey, setConfirmDeleteKey] = useState<string | null>(null);
 
   const groupedSettings = useMemo(() => {
     return settings.reduce<Record<string, Setting[]>>((groups, setting) => {
@@ -363,15 +343,15 @@ export default function SettingsPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(SETTINGS_ENDPOINT);
+      // Relative path goes through the BFF gateway (same-origin) so cookies
+      // travel automatically. Hard-coding the upstream host triggers CORS.
+      const res = await fetch(`${API_URL}/settings`);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         const reason =
-          res.status === 401
-            ? "Your session expired. Please log in again."
-            : res.status === 403
-              ? "You don't have permission to view settings."
-              : json?.message ?? json?.error ?? `HTTP ${res.status}`;
+          res.status === 401 ? "Your session expired. Please log in again." :
+          res.status === 403 ? "You don't have permission to view settings." :
+          json?.message ?? json?.error ?? `HTTP ${res.status}`;
         setError(`Failed to load settings - ${reason}`);
         return;
       }
@@ -384,36 +364,40 @@ export default function SettingsPage() {
   }
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void load();
-    }, 0);
-
-    return () => window.clearTimeout(timer);
+    void load();
   }, []);
 
+  /** PATCH a single setting's value. Called by each card's Save button. */
   async function updateSettingValue(setting: Setting, value: string) {
-    const res = await fetch(
-      `${SETTINGS_ENDPOINT}/${encodeURIComponent(setting.settingKey)}`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ value }),
-      },
-    );
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setError(json?.payload?.message ?? json?.message ?? "Update failed.");
-      return;
+    try {
+      const res = await fetch(
+        `${API_URL}/settings/${encodeURIComponent(setting.settingKey)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ value }),
+        },
+      );
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = json?.payload?.message ?? json?.message ?? "Update failed.";
+        toast.error(msg);
+        return;
+      }
+      setSettings((current) =>
+        current.map((item) =>
+          item.id === setting.id
+            ? { ...item, settingValue: value, updatedAt: new Date().toISOString() }
+            : item,
+        ),
+      );
+      toast.success(`${humanizeKey(setting.settingKey)} updated.`);
+    } catch {
+      toast.error("Network error.");
     }
-    setSettings((current) =>
-      current.map((item) =>
-        item.id === setting.id
-          ? { ...item, settingValue: value, updatedAt: new Date().toISOString() }
-          : item,
-      ),
-    );
   }
 
+  /** POST a new setting (from the Add sheet). */
   async function handleSubmit() {
     if (!form.key.trim() || !form.value.trim()) {
       setFormError("Key and value are required.");
@@ -422,7 +406,7 @@ export default function SettingsPage() {
     setSubmitting(true);
     setFormError("");
     try {
-      const res = await fetch(SETTINGS_ENDPOINT, {
+      const res = await fetch(`${API_URL}/settings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -437,47 +421,66 @@ export default function SettingsPage() {
         setFormError(json?.payload?.message ?? json?.message ?? "Operation failed.");
         return;
       }
+      toast.success("Setting created.");
       setSheetOpen(false);
+      setForm(defaultForm);
       await load();
+    } catch {
+      setFormError("Network error.");
     } finally {
       setSubmitting(false);
     }
   }
 
-  async function handleDelete(key: string) {
-    if (!confirm(`Delete setting "${key}"? This cannot be undone.`)) return;
+  /** DELETE — fired after the confirmation dialog is accepted. */
+  async function performDelete(key: string) {
     setDeletingKey(key);
+    setConfirmDeleteKey(null);
     try {
-      const res = await fetch(`${SETTINGS_ENDPOINT}/${encodeURIComponent(key)}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `${API_URL}/settings/${encodeURIComponent(key)}`,
+        { method: "DELETE" },
+      );
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        setError(json?.payload?.message ?? json?.message ?? "Delete failed.");
+        toast.error(json?.payload?.message ?? json?.message ?? "Delete failed.");
         return;
       }
-      await load();
+      setSettings((current) => current.filter((s) => s.settingKey !== key));
+      toast.success(`${humanizeKey(key)} deleted.`);
+    } catch {
+      toast.error("Network error.");
     } finally {
       setDeletingKey(null);
     }
   }
 
+  function openAdd() {
+    setForm(defaultForm);
+    setFormError("");
+    setSheetOpen(true);
+  }
+
   return (
-    <div className="px-5 py-8">
+    <div className="px-4 sm:px-5 py-6 sm:py-8">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <Settings2Icon className="size-7 text-primary" />
-            <h1 className="text-3xl font-bold text-foreground">System Settings</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">System Settings</h1>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             Tune attendance rules with simple controls. Changes apply across all sessions.
           </p>
         </div>
+        <Button onClick={openAdd} className="gap-2 bg-primary hover:bg-primary/90">
+          <PlusIcon className="size-4" />
+          Add Setting
+        </Button>
       </div>
 
       {error && (
-        <div className="mb-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <div className="mb-5 rounded-xl border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm text-red-700 dark:text-red-300">
           {error}
         </div>
       )}
@@ -507,7 +510,7 @@ export default function SettingsPage() {
                     setting={setting}
                     deleting={deletingKey === setting.settingKey}
                     onSave={updateSettingValue}
-                    onDelete={handleDelete}
+                    onDelete={(k) => setConfirmDeleteKey(k)}
                   />
                 ))}
               </div>
@@ -516,13 +519,14 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* Add Setting sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="right" className="w-full sm:max-w-md">
           <SheetHeader className="mb-6">
             <SheetTitle>Add New Setting</SheetTitle>
           </SheetHeader>
 
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 px-1">
             <div className="space-y-1.5">
               <Label htmlFor="s-key">
                 Key <span className="text-red-500">*</span>
@@ -581,7 +585,7 @@ export default function SettingsPage() {
             </div>
 
             {formError && (
-              <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
+              <p className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900/40 px-3 py-2 text-sm text-red-600 dark:text-red-300">
                 {formError}
               </p>
             )}
@@ -609,6 +613,33 @@ export default function SettingsPage() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Delete confirm dialog */}
+      <AlertDialog
+        open={confirmDeleteKey !== null}
+        onOpenChange={(o) => !o && setConfirmDeleteKey(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete {confirmDeleteKey ? humanizeKey(confirmDeleteKey) : "setting"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the setting and its value. Any feature that
+              depends on it will fall back to its default. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmDeleteKey && performDelete(confirmDeleteKey)}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

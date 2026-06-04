@@ -7,8 +7,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  /* These resolve at runtime — each [data-theme] sets --font-sans / --font-mono
+     to one of the @next/font variables declared on <html>. */
+  --font-sans: var(--theme-font-sans, var(--font-inter));
+  --font-mono: var(--theme-font-mono, var(--font-mono-jb));
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -46,6 +48,27 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --animate-shimmer-slide: shimmer-slide var(--speed) ease-in-out infinite alternate;
+  --animate-spin-around: spin-around calc(var(--speed) * 2) infinite linear;
+  @keyframes shimmer-slide {
+  to {
+    transform: translate(calc(100cqw - 100%), 0);
+    }
+  }
+  @keyframes spin-around {
+  0% {
+    transform: translateZ(0) rotate(0);
+    }
+  15%, 35% {
+    transform: translateZ(0) rotate(90deg);
+    }
+  65%, 85% {
+    transform: translateZ(0) rotate(270deg);
+    }
+  100% {
+    transform: translateZ(0) rotate(360deg);
+    }
+  }
 }
 
 :root {
@@ -200,6 +223,41 @@
   --sidebar-primary: oklch(0.72 0.19 80);
   --sidebar-primary-foreground: oklch(0.15 0 0);
 }
+
+/* ── Per-theme typography — each theme also swaps the font face ─────────── */
+:root,
+[data-theme="default"] {
+  --theme-font-sans: var(--font-inter);
+  --theme-font-mono: var(--font-mono-jb);
+}
+[data-theme="claude"] {
+  /* Anthropic uses a serif for headings/body — IBM Plex Serif gives a similar feel */
+  --theme-font-sans: var(--font-plex-serif);
+}
+[data-theme="supabase"] {
+  --theme-font-sans: var(--font-inter);
+}
+[data-theme="vercel"] {
+  --theme-font-sans: var(--font-geist);
+  --theme-font-mono: var(--font-mono-geist);
+}
+[data-theme="mono"] {
+  --theme-font-sans: var(--font-geist);
+  --theme-font-mono: var(--font-mono-geist);
+}
+[data-theme="rose"] {
+  --theme-font-sans: var(--font-outfit);
+}
+[data-theme="emerald"] {
+  --theme-font-sans: var(--font-space-grotesk);
+}
+[data-theme="violet"] {
+  --theme-font-sans: var(--font-bricolage);
+}
+[data-theme="amber"] {
+  --theme-font-sans: var(--font-outfit);
+}
+
 ::view-transition-old(root), ::view-transition-new(root) {
     animation: none;
     mix-blend-mode: normal;
