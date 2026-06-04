@@ -3,6 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, ChevronDown, ChevronUp } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export type ReportAttendanceRow = {
@@ -53,15 +54,24 @@ export const reportColumns: ColumnDef<ReportAttendanceRow>[] = [
   {
     accessorKey: "profile",
     header: "Profile",
-    cell: ({ row }) => (
-      <Image
-        width={50}
-        height={50}
-        src={row.original.profile}
-        alt={`${row.original.name} profile`}
-        className="h-12 w-12 rounded-xl object-cover"
-      />
-    ),
+    cell: ({ row, table }) => {
+      const profileBasePath = table.options.meta?.studentProfileBasePath;
+      const profileHref = profileBasePath
+        ? `${profileBasePath}/${row.original.id}`
+        : `/students/${row.original.id}`;
+
+      return (
+        <Link href={profileHref} aria-label={`View ${row.original.name} profile`}>
+          <Image
+            width={50}
+            height={50}
+            src={row.original.profile}
+            alt={`${row.original.name} profile`}
+            className="h-12 w-12 rounded-xl object-cover"
+          />
+        </Link>
+      );
+    },
   },
   {
     accessorKey: "name",

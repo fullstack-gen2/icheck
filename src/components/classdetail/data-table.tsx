@@ -59,11 +59,20 @@ export function DataTableList<TData, TValue>({
   showNote = true,
   studentProfileBasePath,
 }: DataTableProps<TData, TValue>) {
-  const params = useParams<{ classcode?: string | string[] }>();
+  const params = useParams<{
+    id?: string | string[];
+    classcode?: string | string[];
+  }>();
   const pathname = usePathname();
+  const classroomId = Array.isArray(params.id) ? params.id[0] : params.id;
   const classcode = Array.isArray(params.classcode)
     ? params.classcode[0]
     : params.classcode;
+  const resolvedStudentProfileBasePath =
+    studentProfileBasePath ??
+    (classroomId
+      ? `/dashboard/classrooms/${classroomId}/student-profile`
+      : undefined);
   const showReportActions = classcode
     ? pathname.startsWith(`/class/${classcode}/report`)
     : pathname.includes("/report");
@@ -104,7 +113,7 @@ export function DataTableList<TData, TValue>({
     },
     meta: {
       expandedRowId,
-      studentProfileBasePath,
+      studentProfileBasePath: resolvedStudentProfileBasePath,
       toggleExpandedRow: (rowId: string) => {
         setExpandedRowId((current) => (current === rowId ? null : rowId));
       },

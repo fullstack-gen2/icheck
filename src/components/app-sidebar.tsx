@@ -67,7 +67,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
             <SidebarMenuButton
               asChild
               size="lg"
-              className="h-14 data-[slot=sidebar-menu-button]:p-2! border-b border-l">
+              className="h-14 data-[slot=sidebar-menu-button]:p-2!">
               <Link href={role === "STUDENT" ? "/student" : "/dashboard"} className="flex items-center gap-2 py-2">
                 {/* Combined logo + "i-Check" wordmark */}
                 <LogoWordmark height={40} />
