@@ -2,7 +2,6 @@ import Link from "next/link";
 import { BookOpenIcon } from "lucide-react";
 import { ClassCard } from "@/components/ui/class-card";
 import { getServerUser } from "@/auth-server";
-import { backendFetch } from "@/lib/api-fetch";
 import { MyDropdownMenuCheckboxes } from "@/components/drop-donw";
 interface Classroom {
   id: number;
@@ -18,7 +17,6 @@ interface Classroom {
   endDate: string;
   status: boolean;
 }
-import { getServerUser } from "@/auth";
 import { backendFetch } from "@/lib/api-fetch";
 import { ClassroomsList, type ClassroomItem } from "@/components/classrooms-list";
 
