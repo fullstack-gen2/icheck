@@ -36,6 +36,20 @@ export default async function CheckedAttendance({
             </section>
             <section>
                 <ReportToday />
+                <aside className="mt-4 max-w-md w-87.5 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 my-font dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200">
+                  <p className="border-b border-slate-200 pb-1 font-semibold text-slate-900 dark:border-slate-700 dark:text-white">Note</p>
+                  <ul className="space-y-1 mt-2 pl-3 list-disc">
+                    <li className="ml-4">
+                      <span className="font-semibold">P</span> stands for Present.
+                    </li>
+                    <li className="ml-4">
+                      <span className="font-semibold">PM</span> stands for Permission.
+                    </li>
+                    <li className="ml-4">
+                      <span className="font-semibold">L</span> stands for Late.
+                    </li>
+                  </ul>
+                </aside>
             </section>
         </main>
     );
