@@ -21,9 +21,9 @@ const ERROR_MESSAGES: Record<string, string> = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; detail?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, detail } = await searchParams;
 
   if (!error) redirect(OAUTH2_LOGIN_URL);
 
@@ -44,6 +44,11 @@ export default async function LoginPage({
         <code className="block bg-muted text-xs text-muted-foreground rounded-lg px-3 py-2 mb-6 font-mono">
           {error}
         </code>
+        {detail ? (
+          <code className="block bg-muted text-xs text-muted-foreground rounded-lg px-3 py-2 mb-6 font-mono break-words">
+            {detail}
+          </code>
+        ) : null}
         <Button asChild className="gap-1.5 w-full">
           <Link href={OAUTH2_LOGIN_URL}>
             <RefreshCwIcon className="size-4" />

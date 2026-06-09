@@ -47,10 +47,16 @@ export const KEYCLOAK_CLIENT_SECRET =
   process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_SECRET ??
   "";
 
+export const OAUTH_STATE_SECRET =
+  process.env.OAUTH_STATE_SECRET ??
+  process.env.KEYCLOAK_CLIENT_SECRET ??
+  "icheck-local-oauth-state-secret";
+
 export const ACCESS_TOKEN_COOKIE = "icheck_access_token";
 export const REFRESH_TOKEN_COOKIE = "icheck_refresh_token";
 export const ID_TOKEN_COOKIE = "icheck_id_token";
 export const OAUTH_STATE_COOKIE = "icheck_oauth_state";
+export const OAUTH_CODE_VERIFIER_COOKIE = "icheck_oauth_code_verifier";
 
 export interface AppUser {
   id: string;

@@ -4,9 +4,12 @@ import {
   KEYCLOAK_CLIENT_ID,
   KEYCLOAK_CLIENT_SECRET,
   KEYCLOAK_ISSUER_URI,
+  OAUTH_CODE_VERIFIER_COOKIE,
+  OAUTH_STATE_SECRET,
   OAUTH_STATE_COOKIE,
   REFRESH_TOKEN_COOKIE,
 } from "@/auth";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -28,20 +31,61 @@ function getCookie(req: Request, name: string) {
     ?.slice(name.length + 1);
 }
 
+function sign(value: string) {
+  return createHmac("sha256", OAUTH_STATE_SECRET)
+    .update(value)
+    .digest("base64url");
+}
+
+function verifySignedState(state: string | null) {
+  if (!state) return null;
+
+  const [payload, signature] = state.split(".");
+  if (!payload || !signature) return null;
+
+  const expected = sign(payload);
+  const expectedBuffer = Buffer.from(expected);
+  const signatureBuffer = Buffer.from(signature);
+  if (
+    expectedBuffer.length !== signatureBuffer.length ||
+    !timingSafeEqual(expectedBuffer, signatureBuffer)
+  ) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
+      codeVerifier?: string;
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(req: Request) {
   const requestUrl = new URL(req.url);
   const code = requestUrl.searchParams.get("code");
   const state = requestUrl.searchParams.get("state");
+  const signedState = verifySignedState(state);
   const savedState = getCookie(req, OAUTH_STATE_COOKIE);
+  const codeVerifier = signedState?.codeVerifier ?? getCookie(req, OAUTH_CODE_VERIFIER_COOKIE);
+  const isLocalhost = requestUrl.hostname === "localhost" || requestUrl.hostname === "127.0.0.1";
 
-  if (!code || !state || !savedState || state !== savedState) {
+  if (!code || !codeVerifier || (!signedState && !isLocalhost && (!state || !savedState || state !== savedState))) {
     console.error("[oauth/callback] state mismatch", {
+      host: requestUrl.host,
       hasCode: !!code,
       hasState: !!state,
+      hasSignedState: !!signedState,
       hasSavedState: !!savedState,
+      hasCodeVerifier: !!codeVerifier,
       stateMatch: state === savedState,
+      isLocalhost,
     });
-    return NextResponse.redirect(new URL("/login?error=oauth_state", requestUrl.origin));
+    const response = NextResponse.redirect(new URL("/login?error=oauth_state", requestUrl.origin));
+    response.cookies.delete(OAUTH_STATE_COOKIE);
+    response.cookies.delete(OAUTH_CODE_VERIFIER_COOKIE);
+    return response;
   }
 
   // Loud config sanity-check — most common cause of token_exchange failure.
@@ -58,6 +102,7 @@ export async function GET(req: Request) {
     client_id: KEYCLOAK_CLIENT_ID,
     code,
     redirect_uri: redirectUri.toString(),
+    code_verifier: codeVerifier,
   });
 
   if (KEYCLOAK_CLIENT_SECRET) {
@@ -75,6 +120,16 @@ export async function GET(req: Request) {
   if (!tokenRes.ok) {
     // Read the body so Vercel logs actually tell you "invalid_client", "invalid_grant", etc.
     const body = await tokenRes.text().catch(() => "");
+    let detail = "unknown";
+    try {
+      const parsed = JSON.parse(body) as {
+        error?: string;
+        error_description?: string;
+      };
+      detail = parsed.error_description ?? parsed.error ?? "unknown";
+    } catch {
+      detail = body || "unknown";
+    }
     console.error("[oauth/callback] token exchange failed", {
       tokenUrl,
       status: tokenRes.status,
@@ -83,7 +138,10 @@ export async function GET(req: Request) {
       hasSecret: !!KEYCLOAK_CLIENT_SECRET,
       redirectUri: redirectUri.toString(),
     });
-    return NextResponse.redirect(new URL("/login?error=token_exchange", requestUrl.origin));
+    const errorUrl = new URL("/login", requestUrl.origin);
+    errorUrl.searchParams.set("error", "token_exchange");
+    errorUrl.searchParams.set("detail", detail.slice(0, 160));
+    return NextResponse.redirect(errorUrl);
   }
 
   const token = (await tokenRes.json()) as TokenResponse;
@@ -91,6 +149,7 @@ export async function GET(req: Request) {
   const secure = requestUrl.protocol === "https:";
 
   response.cookies.delete(OAUTH_STATE_COOKIE);
+  response.cookies.delete(OAUTH_CODE_VERIFIER_COOKIE);
   response.cookies.set(ACCESS_TOKEN_COOKIE, token.access_token, {
     httpOnly: true,
     sameSite: "lax",
