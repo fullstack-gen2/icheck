@@ -1,4 +1,5 @@
 import ReportToday from "@/components/table/report_today";
+import { Button } from "@/components/ui/button";
 import { backendFetch } from "@/lib/api-fetch";
 import { Classroom, mockClassroom } from "@/lib/data/mockData/test-with-table/mock-table";
 
@@ -31,7 +32,10 @@ export default async function CheckedAttendance({
                   </h2>
                 </div>
                 </div>
-                <div className="flex justify-between">     
+                <div className="flex-col">
+                  <Button className="bg-primary p-5" type="button">
+                    Amendment
+                  </Button>
                 </div>
             </section>
             <section>
