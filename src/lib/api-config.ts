@@ -1,7 +1,8 @@
-
 export const API_URL = "/api/v1/attendance";
 
-export const ICHECK_URL = "https://attendance.icheck.today";
+export const AUTH_URL = "/api/v1/auth";
 
-export const GATEWAY_HOST =
-  process.env.NEXT_PUBLIC_GATEWAY_URL ?? "https://insight.istad.co";
+export const OAUTH2_LOGIN_URL =
+  process.env.NEXT_PUBLIC_LOGIN_URL ?? "/oauth2/authorization/iam_keycloak";
+
+export const LOGOUT_URL = process.env.NEXT_PUBLIC_LOGOUT_URL ?? "/logout";

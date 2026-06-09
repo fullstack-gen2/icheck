@@ -143,10 +143,8 @@ export default function SessionQrPage() {
                   <QRCode
                     // QR is scanned by a student's phone camera, so the value
                     // MUST be an absolute URL — relative paths can't be opened
-                    // from a camera scan. The Next.js app sits under the
-                    // /attendance basePath, so the check-in page is at
-                    // `${origin}/attendance/check-in?token=...`.
-                    value={`${window.location.origin}/attendance/check-in?token=${qr.codeValue}`}
+                    // from a camera scan.
+                    value={`${window.location.origin}/check-in?token=${qr.codeValue}`}
                     size={260}
                     level="H"
                     style={{ height: "auto", maxWidth: "100%", width: "260px" }}

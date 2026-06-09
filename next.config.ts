@@ -1,6 +1,21 @@
+function trimTrailingSlash(value: string) {
+  return value.replace(/\/+$/, "");
+}
+
+function normalizeServiceUrl(value: string) {
+  return trimTrailingSlash(value)
+    .replace(/\/api\/v1\/attendance$/, "")
+    .replace(/\/api\/v1$/, "");
+}
+
+const springBootUrl = normalizeServiceUrl(
+  process.env.ATTENDANCE_SERVICE_URL ??
+  process.env.BASE_API_URL ??
+  process.env.BACKEND_URL ??
+  "https://attendance.icheck.today"
+);
+
 const nextConfig = {
-  basePath: "/attendance",
-  assetPrefix: "/attendance",
   images: {
     remotePatterns: [
       {
@@ -15,6 +30,30 @@ const nextConfig = {
   },
   turbopack: {
     root: __dirname,
+  },
+  async rewrites() {
+    return [
+      {
+        source: "/api/v1/attendance/:path*",
+        destination: `${springBootUrl}/api/v1/attendance/:path*`,
+      },
+      {
+        source: "/api/v1/auth/:path*",
+        destination: `${springBootUrl}/api/v1/auth/:path*`,
+      },
+      {
+        source: "/oauth2/:path*",
+        destination: `${springBootUrl}/oauth2/:path*`,
+      },
+      {
+        source: "/login/oauth2/:path*",
+        destination: `${springBootUrl}/login/oauth2/:path*`,
+      },
+      {
+        source: "/logout",
+        destination: `${springBootUrl}/logout`,
+      },
+    ];
   },
 };
 

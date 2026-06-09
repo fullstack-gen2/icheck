@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cookies } from "next/headers";
-import { GATEWAY_URL, mapAuthMe, type AppUser } from "@/auth";
+import { AUTH_API_URL, mapAuthMe, type AppUser } from "@/auth";
 
 export async function getServerUser(): Promise<AppUser | null> {
   try {
@@ -11,7 +11,7 @@ export async function getServerUser(): Promise<AppUser | null> {
       .map((c) => `${c.name}=${c.value}`)
       .join("; ");
 
-    const res = await fetch(`${GATEWAY_URL}/api/v1/auth/me`, {
+    const res = await fetch(`${AUTH_API_URL}/me`, {
       cache: "no-store",
       headers: { Cookie: cookieHeader },
     });

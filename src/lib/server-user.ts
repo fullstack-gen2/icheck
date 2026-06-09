@@ -1,4 +1,4 @@
-import { GATEWAY_URL } from "@/auth";
+import { AUTH_API_URL } from "@/auth";
 
 const ROLE_PRIORITY = ["ADMIN", "TEACHER", "STUDENT"] as const;
 function normalizeRole(raw: string): string {
@@ -9,7 +9,7 @@ function normalizeRole(raw: string): string {
 
 export async function getRequestUser(cookieHeader: string) {
   try {
-    const res = await fetch(`${GATEWAY_URL}/api/v1/auth/me`, {
+    const res = await fetch(`${AUTH_API_URL}/me`, {
       cache: "no-store",
       headers: { Cookie: cookieHeader },
     });

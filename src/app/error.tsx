@@ -51,7 +51,7 @@ export default function ErrorBoundary({
           <Button
             variant="ghost"
             className="w-full text-muted-foreground"
-            onClick={() => { window.location.href = "/attendance/dashboard"; }}
+            onClick={() => { window.location.href = "/dashboard"; }}
           >
             Go to Dashboard
           </Button>

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { ResetDeviceButton } from "@/components/reset-device-button";
 import { useUser } from "@/components/user-provider";
 import { UsersIcon, ChevronDownIcon, SearchIcon, XIcon } from "lucide-react";
+import { API_URL } from "@/lib/api-config";
 
 interface Student {
   id: number;
@@ -57,8 +58,8 @@ export default function StudentsPage() {
     async function load() {
       setLoading(true);
       const [sRes, cRes] = await Promise.all([
-        fetch("https://attendance.icheck.today/api/v1/attendance/users"),
-        fetch("https://attendance.icheck.today/api/v1/attendance/classrooms"),
+        fetch(`${API_URL}/users`),
+        fetch(`${API_URL}/classrooms`),
       ]);
       const sJson = await sRes.json();
       const cJson = await cRes.json();

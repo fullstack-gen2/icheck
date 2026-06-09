@@ -1,7 +1,6 @@
 
 import { cookies } from "next/headers";
-import { GATEWAY_URL } from "@/auth";
-import { API_URL, ICHECK_URL } from "@/lib/api-config";
+import { ATTENDANCE_API_URL, SPRING_BOOT_URL } from "@/auth";
 
 export async function backendFetch(
   path: string,
@@ -18,7 +17,11 @@ export async function backendFetch(
     ...(init?.headers as Record<string, string> | undefined),
   };
 
-  return fetch(`${ICHECK_URL}${API_URL}${path}`, {
+  const url = path.startsWith("/api/")
+    ? `${SPRING_BOOT_URL}${path}`
+    : `${ATTENDANCE_API_URL}${path}`;
+
+  return fetch(url, {
     cache: "no-store",
     ...init,
     headers,

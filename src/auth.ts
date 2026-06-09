@@ -1,18 +1,35 @@
-export const BASE_API_URL =
+import { API_URL, AUTH_URL } from "@/lib/api-config";
+
+function trimTrailingSlash(value: string) {
+  return value.replace(/\/+$/, "");
+}
+
+function normalizeServiceUrl(value: string) {
+  return trimTrailingSlash(value)
+    .replace(/\/api\/v1\/attendance$/, "")
+    .replace(/\/api\/v1$/, "");
+}
+
+export const SPRING_BOOT_URL = normalizeServiceUrl(
+  process.env.ATTENDANCE_SERVICE_URL ??
   process.env.BASE_API_URL ??
   process.env.BACKEND_URL ??
-  "https://attendance.icheck.today/api/v1";
+  "https://attendance.icheck.today"
+);
 
-//=========================================
-// Re-exported from the client-safe module so server-only modules can also
-// reach for it.
-export { API_URL } from "@/lib/api-config";
+export const SPRING_BOOT_PUBLIC_URL = normalizeServiceUrl(
+  process.env.ATTENDANCE_PUBLIC_URL ??
+  process.env.BACKEND_PUBLIC_URL ??
+  process.env.NEXT_PUBLIC_BACKEND_URL ??
+  SPRING_BOOT_URL
+);
 
+export const BASE_API_URL =
+  `${SPRING_BOOT_URL}/api/v1`;
 
-export const GATEWAY_URL =
-  process.env.GATEWAY_URL ??
-  process.env.NEXT_PUBLIC_GATEWAY_URL ??
-  "https://insight.istad.co";
+export const ATTENDANCE_API_URL = `${SPRING_BOOT_URL}${API_URL}`;
+
+export const AUTH_API_URL = `${SPRING_BOOT_URL}${AUTH_URL}`;
 
 export interface AppUser {
   id: string;

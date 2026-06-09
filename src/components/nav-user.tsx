@@ -23,6 +23,7 @@ import {
   LogOutIcon,
 } from "lucide-react"
 import { useUser } from "@/components/user-provider"
+import { LOGOUT_URL, OAUTH2_LOGIN_URL } from "@/lib/api-config"
 
 function initials(name: string) {
   if (!name) return "?";
@@ -35,12 +36,10 @@ function initials(name: string) {
 
 async function handleLogout() {
   try {
-    await fetch("/logout", { method: "POST", credentials: "include" });
+    await fetch(LOGOUT_URL, { method: "POST", credentials: "include" });
   } catch {
   }
-  window.location.href =
-    // process.env.NEXT_PUBLIC_LOGIN_URL ?? "https://iam.istad.co";
-    process.env.NEXT_PUBLIC_LOGIN_URL ?? "https://iam.istad.co/login";
+  window.location.href = OAUTH2_LOGIN_URL;
 }
 
 export function NavUser({

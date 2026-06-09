@@ -1,6 +1,6 @@
 "use client";
 
-import { GATEWAY_HOST } from "@/lib/api-config";
+import { AUTH_URL } from "@/lib/api-config";
 import { createContext, useContext, useEffect, useState } from "react";
 
 export interface AppUser {
@@ -58,7 +58,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
 
   useEffect(() => {
-    fetch(`${GATEWAY_HOST}/api/v1/auth/me`, { credentials: "include" })
+    fetch(`${AUTH_URL}/me`, { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((p) => {
         if (!p || typeof p !== "object") return;

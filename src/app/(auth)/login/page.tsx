@@ -1,10 +1,6 @@
-import { Logo } from "@/components/logo";
+import { OAUTH2_LOGIN_URL } from "@/lib/api-config";
+import { redirect } from "next/navigation";
 
 export default function LoginPage() {
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-muted/50">
-      <Logo size={72} />
-      <p className="text-sm text-muted-foreground/70">Authenticating- - - -</p>
-    </div>
-  );
+  redirect(OAUTH2_LOGIN_URL);
 }
