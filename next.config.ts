@@ -41,18 +41,6 @@ const nextConfig = {
         source: "/api/v1/auth/:path*",
         destination: `${springBootUrl}/api/v1/auth/:path*`,
       },
-      {
-        source: "/oauth2/:path*",
-        destination: `${springBootUrl}/oauth2/:path*`,
-      },
-      {
-        source: "/login/oauth2/:path*",
-        destination: `${springBootUrl}/login/oauth2/:path*`,
-      },
-      {
-        source: "/logout",
-        destination: `${springBootUrl}/logout`,
-      },
     ];
   },
 };
