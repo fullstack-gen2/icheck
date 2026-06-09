@@ -35,7 +35,21 @@ export async function GET(req: Request) {
   const savedState = getCookie(req, OAUTH_STATE_COOKIE);
 
   if (!code || !state || !savedState || state !== savedState) {
+    console.error("[oauth/callback] state mismatch", {
+      hasCode: !!code,
+      hasState: !!state,
+      hasSavedState: !!savedState,
+      stateMatch: state === savedState,
+    });
     return NextResponse.redirect(new URL("/login?error=oauth_state", requestUrl.origin));
+  }
+
+  // Loud config sanity-check — most common cause of token_exchange failure.
+  if (!KEYCLOAK_CLIENT_SECRET) {
+    console.error(
+      "[oauth/callback] KEYCLOAK_CLIENT_SECRET env var is empty. " +
+      "If your Keycloak client is confidential, token exchange will return 401."
+    );
   }
 
   const redirectUri = new URL("/api/auth/callback/keycloak", requestUrl.origin);
@@ -50,7 +64,8 @@ export async function GET(req: Request) {
     form.set("client_secret", KEYCLOAK_CLIENT_SECRET);
   }
 
-  const tokenRes = await fetch(`${KEYCLOAK_ISSUER_URI}/protocol/openid-connect/token`, {
+  const tokenUrl = `${KEYCLOAK_ISSUER_URI}/protocol/openid-connect/token`;
+  const tokenRes = await fetch(tokenUrl, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: form,
@@ -58,6 +73,16 @@ export async function GET(req: Request) {
   });
 
   if (!tokenRes.ok) {
+    // Read the body so Vercel logs actually tell you "invalid_client", "invalid_grant", etc.
+    const body = await tokenRes.text().catch(() => "");
+    console.error("[oauth/callback] token exchange failed", {
+      tokenUrl,
+      status: tokenRes.status,
+      body,
+      clientId: KEYCLOAK_CLIENT_ID,
+      hasSecret: !!KEYCLOAK_CLIENT_SECRET,
+      redirectUri: redirectUri.toString(),
+    });
     return NextResponse.redirect(new URL("/login?error=token_exchange", requestUrl.origin));
   }
 

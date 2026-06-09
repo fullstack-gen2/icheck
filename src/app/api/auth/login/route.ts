@@ -13,6 +13,15 @@ export function GET(req: Request) {
   const redirectUri = new URL("/api/auth/callback/keycloak", requestUrl.origin);
   const authorizationUrl = new URL(`${KEYCLOAK_ISSUER_URI}/protocol/openid-connect/auth`);
 
+  // Log the exact URL we're sending the user to + the redirect_uri we're
+  // registering with Keycloak. If Keycloak rejects with "Invalid parameter:
+  // redirect_uri", the Vercel logs will show the value to register.
+  console.log("[oauth/login] starting", {
+    issuer: KEYCLOAK_ISSUER_URI,
+    clientId: KEYCLOAK_CLIENT_ID,
+    redirectUri: redirectUri.toString(),
+  });
+
   authorizationUrl.searchParams.set("client_id", KEYCLOAK_CLIENT_ID);
   authorizationUrl.searchParams.set("response_type", "code");
   authorizationUrl.searchParams.set("scope", "openid profile email");

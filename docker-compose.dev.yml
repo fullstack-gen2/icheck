@@ -1,0 +1,31 @@
+# Local-only Keycloak for development.
+# Spin it up:    docker compose -f docker-compose.dev.yml up -d
+# Tear it down:  docker compose -f docker-compose.dev.yml down -v
+#
+# Admin console → http://localhost:8080
+# Admin login   → admin / admin
+#
+# After it's up:
+#   1. Create realm "icheck"
+#   2. Create client "icheck" (Client authentication ON, Standard flow ON)
+#   3. Copy the client's Credentials → Client secret into .env.local
+#   4. Create a user, set password, assign role
+#   5. Set KEYCLOAK_ISSUER_URI=http://localhost:8080/realms/icheck in .env.local
+#   6. npm run dev → http://localhost:3000
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: icheck-keycloak-dev
+    command: start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HTTP_PORT: 8080
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET / HTTP/1.1\\r\\nhost: localhost\\r\\n\\r\\n' >&3 && head -1 <&3 | grep -E '200|302|303'"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
