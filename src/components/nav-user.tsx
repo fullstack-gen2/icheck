@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarBadge, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -144,11 +144,14 @@ export function NavUser({
             {/* Profile header */}
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-3 px-3 py-3 text-left text-sm">
-                <Avatar className="h-10 w-10 rounded-xl">
+                <Avatar className="h-12 w-12 rounded-xl">
                   {imageUrl ? <AvatarImage src={imageUrl} alt={user.name || "Profile"} className="rounded-xl" /> : null}
                   <AvatarFallback className={`rounded-xl ${avatarBg} text-white text-sm font-semibold`}>
                     {initials(user.name)}
                   </AvatarFallback>
+                  <AvatarBadge className="size-5 rounded-md bg-background text-primary ring-2 ring-card">
+                    <CameraIcon className="size-3.5" />
+                  </AvatarBadge>
                 </Avatar>
                 <div className="grid flex-1 text-left leading-tight gap-0.5">
                   <span className="font-semibold text-foreground">{user.name || "—"}</span>
@@ -166,7 +169,10 @@ export function NavUser({
 
             {/* Menu items */}
             <DropdownMenuGroup>
-              <DropdownMenuItem className="gap-3 py-2.5">
+              <DropdownMenuItem
+                className="gap-3 py-2.5"
+                onSelect={(event) => event.preventDefault()}
+              >
                 <UserIcon className="size-4 text-muted-foreground" />
                 <span>Account</span>
               </DropdownMenuItem>
@@ -175,9 +181,11 @@ export function NavUser({
                 onSelect={(event) => event.preventDefault()}
               >
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                    <CameraIcon className="size-3.5" />
-                    Profile photo URL
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <span className="inline-flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <CameraIcon className="size-4" />
+                    </span>
+                    Edit profile photo
                   </div>
                   <Input
                     value={profileImage}
@@ -185,9 +193,12 @@ export function NavUser({
                       setProfileImage(event.target.value);
                       if (saving === "error") setSaving("idle");
                     }}
-                    placeholder="https://.../image.jpg"
+                    placeholder="Paste image URL"
                     className="h-9 text-sm"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Paste a public image URL, then save.
+                  </p>
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       type="button"
