@@ -32,7 +32,7 @@ function logout(req: Request) {
   const idToken = getCookie(req, ID_TOKEN_COOKIE);
 
   logoutUrl.searchParams.set("client_id", KEYCLOAK_CLIENT_ID);
-  logoutUrl.searchParams.set("post_logout_redirect_uri", new URL("/login?logged_out=1", requestUrl.origin).toString());
+  logoutUrl.searchParams.set("post_logout_redirect_uri", new URL("/api/auth/login", requestUrl.origin).toString());
   if (idToken) {
     logoutUrl.searchParams.set("id_token_hint", idToken);
   }

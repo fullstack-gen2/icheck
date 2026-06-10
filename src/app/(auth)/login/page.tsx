@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { OAUTH2_LOGIN_URL } from "@/lib/api-config";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
-import { AlertCircleIcon, CheckCircle2Icon, RefreshCwIcon } from "lucide-react";
+import { AlertCircleIcon, RefreshCwIcon } from "lucide-react";
 
 /**
  * Sign-in screen.
@@ -21,39 +21,14 @@ const ERROR_MESSAGES: Record<string, string> = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; detail?: string; logged_out?: string }>;
+  searchParams: Promise<{ error?: string; detail?: string }>;
 }) {
-  const { error, detail, logged_out: loggedOut } = await searchParams;
+  const { error, detail } = await searchParams;
 
-  if (!error && !loggedOut) redirect(OAUTH2_LOGIN_URL);
-
-  if (loggedOut) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-6">
-        <div className="bg-card border border-border rounded-2xl p-8 max-w-md w-full shadow-sm text-center">
-          <div className="mx-auto mb-4 flex justify-center">
-            <Logo size={56} />
-          </div>
-          <div className="flex items-center justify-center gap-2 mb-1 text-green-600 dark:text-green-400">
-            <CheckCircle2Icon className="size-5" />
-            <h1 className="font-semibold">Signed out</h1>
-          </div>
-          <p className="text-sm text-muted-foreground mb-6">
-            Your i-Check session has ended.
-          </p>
-          <Button asChild className="gap-1.5 w-full">
-            <Link href={OAUTH2_LOGIN_URL}>
-              <RefreshCwIcon className="size-4" />
-              Sign in again
-            </Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  if (!error) redirect(OAUTH2_LOGIN_URL);
 
   const description =
-    ERROR_MESSAGES[error ?? ""] ?? `Authentication failed (code: ${error}).`;
+    ERROR_MESSAGES[error] ?? `Authentication failed (code: ${error}).`;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
