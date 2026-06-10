@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useUser } from "@/components/user-provider";
 import { QrScanner } from "@/components/qr-scanner";
+import { useGetCurrentUserQuery } from "@/store/api/userApi";
 import {
   BadgeCheckIcon,
   BookOpenIcon,
@@ -16,14 +17,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 type StudentProfile = Record<string, unknown>;
-
-function unwrapPayload(value: unknown): StudentProfile | null {
-  if (!value || typeof value !== "object") return null;
-  const root = value as Record<string, unknown>;
-  const payload = root.payload;
-  if (payload && typeof payload === "object") return payload as StudentProfile;
-  return root;
-}
 
 function asText(value: unknown) {
   return value == null || value === "" ? "—" : String(value);
@@ -68,15 +61,8 @@ function pickSummary(profile: StudentProfile | null) {
 
 export default function StudentHomePage() {
   const user = useUser();
+  const { data: profile = null } = useGetCurrentUserQuery();
   const [showScanner, setShowScanner] = useState(false);
-  const [profile, setProfile] = useState<StudentProfile | null>(null);
-
-  useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include" })
-      .then((res) => res.ok ? res.json() : null)
-      .then((json) => setProfile(unwrapPayload(json)))
-      .catch(() => {});
-  }, []);
 
   const displayName = asText(profile?.name ?? profile?.username ?? user?.name);
   const email = asText(profile?.email ?? user?.email);

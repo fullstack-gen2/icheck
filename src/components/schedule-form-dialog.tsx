@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { LoaderCircleIcon } from "lucide-react";
 import { api } from "@/lib/api-client";
+import { useGetTeachersQuery } from "@/store/api/userApi";
 
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] as const;
 
@@ -61,8 +62,15 @@ interface Props {
 export function ScheduleFormDialog({ open, initial, classrooms = [], onOpenChange }: Props) {
   const router = useRouter();
   const editing = !!initial?.id;
+  const { data: teachers = [], isLoading: loadingTeachers } = useGetTeachersQuery();
   const [form, setForm] = useState<ScheduleFormValue>(empty);
   const [saving, setSaving] = useState(false);
+
+  const teacherOptions = useMemo(() => {
+    const names = new Set(teachers.map((teacher) => teacher.name).filter(Boolean));
+    if (form.teacherName && !names.has(form.teacherName)) names.add(form.teacherName);
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [form.teacherName, teachers]);
 
   useEffect(() => {
     if (open) setForm(initial ? { ...empty, ...initial } : empty);
@@ -144,11 +152,26 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], onOpenChang
           </Field>
 
           <Field label="Teacher" required>
-            <Input
-              value={form.teacherName}
-              onChange={(e) => patch("teacherName", e.target.value)}
-              placeholder="Teacher's full name"
-            />
+            {teacherOptions.length > 0 ? (
+              <Select value={form.teacherName} onValueChange={(v) => patch("teacherName", v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingTeachers ? "Loading teachers..." : "Select teacher"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {teacherOptions.map((teacherName) => (
+                    <SelectItem key={teacherName} value={teacherName}>
+                      {teacherName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                value={form.teacherName}
+                onChange={(e) => patch("teacherName", e.target.value)}
+                placeholder={loadingTeachers ? "Loading teachers..." : "Teacher's full name"}
+              />
+            )}
           </Field>
 
           <Field label="Day">

@@ -53,12 +53,8 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: "/api/v1/attendance/:path*",
-        destination: `${springBootUrl}/api/v1/attendance/:path*`,
-      },
-      {
-        source: "/api/v1/auth/:path*",
-        destination: `${springBootUrl}/api/v1/auth/:path*`,
+        source: "/api/v1/:path*",
+        destination: `${springBootUrl}/api/v1/:path*`,
       },
     ];
   },

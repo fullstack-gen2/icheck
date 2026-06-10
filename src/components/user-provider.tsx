@@ -1,7 +1,7 @@
 "use client";
 
 import { mapAuthMe } from "@/auth";
-import { AUTH_URL } from "@/lib/api-config";
+import { useGetCurrentUserQuery } from "@/store/api/userApi";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 export interface AppUser {
@@ -22,16 +22,11 @@ const UserUpdateContext = createContext<((patch: Partial<AppUser>) => void) | nu
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
+  const { data } = useGetCurrentUserQuery();
 
   useEffect(() => {
-    fetch(`${AUTH_URL}/me`, { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((p) => {
-        const user = mapAuthMe(p);
-        if (user) setUser(user);
-      })
-      .catch(() => {});
-  }, []);
+    setUser(mapAuthMe(data));
+  }, [data]);
 
   const updateUser = useCallback((patch: Partial<AppUser>) => {
     setUser((current) => current ? { ...current, ...patch } : current);

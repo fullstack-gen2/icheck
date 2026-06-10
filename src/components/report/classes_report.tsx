@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useUser } from "@/components/user-provider";
 import { Badge } from "@/components/ui/badge";
@@ -31,41 +31,20 @@ import {
   SearchIcon,
   XIcon,
   ChevronDownIcon,
+  SlidersHorizontalIcon,
 } from "lucide-react";
-import { API_URL } from "@/lib/api-config";
+import { useGetClassroomsQuery, type ClassroomDto } from "@/store/api/attendanceApi";
+import {
+  type GenerateReportRequest,
+  type ReportDto,
+  useGenerateReportsMutation,
+  useGetClassroomReportsQuery,
+  useLockReportMutation,
+} from "@/store/api/reportApi";
 
-/* ── Types ──────────────────────────────────────────────────────────────── */
+type Classroom = ClassroomDto;
+type Report = ReportDto;
 
-interface Classroom {
-  id: number;
-  className: string;
-  classCode: string;
-  programTypeName: string;
-  generation: number;
-  year: number | null;
-  semester: number | null;
-  shift: string;
-}
-
-interface Report {
-  id: number;
-  student?: { id: number; name: string; studentNo?: string };
-  reportType: string;            // MONTHLY | SEMESTER
-  reportMonth: number | null;
-  reportYear: number;
-  semester: number | null;
-  totalSessions: number;
-  presentCount: number;
-  lateCount: number;
-  absentCount: number;
-  attendancePercentage: number;
-  attendanceScore: number;
-  warningStatus: boolean;
-  examEligible: boolean;
-  locked?: boolean;
-}
-
-/* ── Constants ─────────────────────────────────────────────────────────── */
 
 const MONTHS = [
   "January","February","March","April","May","June",
@@ -87,8 +66,7 @@ export default function ClassesReport() {
   const isAdmin = user?.role === "ADMIN";
 
   // Left panel — classroom picker
-  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-  const [loadingCls, setLoadingCls] = useState(true);
+  const { data: classrooms = [], isLoading: loadingCls } = useGetClassroomsQuery({ size: 200 });
   const [progType, setProgType] = useState<"ALL" | "BACHELOR" | "SCHOLARSHIP">("ALL");
   const [search, setSearch] = useState("");
   const [selectedCls, setSelectedCls] = useState<Classroom | null>(null);
@@ -102,23 +80,21 @@ export default function ClassesReport() {
 
   // Right panel — results
   const [tab, setTab] = useState<"reports" | "warnings">("reports");
-  const [reports, setReports] = useState<Report[]>([]);
-  const [loadingReps, setLoadingReps] = useState(false);
   const [lockingId, setLockingId]     = useState<number | null>(null);
-
-  /* ── Load classrooms once ────────────────────────────────────────────── */
-  useEffect(() => {
-    fetch(`${API_URL}/classrooms?size=200`)
-      .then((r) => r.json())
-      .then((j) => setClassrooms(j?.payload?.content ?? []))
-      .catch(() => setClassrooms([]))
-      .finally(() => setLoadingCls(false));
-  }, []);
+  const [generateReports] = useGenerateReportsMutation();
+  const [lockReport] = useLockReportMutation();
+  const {
+    data: reports = [],
+    isFetching: loadingReps,
+    refetch: refetchReports,
+  } = useGetClassroomReportsQuery(
+    { classroomId: selectedCls?.id ?? 0, size: 200 },
+    { skip: !selectedCls },
+  );
 
   function resetFilters() {
     setSearch("");
     setSelectedCls(null);
-    setReports([]);
   }
 
   /* ── Derived: filtered classroom list ────────────────────────────────── */
@@ -145,20 +121,9 @@ export default function ClassesReport() {
   const visibleReports = tab === "warnings" ? warnings : reports;
 
   /* ── Click a classroom → load its existing reports ───────────────────── */
-  async function loadReports(c: Classroom) {
+  function loadReports(c: Classroom) {
     setSelectedCls(c);
     setTab("reports");
-    setLoadingReps(true);
-    try {
-      const res = await fetch(`${API_URL}/reports/classrooms/${c.id}?size=200`);
-      const json = await res.json();
-      setReports(json?.payload?.content ?? []);
-    } catch {
-      setReports([]);
-      toast.error("Failed to load reports.");
-    } finally {
-      setLoadingReps(false);
-    }
   }
 
   /* ── Generate (semester for Bachelor / month for everything else) ────── */
@@ -167,7 +132,7 @@ export default function ClassesReport() {
     setGenerating(true);
     try {
       const bachelor = isBachelor(selectedCls.programTypeName);
-      const body = bachelor
+      const body: GenerateReportRequest = bachelor
         ? {
             classroomId: selectedCls.id,
             reportType: "SEMESTER",
@@ -180,17 +145,9 @@ export default function ClassesReport() {
             reportYear: Number(genYear),
             reportMonth: Number(genMonth),
           };
-      const res = await fetch(`${API_URL}/reports`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j?.payload?.message ?? j?.message ?? `HTTP ${res.status}`);
-      }
+      await generateReports(body).unwrap();
       toast.success("Reports generated.");
-      await loadReports(selectedCls);
+      await refetchReports();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Generate failed.");
     } finally {
@@ -202,12 +159,7 @@ export default function ClassesReport() {
   async function handleLock(reportId: number) {
     setLockingId(reportId);
     try {
-      const res = await fetch(`${API_URL}/reports/${reportId}/lock`, { method: "POST" });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j?.payload?.message ?? j?.message ?? `HTTP ${res.status}`);
-      }
-      setReports((arr) => arr.map((r) => (r.id === reportId ? { ...r, locked: true } : r)));
+      await lockReport(reportId).unwrap();
       toast.success("Report locked.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Lock failed.");
@@ -215,8 +167,6 @@ export default function ClassesReport() {
       setLockingId(null);
     }
   }
-
-  /* ── Export helpers ──────────────────────────────────────────────────── */
 
   function periodLabel(): string {
     if (!selectedCls) return "";
@@ -295,14 +245,36 @@ export default function ClassesReport() {
     toast.success("PDF file downloaded.");
   }
 
-  /* ── Render ──────────────────────────────────────────────────────────── */
   return (
     <div className="px-4 sm:px-5 py-6 sm:py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Reports</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Pick a class on the left, choose a period, then Generate to create &amp; view reports.
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Reports</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Pick a class, choose a period, then Generate to create and export report papers.
+          </p>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" className="shrink-0" title="Filters">
+              <SlidersHorizontalIcon className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel>Filter Classes</DropdownMenuLabel>
+            {(["ALL", "BACHELOR", "SCHOLARSHIP"] as const).map((pt) => (
+              <DropdownMenuItem
+                key={pt}
+                onClick={() => {
+                  setProgType(pt);
+                  resetFilters();
+                }}
+              >
+                {pt === "ALL" ? "All" : pt === "BACHELOR" ? "Bachelor" : "Scholarship"}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
@@ -392,7 +364,6 @@ export default function ClassesReport() {
           </div>
         </div>
 
-        {/* ─────── Right: reports panel ───────────────────────────────── */}
         <div>
           {!selectedCls ? (
             <div className="flex flex-col items-center justify-center py-24 text-muted-foreground/40 bg-card rounded-2xl border border-dashed border-border">
@@ -633,7 +604,6 @@ export default function ClassesReport() {
   );
 }
 
-/* ── Small select used in the generate bar ───────────────────────────────── */
 function SmSelect({
   value, onChange, options,
 }: {

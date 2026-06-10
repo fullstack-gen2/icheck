@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
-import { Avatar, AvatarBadge, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useRef, useState } from "react"
+import { toast } from "sonner"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,14 +24,10 @@ import {
   BellIcon,
   LogOutIcon,
   CameraIcon,
-  SaveIcon,
-  Trash2Icon,
   LoaderCircleIcon,
 } from "lucide-react"
 import { useUpdateUser, useUser } from "@/components/user-provider"
 import { LOGOUT_URL } from "@/lib/api-config"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
 
 function initials(name: string) {
   if (!name) return "?";
@@ -45,6 +42,20 @@ function handleLogout() {
   window.location.assign(LOGOUT_URL);
 }
 
+function pickProfileImage(value: unknown): string | null {
+  if (!value || typeof value !== "object") return typeof value === "string" ? value : null;
+  const root = value as Record<string, unknown>;
+  const payload = root.payload;
+  if (typeof payload === "string") return payload;
+  if (payload && typeof payload === "object") {
+    const nested = payload as Record<string, unknown>;
+    const image = nested.profileImage ?? nested.url ?? nested.imageUrl;
+    return typeof image === "string" ? image : null;
+  }
+  const image = root.profileImage ?? root.url ?? root.imageUrl;
+  return typeof image === "string" ? image : null;
+}
+
 export function NavUser({
   user: serverUser,
 }: {
@@ -55,10 +66,8 @@ export function NavUser({
   const liveUser = useUser()
   const updateUser = useUpdateUser()
   const user = liveUser ?? serverUser
-  const [profileImage, setProfileImage] = useState(
-    "profileImage" in user && user.profileImage ? user.profileImage : ""
-  )
-  const [saving, setSaving] = useState<"idle" | "saving" | "deleting" | "error">("idle")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
 
   const displayRole =
     "displayRole" in user && user.displayRole
@@ -73,37 +82,38 @@ export function NavUser({
 
   const avatarBg = "bg-primary"
 
-  const saveProfileImage = async () => {
-    const nextImage = profileImage.trim();
-    if (!nextImage || saving !== "idle") return;
-
-    setSaving("saving");
-    const res = await fetch("/api/auth/profile-image", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ profileImage: nextImage }),
-    });
-
-    if (res.ok) {
-      updateUser?.({ profileImage: nextImage });
-      setSaving("idle");
-    } else {
-      setSaving("error");
+  const uploadProfileImage = async (file: File | undefined) => {
+    if (!file || uploading) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file.");
+      return;
     }
-  };
 
-  const deleteProfileImage = async () => {
-    if (saving !== "idle" || !("profileImage" in user && user.profileImage)) return;
+    const formData = new FormData();
+    formData.append("file", file);
 
-    setSaving("deleting");
-    const res = await fetch("/api/auth/profile-image", { method: "DELETE" });
+    setUploading(true);
+    try {
+      const res = await fetch("/api/auth/profile-image", {
+        method: "PUT",
+        body: formData,
+      });
+      const json = await res.json().catch(() => null);
 
-    if (res.ok) {
-      setProfileImage("");
-      updateUser?.({ profileImage: null });
-      setSaving("idle");
-    } else {
-      setSaving("error");
+      if (!res.ok) {
+        throw new Error(json?.message ?? json?.error ?? "Upload failed.");
+      }
+
+      const nextImage = pickProfileImage(json);
+      if (nextImage) {
+        updateUser?.({ profileImage: nextImage });
+      }
+      toast.success("Profile photo updated.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not upload profile photo.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -116,12 +126,11 @@ export function NavUser({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              onClick={() => setProfileImage(imageUrl ?? "")}
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-8 w-8 rounded-lg">
-                {imageUrl ? <AvatarImage src={imageUrl} alt={user.name || "Profile"} className="rounded-lg" /> : null}
-                <AvatarFallback className={`rounded-lg ${avatarBg} text-white text-xs font-semibold`}>
+              <Avatar className="h-8 w-8">
+                {imageUrl ? <AvatarImage src={imageUrl} alt={user.name || "Profile"} /> : null}
+                <AvatarFallback className={`${avatarBg} text-white text-xs font-semibold`}>
                   {initials(user.name)}
                 </AvatarFallback>
               </Avatar>
@@ -144,15 +153,38 @@ export function NavUser({
             {/* Profile header */}
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-3 px-3 py-3 text-left text-sm">
-                <Avatar className="h-12 w-12 rounded-xl">
-                  {imageUrl ? <AvatarImage src={imageUrl} alt={user.name || "Profile"} className="rounded-xl" /> : null}
-                  <AvatarFallback className={`rounded-xl ${avatarBg} text-white text-sm font-semibold`}>
-                    {initials(user.name)}
-                  </AvatarFallback>
-                  <AvatarBadge className="size-5 rounded-md bg-background text-primary ring-2 ring-card">
-                    <CameraIcon className="size-3.5" />
-                  </AvatarBadge>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="h-12 w-12">
+                    {imageUrl ? <AvatarImage src={imageUrl} alt={user.name || "Profile"} /> : null}
+                    <AvatarFallback className={`${avatarBg} text-white text-sm font-semibold`}>
+                      {initials(user.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <button
+                    type="button"
+                    className="absolute -right-1 -bottom-1 inline-flex size-7 items-center justify-center rounded-full border-2 border-card bg-background text-primary shadow-sm hover:bg-primary hover:text-primary-foreground disabled:cursor-wait disabled:opacity-70"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
+                    disabled={uploading}
+                    aria-label="Upload profile photo"
+                  >
+                    {uploading ? (
+                      <LoaderCircleIcon className="size-3.5 animate-spin" />
+                    ) : (
+                      <CameraIcon className="size-3.5" />
+                    )}
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => void uploadProfileImage(event.target.files?.[0])}
+                  />
+                </div>
                 <div className="grid flex-1 text-left leading-tight gap-0.5">
                   <span className="font-semibold text-foreground">{user.name || "—"}</span>
                   <span className="text-xs text-muted-foreground truncate">
@@ -175,65 +207,6 @@ export function NavUser({
               >
                 <UserIcon className="size-4 text-muted-foreground" />
                 <span>Account</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="block cursor-default p-3 focus:bg-transparent"
-                onSelect={(event) => event.preventDefault()}
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <span className="inline-flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <CameraIcon className="size-4" />
-                    </span>
-                    Edit profile photo
-                  </div>
-                  <Input
-                    value={profileImage}
-                    onChange={(event) => {
-                      setProfileImage(event.target.value);
-                      if (saving === "error") setSaving("idle");
-                    }}
-                    placeholder="Paste image URL"
-                    className="h-9 text-sm"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Paste a public image URL, then save.
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={saveProfileImage}
-                      disabled={!profileImage.trim() || saving !== "idle"}
-                      className="gap-1.5"
-                    >
-                      {saving === "saving" ? (
-                        <LoaderCircleIcon className="size-3.5 animate-spin" />
-                      ) : (
-                        <SaveIcon className="size-3.5" />
-                      )}
-                      Save
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={deleteProfileImage}
-                      disabled={!imageUrl || saving !== "idle"}
-                      className="gap-1.5"
-                    >
-                      {saving === "deleting" ? (
-                        <LoaderCircleIcon className="size-3.5 animate-spin" />
-                      ) : (
-                        <Trash2Icon className="size-3.5" />
-                      )}
-                      Remove
-                    </Button>
-                  </div>
-                  {saving === "error" ? (
-                    <p className="text-xs text-red-500">Could not update photo. Check the image URL and try again.</p>
-                  ) : null}
-                </div>
               </DropdownMenuItem>
               <DropdownMenuItem className="gap-3 py-2.5">
                 <BellIcon className="size-4 text-muted-foreground" />

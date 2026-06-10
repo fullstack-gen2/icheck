@@ -19,14 +19,24 @@ async function forward(req: Request, method: "PUT" | "DELETE") {
     return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
   }
 
+  const contentType = req.headers.get("content-type") ?? "";
+  const body =
+    method === "PUT"
+      ? contentType.includes("multipart/form-data")
+        ? await req.formData()
+        : await req.text()
+      : undefined;
+
   const res = await fetch(`${AUTH_API_URL}/me/profile-image`, {
     method,
     cache: "no-store",
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      ...(method === "PUT" ? { "Content-Type": "application/json" } : {}),
+      ...(method === "PUT" && !contentType.includes("multipart/form-data")
+        ? { "Content-Type": "application/json" }
+        : {}),
     },
-    body: method === "PUT" ? await req.text() : undefined,
+    body,
   });
 
   const data = await res.json().catch(() => null);

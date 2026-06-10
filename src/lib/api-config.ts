@@ -1,4 +1,4 @@
-export const API_URL = "https://attendance.icheck.today/api/v1";
+export const API_URL = "/api/v1";
 
 export const AUTH_URL = "/api/auth";
 
