@@ -45,12 +45,22 @@ async function handleLogout() {
 export function NavUser({
   user: serverUser,
 }: {
-  user: { name: string; email: string; role: string }
+  user: { name: string; email: string; role: string; displayRole?: string }
 }) {
   const { isMobile } = useSidebar()
   
   const liveUser = useUser()
   const user = liveUser ?? serverUser
+  const displayRole =
+    "displayRole" in user && user.displayRole
+      ? user.displayRole
+      : user.role === "ADMIN"
+        ? "Admin"
+        : user.role === "TEACHER"
+          ? "Teacher"
+          : user.role === "STUDENT"
+            ? "Student"
+            : user.role
 
   const avatarBg = "bg-primary"
 
@@ -71,7 +81,7 @@ export function NavUser({
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">{user.name || "—"}</span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {user.email || "—"}
+                  {displayRole}{user.email ? ` · ${user.email}` : ""}
                 </span>
               </div>
               <ChevronsUpDownIcon className="ml-auto size-4 opacity-50" />
@@ -96,6 +106,9 @@ export function NavUser({
                   <span className="font-semibold text-foreground">{user.name || "—"}</span>
                   <span className="text-xs text-muted-foreground truncate">
                     {user.email || "—"}
+                  </span>
+                  <span className="text-xs font-medium text-primary">
+                    {displayRole}
                   </span>
                 </div>
               </div>

@@ -1,4 +1,6 @@
-import { API_URL, AUTH_URL } from "@/lib/api-config";
+import { API_URL } from "@/lib/api-config";
+
+const DEFAULT_ATTENDANCE_SERVICE_URL = "https://attendance.icheck.today";
 
 function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, "");
@@ -10,12 +12,29 @@ function normalizeServiceUrl(value: string) {
     .replace(/\/api\/v1$/, "");
 }
 
-export const SPRING_BOOT_URL = normalizeServiceUrl(
-  process.env.ATTENDANCE_SERVICE_URL ??
-  process.env.BASE_API_URL ??
-  process.env.BACKEND_URL ??
-  "https://attendance.icheck.today"
-);
+function resolveServiceUrl() {
+  const configured = normalizeServiceUrl(
+    process.env.ATTENDANCE_SERVICE_URL ??
+    process.env.BASE_API_URL ??
+    process.env.BACKEND_URL ??
+    DEFAULT_ATTENDANCE_SERVICE_URL
+  );
+
+  if (process.env.NODE_ENV === "production") {
+    try {
+      const hostname = new URL(configured).hostname;
+      if (hostname === "localhost" || hostname === "127.0.0.1") {
+        return DEFAULT_ATTENDANCE_SERVICE_URL;
+      }
+    } catch {
+      return DEFAULT_ATTENDANCE_SERVICE_URL;
+    }
+  }
+
+  return configured;
+}
+
+export const SPRING_BOOT_URL = resolveServiceUrl();
 
 export const SPRING_BOOT_PUBLIC_URL = normalizeServiceUrl(
   process.env.ATTENDANCE_PUBLIC_URL ??
@@ -45,16 +64,13 @@ export const KEYCLOAK_CLIENT_ID =
 export const KEYCLOAK_CLIENT_SECRET =
   process.env.KEYCLOAK_CLIENT_SECRET ??
   process.env.KEYCLOAK_SECRET ??
-  process.env.KEYCLOAK_ADMIN_CLIENT_SECRET ??
   process.env.AUTH_KEYCLOAK_SECRET ??
-  process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_SECRET ??
   "";
 
 export const OAUTH_STATE_SECRET =
   process.env.OAUTH_STATE_SECRET ??
   process.env.KEYCLOAK_CLIENT_SECRET ??
   process.env.KEYCLOAK_SECRET ??
-  process.env.KEYCLOAK_ADMIN_CLIENT_SECRET ??
   process.env.AUTH_KEYCLOAK_SECRET ??
   "icheck-local-oauth-state-secret";
 
