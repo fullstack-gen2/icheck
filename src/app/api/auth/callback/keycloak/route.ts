@@ -105,14 +105,19 @@ export async function GET(req: Request) {
     code_verifier: codeVerifier,
   });
 
+  const headers: HeadersInit = {
+    "Content-Type": "application/x-www-form-urlencoded",
+  };
   if (KEYCLOAK_CLIENT_SECRET) {
-    form.set("client_secret", KEYCLOAK_CLIENT_SECRET);
+    headers.Authorization = `Basic ${Buffer.from(
+      `${KEYCLOAK_CLIENT_ID}:${KEYCLOAK_CLIENT_SECRET}`
+    ).toString("base64")}`;
   }
 
   const tokenUrl = `${KEYCLOAK_ISSUER_URI}/protocol/openid-connect/token`;
   const tokenRes = await fetch(tokenUrl, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers,
     body: form,
     cache: "no-store",
   });

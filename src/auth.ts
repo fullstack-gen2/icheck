@@ -44,12 +44,18 @@ export const KEYCLOAK_CLIENT_ID =
 
 export const KEYCLOAK_CLIENT_SECRET =
   process.env.KEYCLOAK_CLIENT_SECRET ??
+  process.env.KEYCLOAK_SECRET ??
+  process.env.KEYCLOAK_ADMIN_CLIENT_SECRET ??
+  process.env.AUTH_KEYCLOAK_SECRET ??
   process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_SECRET ??
   "";
 
 export const OAUTH_STATE_SECRET =
   process.env.OAUTH_STATE_SECRET ??
   process.env.KEYCLOAK_CLIENT_SECRET ??
+  process.env.KEYCLOAK_SECRET ??
+  process.env.KEYCLOAK_ADMIN_CLIENT_SECRET ??
+  process.env.AUTH_KEYCLOAK_SECRET ??
   "icheck-local-oauth-state-secret";
 
 export const ACCESS_TOKEN_COOKIE = "icheck_access_token";
