@@ -17,11 +17,25 @@ export async function POST(req: Request) {
   return logout(req);
 }
 
+function getCookie(req: Request, name: string) {
+  return req.headers
+    .get("cookie")
+    ?.split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
+}
+
 function logout(req: Request) {
   const requestUrl = new URL(req.url);
   const logoutUrl = new URL(`${KEYCLOAK_ISSUER_URI}/protocol/openid-connect/logout`);
+  const idToken = getCookie(req, ID_TOKEN_COOKIE);
+
   logoutUrl.searchParams.set("client_id", KEYCLOAK_CLIENT_ID);
-  logoutUrl.searchParams.set("post_logout_redirect_uri", new URL("/login", requestUrl.origin).toString());
+  logoutUrl.searchParams.set("post_logout_redirect_uri", new URL("/login?logged_out=1", requestUrl.origin).toString());
+  if (idToken) {
+    logoutUrl.searchParams.set("id_token_hint", idToken);
+  }
 
   const response = NextResponse.redirect(logoutUrl);
   response.cookies.delete(ACCESS_TOKEN_COOKIE);

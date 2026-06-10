@@ -23,7 +23,7 @@ import {
   LogOutIcon,
 } from "lucide-react"
 import { useUser } from "@/components/user-provider"
-import { LOGOUT_URL, OAUTH2_LOGIN_URL } from "@/lib/api-config"
+import { LOGOUT_URL } from "@/lib/api-config"
 
 function initials(name: string) {
   if (!name) return "?";
@@ -34,12 +34,8 @@ function initials(name: string) {
   return name.slice(0, 2).toUpperCase();
 }
 
-async function handleLogout() {
-  try {
-    await fetch(LOGOUT_URL, { method: "POST", credentials: "include" });
-  } catch {
-  }
-  window.location.href = OAUTH2_LOGIN_URL;
+function handleLogout() {
+  window.location.assign(LOGOUT_URL);
 }
 
 export function NavUser({
