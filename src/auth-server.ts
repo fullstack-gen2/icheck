@@ -14,8 +14,6 @@ export async function getServerUser(): Promise<AppUser | null> {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!res.ok) {
-      // Surface the reason in Vercel logs — distinguishes "cookie expired"
-      // (401) from "endpoint wrong/broken" (404/500).
       const body = await res.text().catch(() => "");
       console.error("[getServerUser] /me returned non-2xx", {
         url: `${AUTH_API_URL}/me`,

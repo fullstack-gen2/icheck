@@ -21,12 +21,12 @@ export function todayIso(now: Date = new Date()): string {
   }).format(now);
 }
 
-/** "MONDAY" / "TUESDAY" / … in the school's timezone. */
 export function todayWeekday(now: Date = new Date()): WeekdayName {
   const name = new Intl.DateTimeFormat("en-US", {
     timeZone: SCHOOL_TZ,
     weekday: "long",
   }).format(now).toUpperCase();
+  
   // Narrow to our union — if Intl ever returns something off, default to MONDAY.
   return (DAY_NAMES as readonly string[]).includes(name)
     ? (name as WeekdayName)

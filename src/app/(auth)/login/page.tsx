@@ -5,13 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import { AlertCircleIcon, RefreshCwIcon } from "lucide-react";
 
-/**
- * Sign-in screen.
- *  - No `?error` query  → kick straight into the OAuth flow.
- *  - `?error=...`       → show what went wrong so the user is NOT bounced
- *                          back to Keycloak immediately (which previously
- *                          created an infinite Keycloak ↔ callback ↔ /login loop).
- */
 const ERROR_MESSAGES: Record<string, string> = {
   oauth_state:    "Login session expired or was tampered with. Please try signing in again.",
   token_exchange: "Keycloak rejected the token exchange. Most likely the server is missing KEYCLOAK_CLIENT_SECRET, or the redirect_uri isn't registered on the Keycloak client. Check the deploy logs.",

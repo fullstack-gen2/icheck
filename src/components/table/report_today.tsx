@@ -8,7 +8,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { data } from "@/lib/data/mockData/student";
 import { AttendanceStatus, Student } from "@/types/student";
 import { CheckIcon, ChevronDown, ChevronUp } from "lucide-react";
 import Image from "next/image";
@@ -40,7 +39,7 @@ function AttendanceMark({
 }
 
 export default function ReportToday({
-  students = data,
+  students = [],
   studentProfileBasePath,
 }: ReportTodayProps) {
   const params = useParams<{ id?: string | string[] }>();

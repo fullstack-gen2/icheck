@@ -21,6 +21,7 @@ export default async function AdminLayout({
     role:        user?.role  ?? "ADMIN",
     // Show the elevated label (Super Admin / …) straight from /auth/me.
     displayRole: user?.displayRole ?? "Admin",
+    profileImage: user?.profileImage ?? null,
   };
 
   return (

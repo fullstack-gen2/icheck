@@ -84,22 +84,12 @@ export interface AppUser {
   id: string;
   name: string;
   email: string;
-  /** Normalized role used for permission gating: ADMIN | TEACHER | STUDENT | USER. */
   role: string;
-  /** Human-readable label that mirrors what the API actually returned,
-   *  so a SUPER_ADMIN sees "Super Admin" in the UI even though `role`
-   *  normalizes to ADMIN for access checks. */
   displayRole: string;
-  /** All raw role strings from /auth/me, in original casing. */
   rawRoles: string[];
+  profileImage: string | null;
 }
 
-/**
- * Role rules:
- *   - SUPER_ADMIN  → access-equivalent to ADMIN (normalized to "ADMIN")
- *   - Multi-role users → highest privilege wins (ADMIN > TEACHER > STUDENT)
- *   - `displayRole` always reflects the actual API role (Super Admin stays Super Admin).
- */
 const ROLE_PRIORITY = ["ADMIN", "TEACHER", "STUDENT"] as const;
 
 function normalizeRole(raw: string): string {
@@ -108,25 +98,19 @@ function normalizeRole(raw: string): string {
   return upper || "USER";
 }
 
-/** Human title-case label for a raw role string. */
 function humanizeRole(raw: string): string {
   const upper = raw?.toUpperCase?.() ?? "";
   if (upper === "SUPER_ADMIN" || upper === "SUPERADMIN") return "Super Admin";
   if (upper === "ADMIN")   return "Admin";
   if (upper === "TEACHER") return "Teacher";
   if (upper === "STUDENT") return "Student";
-  // Generic fallback: title-case + replace underscores with spaces
+
   return upper
     .split("_")
     .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
     .join(" ");
 }
 
-/**
- * Pick which raw role drives `displayRole`. Highest privilege still wins,
- * but "Super Admin" beats plain "Admin" when both are present so the
- * elevated role is shown in the UI.
- */
 function pickDisplayRoleRaw(rawRoles: string[]): string {
   const upper = rawRoles.map((r) => r.toUpperCase());
   if (upper.some((r) => r === "SUPER_ADMIN" || r === "SUPERADMIN")) return "SUPER_ADMIN";
@@ -165,5 +149,6 @@ export function mapAuthMe(p: any): AppUser | null {
     role,
     displayRole: humanizeRole(pickDisplayRoleRaw(rawRoles)),
     rawRoles,
+    profileImage: p.profileImage ? String(p.profileImage) : null,
   };
 }

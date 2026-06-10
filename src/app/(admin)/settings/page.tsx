@@ -56,7 +56,6 @@ interface Setting {
   updatedAt: string | null;
 }
 
-/* ─── Static metadata ──────────────────────────────────────────────────── */
 
 const KEY_LABELS: Record<string, string> = {
   early_checkin_minutes: "Early check-in window",
@@ -86,7 +85,6 @@ const KEY_HELP: Record<string, string> = {
 
 const defaultForm = { key: "", value: "", type: "STRING", description: "" };
 
-/* ─── Pure helpers ─────────────────────────────────────────────────────── */
 
 function humanizeKey(key: string): string {
   return KEY_LABELS[key] ?? key
@@ -146,7 +144,6 @@ function formatUpdated(date: string | null) {
   });
 }
 
-/* ─── Value field used in the "Add new" sheet ─────────────────────────── */
 
 function ValueField({
   type, value, onChange,
@@ -176,7 +173,6 @@ function ValueField({
   );
 }
 
-/* ─── Single setting card ──────────────────────────────────────────────── */
 
 function SettingOptionCard({
   setting, deleting, onSave, onDelete,
@@ -315,8 +311,6 @@ function SettingOptionCard({
     </Card>
   );
 }
-
-/* ─── Page ─────────────────────────────────────────────────────────────── */
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Setting[]>([]);

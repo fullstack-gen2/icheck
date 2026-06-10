@@ -20,6 +20,7 @@ export default async function StudentLayout({
     email:       user?.email ?? "",
     role:        user?.role  ?? "STUDENT",
     displayRole: user?.displayRole ?? "Student",
+    profileImage: user?.profileImage ?? null,
   };
 
   return (

@@ -1,4 +1,3 @@
-// app/(admin)/attendance/[id]/page.tsx
 
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeftIcon, ClipboardCheckIcon } from "lucide-react";

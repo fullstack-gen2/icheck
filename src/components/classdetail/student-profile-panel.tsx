@@ -1,10 +1,10 @@
-import { data as students } from "@/lib/data/mockData/student";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Pencil, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { backendFetch } from "@/lib/api-fetch";
 
 type StudentProfilePanelProps = {
   classroomId: string;
@@ -12,14 +12,44 @@ type StudentProfilePanelProps = {
   mode?: "page" | "modal";
 };
 
-export function StudentProfilePanel({
+interface StudentProfile {
+  id: string;
+  name: string;
+  email: string;
+  gender: string;
+  dateOfBirth: string;
+  phone: string;
+  profileImage: string;
+}
+
+async function fetchStudent(studentId: string): Promise<StudentProfile | null> {
+  try {
+    const res = await backendFetch(`/students/${encodeURIComponent(studentId)}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    const student = json?.payload ?? json;
+    if (!student || typeof student !== "object") return null;
+
+    return {
+      id: String(student.id ?? student.studentNo ?? studentId),
+      name: String(student.name ?? student.fullName ?? student.username ?? "—"),
+      email: String(student.email ?? "—"),
+      gender: String(student.gender ?? "—"),
+      dateOfBirth: String(student.dateOfBirth ?? student.dob ?? "—"),
+      phone: String(student.phone ?? student.phoneNumber ?? "—"),
+      profileImage: String(student.profileImage ?? student.profile ?? "/file.svg"),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function StudentProfilePanel({
   classroomId,
   studentId,
   mode = "page",
 }: StudentProfilePanelProps) {
-  const student = students.find(
-    (item) => item.id === decodeURIComponent(studentId),
-  );
+  const student = await fetchStudent(decodeURIComponent(studentId));
 
   if (!student) {
     notFound();
@@ -40,7 +70,7 @@ export function StudentProfilePanel({
     <aside className="flex flex-col items-center text-center lg:items-start lg:text-left">
       <div className="relative size-24 overflow-hidden rounded-full border-[1.5px] border-zinc-400 bg-zinc-300 shadow-inner">
         <Image
-          src={student.profile}
+          src={student.profileImage}
           alt={student.name}
           width={96}
           height={96}
@@ -55,7 +85,7 @@ export function StudentProfilePanel({
         </p>
         <p>
           <span className="font-semibold">email: </span>{" "}
-          <span className="font-light">chanthorn@istad.co</span>
+          <span className="font-light">{student.email}</span>
         </p>
       </div>
     </aside>
@@ -66,7 +96,7 @@ export function StudentProfilePanel({
       {/* left part */}
       <div className="relative size-24 overflow-hidden rounded-full border-[1.5px] border-zinc-400 bg-zinc-300 shadow-inner">
         <Image
-          src={student.profile}
+          src={student.profileImage}
           alt={student.name}
           width={96}
           height={96}
@@ -80,7 +110,7 @@ export function StudentProfilePanel({
         </p>
         <p>
           <span className="font-semibold">Email: </span>{" "}
-          <span className="font-light">chanthorn@istad.co</span>
+          <span className="font-light">{student.email}</span>
         </p>
       </div>
     </div>

@@ -23,7 +23,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/settings":             "Settings",
   "/reports":              "Reports",
   "/sessions":             "Session QR",
-  "/student":              "My Attendance",
+  "/student":              "My Information",
 };
 
 function getSegments(pathname: string): { label: string; path: string }[] {
