@@ -31,6 +31,11 @@ import {
   useUpdateSettingMutation,
   type SettingDto,
 } from "@/store/api/attendanceApi";
+import {
+  IpAllowlistCard,
+  SchoolLocationCard,
+  NETWORK_LOCATION_KEYS,
+} from "@/components/settings/network-location-settings";
 
 const KEY_LABELS: Record<string, string> = {
   early_checkin_minutes: "Early check-in window",
@@ -247,11 +252,13 @@ export default function SettingsPage() {
   const [updateSetting] = useUpdateSettingMutation();
 
   const groupedSettings = useMemo(() => {
-    return settings.reduce<Record<string, SettingDto[]>>((groups, setting) => {
-      const group = settingGroup(setting.settingKey);
-      groups[group] = [...(groups[group] ?? []), setting];
-      return groups;
-    }, {});
+    return settings
+      .filter((setting) => !NETWORK_LOCATION_KEYS.includes(setting.settingKey))
+      .reduce<Record<string, SettingDto[]>>((groups, setting) => {
+        const group = settingGroup(setting.settingKey);
+        groups[group] = [...(groups[group] ?? []), setting];
+        return groups;
+      }, {});
   }, [settings]);
 
   async function updateSettingValue(setting: SettingDto, value: string) {
@@ -287,7 +294,20 @@ export default function SettingsPage() {
         <div className="flex justify-center py-24">
           <LoaderCircleIcon className="size-8 animate-spin text-primary" />
         </div>
-      ) : settings.length === 0 ? (
+      ) : (
+        <section className="mb-8 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">Location &amp; Network</h2>
+            <Badge variant="outline">2 options</Badge>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <IpAllowlistCard settings={settings} />
+            <SchoolLocationCard settings={settings} />
+          </div>
+        </section>
+      )}
+
+      {isLoading ? null : settings.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card py-20 text-center text-muted-foreground/70">
           <Settings2Icon className="mx-auto mb-3 size-10 opacity-40" />
           <p className="font-medium">No settings returned by the API.</p>

@@ -62,6 +62,68 @@ export const attendanceApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Setting"],
     }),
+    /** Rule 16 — admin creates a brand-new setting key (e.g. first-time IP allowlist / school location). */
+    createSetting: builder.mutation<
+      SettingDto,
+      { key: string; value: string; type: "INT" | "BOOLEAN" | "STRING"; description?: string }
+    >({
+      query: (body) => ({
+        url: "/settings",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Setting"],
+    }),
+    /**
+     * Create-or-update helper: tries PATCH first (setting already exists), and
+     * falls back to POST /settings if the key hasn't been created yet.
+     */
+    upsertSetting: builder.mutation<
+      SettingDto,
+      { key: string; value: string; type: "INT" | "BOOLEAN" | "STRING"; description?: string }
+    >({
+      async queryFn({ key, value, type, description }, _api, _extra, baseQuery) {
+        const patchResult = await baseQuery({
+          url: `/settings/${encodeURIComponent(key)}`,
+          method: "PATCH",
+          body: { value },
+        });
+        if (!patchResult.error) {
+          return { data: (patchResult.data as ApiEnvelope<SettingDto>)?.payload as SettingDto };
+        }
+        const status = (patchResult.error as { status?: number }).status;
+        if (status === 404) {
+          const createResult = await baseQuery({
+            url: "/settings",
+            method: "POST",
+            body: { key, value, type, description },
+          });
+          if (!createResult.error) {
+            return { data: (createResult.data as ApiEnvelope<SettingDto>)?.payload as SettingDto };
+          }
+          return { error: createResult.error as never };
+        }
+        return { error: patchResult.error as never };
+      },
+      invalidatesTags: ["Setting"],
+    }),
+    deleteSetting: builder.mutation<void, string>({
+      query: (key) => ({
+        url: `/settings/${encodeURIComponent(key)}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Setting"],
+    }),
+    getStudentsByClassroom: builder.query<
+      { id: number; name: string; studentNo?: string }[],
+      { classroomId: number; size?: number }
+    >({
+      query: ({ classroomId, size = 500 }) => `/classrooms/${classroomId}/students?size=${size}`,
+      transformResponse: (
+        response: ApiEnvelope<PagePayload<{ id: number; name: string; studentNo?: string }> | { id: number; name: string; studentNo?: string }[]>
+      ) => unwrapContent(response),
+      providesTags: ["Student"],
+    }),
   }),
 });
 
@@ -69,6 +131,10 @@ export const {
   useCreateClassroomMutation,
   useGetClassroomsQuery,
   useGetSettingsQuery,
+  useGetStudentsByClassroomQuery,
   useUpdateClassroomMutation,
   useUpdateSettingMutation,
+  useCreateSettingMutation,
+  useUpsertSettingMutation,
+  useDeleteSettingMutation,
 } = attendanceApi;

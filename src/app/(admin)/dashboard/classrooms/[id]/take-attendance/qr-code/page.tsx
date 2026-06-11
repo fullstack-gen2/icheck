@@ -10,6 +10,7 @@ export default async function MyQR({
   return (
     <main className="flex h-screen items-center justify-center px-4 py-6">
       <TakeAttendanceQrCode
+        classroomId={Number(id)}
         closeHref={`/dashboard/classrooms/${id}/take-attendance/checked_attendance`}
         qrSize="min(76vmin, calc(100vw - 4rem), calc(100vh - 12rem))"
         logoSize={220}

@@ -14,6 +14,7 @@ export default async function PopupQRCode({
       closeButtonClassName="top-5 right-5 size-14 rounded-full bg-background/90 shadow-md hover:bg-muted [&_svg]:size-8"
     >
       <TakeAttendanceQrCode
+        classroomId={Number(id)}
         closeHref={`/dashboard/classrooms/${id}/take-attendance/checked_attendance`}
       />
     </Modal>

@@ -33,17 +33,19 @@ import {
   ChevronDownIcon,
   SlidersHorizontalIcon,
 } from "lucide-react";
-import { useGetClassroomsQuery, type ClassroomDto } from "@/store/api/attendanceApi";
 import {
-  type GenerateReportRequest,
-  type ReportDto,
-  useGenerateReportsMutation,
+  useGetClassroomsQuery,
+  useGetStudentsByClassroomQuery,
+  type ClassroomDto,
+} from "@/store/api/attendanceApi";
+import {
+  useGenerateMonthlyReportMutation,
+  useGenerateSemesterReportMutation,
   useGetClassroomReportsQuery,
   useLockReportMutation,
 } from "@/store/api/reportApi";
 
 type Classroom = ClassroomDto;
-type Report = ReportDto;
 
 
 const MONTHS = [
@@ -81,7 +83,8 @@ export default function ClassesReport() {
   // Right panel — results
   const [tab, setTab] = useState<"reports" | "warnings">("reports");
   const [lockingId, setLockingId]     = useState<number | null>(null);
-  const [generateReports] = useGenerateReportsMutation();
+  const [generateMonthlyReport] = useGenerateMonthlyReportMutation();
+  const [generateSemesterReport] = useGenerateSemesterReportMutation();
   const [lockReport] = useLockReportMutation();
   const {
     data: reports = [],
@@ -89,6 +92,12 @@ export default function ClassesReport() {
     refetch: refetchReports,
   } = useGetClassroomReportsQuery(
     { classroomId: selectedCls?.id ?? 0, size: 200 },
+    { skip: !selectedCls },
+  );
+  // Students enrolled in the selected classroom — the backend generates ONE
+  // report per student, so "Generate" fans out to every enrolled student.
+  const { data: classroomStudents = [] } = useGetStudentsByClassroomQuery(
+    { classroomId: selectedCls?.id ?? 0, size: 500 },
     { skip: !selectedCls },
   );
 
@@ -126,27 +135,45 @@ export default function ClassesReport() {
     setTab("reports");
   }
 
-  /* ── Generate (semester for Bachelor / month for everything else) ────── */
+  /* ── Generate (semester for Bachelor / month for everything else) ─────
+   * The backend generates ONE report per student
+   * (POST /reports/monthly | /reports/semester, body: studentId+classId+...).
+   * So "Generate" here fans out across every student enrolled in the class.
+   */
   async function handleGenerate() {
     if (!selectedCls) return;
+    if (classroomStudents.length === 0) {
+      toast.error("No students enrolled in this classroom.");
+      return;
+    }
     setGenerating(true);
     try {
       const bachelor = isBachelor(selectedCls.programTypeName);
-      const body: GenerateReportRequest = bachelor
-        ? {
-            classroomId: selectedCls.id,
-            reportType: "SEMESTER",
-            reportYear: Number(genYear),
-            semester: Number(genSemester),
-          }
-        : {
-            classroomId: selectedCls.id,
-            reportType: "MONTHLY",
-            reportYear: Number(genYear),
-            reportMonth: Number(genMonth),
-          };
-      await generateReports(body).unwrap();
-      toast.success("Reports generated.");
+      const results = await Promise.allSettled(
+        classroomStudents.map((student) =>
+          bachelor
+            ? generateSemesterReport({
+                studentId: student.id,
+                classId: selectedCls.id,
+                semester: Number(genSemester),
+                year: Number(genYear),
+              }).unwrap()
+            : generateMonthlyReport({
+                studentId: student.id,
+                classId: selectedCls.id,
+                month: Number(genMonth),
+                year: Number(genYear),
+              }).unwrap()
+        )
+      );
+      const failed = results.filter((r) => r.status === "rejected").length;
+      const succeeded = results.length - failed;
+      if (succeeded > 0) {
+        toast.success(`Generated ${succeeded} report${succeeded === 1 ? "" : "s"}.`);
+      }
+      if (failed > 0) {
+        toast.error(`${failed} report${failed === 1 ? "" : "s"} failed to generate.`);
+      }
       await refetchReports();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Generate failed.");
@@ -155,11 +182,16 @@ export default function ClassesReport() {
     }
   }
 
-  /* ── Lock a single report row ────────────────────────────────────────── */
+  /* ── Lock a single report row (Rule 15 — admin only, requires adminId) ─ */
   async function handleLock(reportId: number) {
+    const adminId = Number(user?.id);
+    if (!adminId || Number.isNaN(adminId)) {
+      toast.error("Could not determine admin id.");
+      return;
+    }
     setLockingId(reportId);
     try {
-      await lockReport(reportId).unwrap();
+      await lockReport({ id: reportId, adminId }).unwrap();
       toast.success("Report locked.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Lock failed.");

@@ -36,13 +36,13 @@ export interface CurrentUserDto {
 export const userApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getStudents: builder.query<StudentDto[], void>({
-      query: () => "/users?size=1000",
+      query: () => "/users/students?size=1000",
       transformResponse: (response: ApiEnvelope<PagePayload<StudentDto> | StudentDto[]>) =>
         unwrapContent<StudentDto>(response),
       providesTags: ["Student", "User"],
     }),
     getTeachers: builder.query<TeacherDto[], void>({
-      query: () => "/teachers?size=1000",
+      query: () => "/users/lecturers?size=1000",
       transformResponse: (response: ApiEnvelope<PagePayload<TeacherDto> | TeacherDto[]>) =>
         unwrapContent<TeacherDto>(response),
       providesTags: ["Teacher", "User"],

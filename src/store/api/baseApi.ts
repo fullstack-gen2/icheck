@@ -37,6 +37,7 @@ export const baseApi = createApi({
   tagTypes: [
     "Classroom",
     "Report",
+    "Session",
     "Setting",
     "Student",
     "Teacher",

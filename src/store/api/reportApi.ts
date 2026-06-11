@@ -18,12 +18,20 @@ export interface ReportDto {
   locked?: boolean;
 }
 
-export interface GenerateReportRequest {
-  classroomId: number;
-  reportType: "MONTHLY" | "SEMESTER";
-  reportYear: number;
-  reportMonth?: number;
-  semester?: number;
+/** Maps to POST /api/v1/reports/monthly — backend generates ONE report per student. */
+export interface GenerateMonthlyReportRequest {
+  studentId: number;
+  classId: number;
+  month: number;
+  year: number;
+}
+
+/** Maps to POST /api/v1/reports/semester — backend generates ONE report per student. */
+export interface GenerateSemesterReportRequest {
+  studentId: number;
+  classId: number;
+  semester: number;
+  year: number;
 }
 
 export const reportApi = baseApi.injectEndpoints({
@@ -34,17 +42,28 @@ export const reportApi = baseApi.injectEndpoints({
         unwrapContent<ReportDto>(response),
       providesTags: ["Report"],
     }),
-    generateReports: builder.mutation<unknown, GenerateReportRequest>({
+    /** Rule: MONTHLY report is only valid for classrooms whose program type is MONTHLY. */
+    generateMonthlyReport: builder.mutation<unknown, GenerateMonthlyReportRequest>({
       query: (body) => ({
-        url: "/reports",
+        url: "/reports/monthly",
         method: "POST",
         body,
       }),
       invalidatesTags: ["Report"],
     }),
-    lockReport: builder.mutation<unknown, number>({
-      query: (id) => ({
-        url: `/reports/${id}/lock`,
+    /** Rule: SEMESTER report is only valid for classrooms whose program type is SEMESTER. */
+    generateSemesterReport: builder.mutation<unknown, GenerateSemesterReportRequest>({
+      query: (body) => ({
+        url: "/reports/semester",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Report"],
+    }),
+    /** Rule 15 — only admin can lock a report; backend requires ?adminId=. */
+    lockReport: builder.mutation<unknown, { id: number; adminId: number }>({
+      query: ({ id, adminId }) => ({
+        url: `/reports/${id}/lock?adminId=${adminId}`,
         method: "POST",
       }),
       invalidatesTags: ["Report"],
@@ -53,7 +72,8 @@ export const reportApi = baseApi.injectEndpoints({
 });
 
 export const {
-  useGenerateReportsMutation,
+  useGenerateMonthlyReportMutation,
+  useGenerateSemesterReportMutation,
   useGetClassroomReportsQuery,
   useLockReportMutation,
 } = reportApi;

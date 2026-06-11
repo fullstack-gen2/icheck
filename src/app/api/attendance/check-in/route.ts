@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ACCESS_TOKEN_COOKIE, ATTENDANCE_API_URL } from "@/auth";
 import { getDeviceId } from "@/lib/device-cookie";
 import { getRequestUser } from "@/lib/server-user";
+import { getClientIp } from "@/lib/client-ip";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,9 @@ export async function POST(req: Request) {
         deviceId,
         latitude:  body.latitude  ?? null,
         longitude: body.longitude ?? null,
-        ipAddress: body.ipAddress ?? null,
+        // IP validation (Rule 11, optional/admin-toggle): the client can't see
+        // its own public IP, so the server reads it from proxy/request headers.
+        ipAddress: body.ipAddress ?? getClientIp(req),
       }),
     }
   );
