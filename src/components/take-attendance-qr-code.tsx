@@ -62,10 +62,22 @@ export function TakeAttendanceQrCode({
   const [ensureToday, { isLoading: ensuringToday }] =
     useEnsureTodaySessionsForClassroomMutation();
   const ensuredRef = useRef(false);
+  const [ensureDone, setEnsureDone] = useState(false);
+  const [ensuredSessions, setEnsuredSessions] = useState<SessionDto[] | null>(null);
   useEffect(() => {
     if (ensuredRef.current) return;
     ensuredRef.current = true;
-    void ensureToday(classroomId);
+    setEnsureDone(false);
+    ensureToday(classroomId)
+      .unwrap()
+      .then((result) => {
+        setEnsuredSessions(result.sessions);
+        setError("");
+      })
+      .catch((e) => {
+        setError(extractMessage(e, "Could not create today's session from the class schedule."));
+      })
+      .finally(() => setEnsureDone(true));
   }, [ensureToday, classroomId]);
 
   const {
@@ -116,15 +128,16 @@ export function TakeAttendanceQrCode({
     // Wait for the on-demand session generator to finish — otherwise the first
     // pass through this effect can see an empty list and short-circuit before
     // the row materialises.
-    if (ensuringToday) return;
-    if (!sessions) return;
+    if (!ensureDone || ensuringToday) return;
+    const availableSessions = ensuredSessions?.length ? ensuredSessions : sessions;
+    if (!availableSessions) return;
     if (!user) return;
     initRef.current = true;
 
     (async () => {
       const target =
-        sessions.find((s) => s.status === "ACTIVE") ??
-        sessions.find((s) => isOpenable(s.status));
+        availableSessions.find((s) => s.status === "ACTIVE") ??
+        availableSessions.find((s) => isOpenable(s.status));
 
       if (!target) {
         setError("No session is scheduled for this class today.");
@@ -150,7 +163,7 @@ export function TakeAttendanceQrCode({
 
       await generate(target.id);
     })();
-  }, [sessions, ensuringToday, openSession, teacherCheckInSession, generate, user?.id, user?.role]);
+  }, [sessions, ensuredSessions, ensureDone, ensuringToday, openSession, teacherCheckInSession, generate, user?.id, user?.role]);
 
   // Countdown ticker — auto-rotates the QR when it expires.
   useEffect(() => {

@@ -1,4 +1,5 @@
 import { baseApi, unwrapContent, unwrapPayload, type ApiEnvelope, type PagePayload } from "@/store/api/baseApi";
+import { todayIso } from "@/lib/school-time";
 
 export interface SessionDto {
   id: number;
@@ -30,8 +31,9 @@ export interface QrCodeDto {
   expireTime: string | null;
 }
 
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+export interface EnsureTodaySessionsResult {
+  created: number;
+  sessions: SessionDto[];
 }
 
 export const qrApi = baseApi.injectEndpoints({
@@ -42,13 +44,18 @@ export const qrApi = baseApi.injectEndpoints({
      * session row until tomorrow. Call this first so today's session always
      * exists for the classroom you're about to take attendance for.
      */
-    ensureTodaySessionsForClassroom: builder.mutation<{ created: number }, number>({
+    ensureTodaySessionsForClassroom: builder.mutation<EnsureTodaySessionsResult, number>({
       query: (classroomId) => ({
         url: `/sessions/classrooms/${classroomId}/ensure-today`,
         method: "POST",
       }),
-      transformResponse: (response: ApiEnvelope<{ created: number }>) =>
-        unwrapPayload(response) ?? { created: 0 },
+      transformResponse: (response: ApiEnvelope<EnsureTodaySessionsResult>) => {
+        const payload = unwrapPayload(response);
+        return {
+          created: payload?.created ?? 0,
+          sessions: payload?.sessions ?? [],
+        };
+      },
       invalidatesTags: ["Session"],
     }),
     /** Today's sessions for a classroom — used to find the session to run "Take Attendance" for. */
