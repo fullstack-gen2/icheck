@@ -12,7 +12,7 @@ export interface SessionDto {
   sessionDate: string;
   startTime: string;
   endTime: string;
-  status: "UPCOMING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
+  status: "UPCOMING" | "SCHEDULED" | "ACTIVE" | "COMPLETED" | "CANCELLED";
   actualStartTime: string | null;
   actualEndTime: string | null;
   allowStaticQr: boolean | null;

@@ -1,18 +1,12 @@
 import ReportToday from "@/components/table/report_today";
 import { Button } from "@/components/ui/button";
 import { backendFetch } from "@/lib/api-fetch";
-import { todayIso } from "@/lib/school-time";
+import { fetchTodaySessionForClassroom, type SessionSummary } from "@/lib/session-helpers";
 import { AttendanceStatus, type Student } from "@/types/student";
 
 interface Classroom {
   className: string;
   classCode?: string | null;
-}
-
-interface SessionLite {
-  sessionDate?: string | null;
-  startTime?: string | null;
-  endTime?: string | null;
 }
 
 async function fetchClassroom(id: string): Promise<Classroom | null> {
@@ -46,21 +40,6 @@ async function fetchStudents(id: string): Promise<Student[]> {
   }
 }
 
-async function fetchTodaySession(classroomId: string): Promise<SessionLite | null> {
-  try {
-    const today = todayIso();
-    const res = await backendFetch(
-      `/sessions/classrooms/${classroomId}?from=${today}&to=${today}&size=1`
-    );
-    if (!res.ok) return null;
-    const json = await res.json();
-    const content = json?.payload?.content ?? json?.payload ?? [];
-    return Array.isArray(content) && content.length > 0 ? content[0] : null;
-  } catch {
-    return null;
-  }
-}
-
 export default async function CheckedAttendance({
   params,
 }: {
@@ -70,7 +49,7 @@ export default async function CheckedAttendance({
     const [classroom, students, session] = await Promise.all([
       fetchClassroom(id),
       fetchStudents(id),
-      fetchTodaySession(id),
+      fetchTodaySessionForClassroom(id) as Promise<SessionSummary | null>,
     ]);
     const femaleStudents = students.filter((student) => {
       const gender = student.gender?.toLowerCase?.() ?? "";

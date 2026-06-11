@@ -34,6 +34,7 @@ const SHIFT_LABEL: Record<string, string> = { MORNING: "Morning", AFTERNOON: "Af
 const SCHOLARSHIP_COURSES = ["Fullstack", "Foundation", "Pre-Uni", "ITP", "ITE"];
 
 const statusColor: Record<string, string> = {
+  UPCOMING: "bg-blue-100 text-blue-700",
   SCHEDULED: "bg-blue-100 text-blue-700",
   ACTIVE:    "bg-green-100 text-green-700",
   COMPLETED: "bg-muted text-muted-foreground",

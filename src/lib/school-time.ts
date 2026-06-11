@@ -39,6 +39,27 @@ export function schoolToday(): { iso: string; weekday: WeekdayName } {
   return { iso: todayIso(now), weekday: todayWeekday(now) };
 }
 
+export function schoolNowMinutes(now: Date = new Date()): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: SCHOOL_TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? "0");
+  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? "0");
+  return hour * 60 + minute;
+}
+
+export function timeToMinutes(t?: string | null): number | null {
+  if (!t) return null;
+  const [hStr, mStr = "0"] = t.split(":");
+  const h = Number(hStr);
+  const m = Number(mStr);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
+}
+
 /** "08:00:00" or "08:00" -> "8:00 AM". Returns "—" for null/empty/unparseable input. */
 export function formatTime12(t?: string | null): string {
   if (!t) return "—";

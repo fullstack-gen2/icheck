@@ -19,6 +19,10 @@ const QR_LOGO_URL =
   "https://res.cloudinary.com/dsmqsivcj/image/upload/v1780286128/c4lgj7uipplt47mergga.png";
 const FALLBACK_QR_SECONDS = 30;
 
+function isOpenable(status: SessionDto["status"]) {
+  return status === "UPCOMING" || status === "SCHEDULED";
+}
+
 function formatRemaining(seconds: number) {
   const minutes = Math.floor(seconds / 60);
   const secondsLeft = seconds % 60;
@@ -120,7 +124,7 @@ export function TakeAttendanceQrCode({
     (async () => {
       const target =
         sessions.find((s) => s.status === "ACTIVE") ??
-        sessions.find((s) => s.status === "UPCOMING");
+        sessions.find((s) => isOpenable(s.status));
 
       if (!target) {
         setError("No session is scheduled for this class today.");
@@ -129,7 +133,7 @@ export function TakeAttendanceQrCode({
 
       setSession(target);
 
-      if (target.status === "UPCOMING") {
+      if (isOpenable(target.status)) {
         try {
           if (user?.role === "ADMIN") {
             await openSession(target.id).unwrap();

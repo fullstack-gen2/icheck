@@ -5,7 +5,8 @@ import { AssignSubstituteDialog } from "@/components/assign-substitute-dialog";
 import { columns } from "@/components/classdetail/column";
 import { DataTableList } from "@/components/classdetail/data-table";
 import type { AttendanceList } from "@/types/attendance";
-import { todayIso, formatTime12 } from "@/lib/school-time";
+import { formatTime12 } from "@/lib/school-time";
+import { fetchTodaySessionForClassroom, type SessionSummary } from "@/lib/session-helpers";
 
 interface Classroom {
   id: number;
@@ -14,31 +15,12 @@ interface Classroom {
   programTypeName: string;
 }
 
-interface SessionInfo {
-  id: number;
-  sessionDate: string | null;
-  startTime: string | null;
-  endTime: string | null;
-  substituteTeacherName: string | null;
-}
-
 async function fetchClassroom(id: string): Promise<Classroom | null> {
   try {
     const res = await backendFetch(`/classrooms/${id}`);
     if (!res.ok) return null;
     const json = await res.json();
     return json?.payload ?? null;
-  } catch { return null; }
-}
-
-/** Today's session for this classroom — drives the real Start Session times and substitute assignment. */
-async function fetchTodaySession(id: string): Promise<SessionInfo | null> {
-  try {
-    const today = todayIso();
-    const res = await backendFetch(`/sessions/classrooms/${id}?from=${today}&to=${today}&page=0&size=20`);
-    if (!res.ok) return null;
-    const sessions: SessionInfo[] = (await res.json())?.payload?.content ?? [];
-    return sessions[0] ?? null;
   } catch { return null; }
 }
 
@@ -75,7 +57,7 @@ export default async function ClassroomDetailPage({
     fetchClassroom(id),
     fetchStudents(id),
     getServerUser(),
-    fetchTodaySession(id),
+    fetchTodaySessionForClassroom(id),
   ]);
 
   const isAdmin = (user?.role ?? "").toUpperCase() === "ADMIN";
@@ -107,7 +89,7 @@ export default async function ClassroomDetailPage({
                 id={id}/>
             {isAdmin && (
               <AssignSubstituteDialog
-                sessionId={session?.id ?? null}
+                sessionId={(session as SessionSummary | null)?.id ?? null}
                 currentSubstituteName={session?.substituteTeacherName ?? null}
               />
             )}

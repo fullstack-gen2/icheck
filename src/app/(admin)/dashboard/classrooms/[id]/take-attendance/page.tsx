@@ -1,5 +1,6 @@
 import AttendanceCheckingList from "@/components/table/check_attendance";
 import { backendFetch } from "@/lib/api-fetch";
+import { todayIso } from "@/lib/school-time";
 import { AttendanceStatus, type Student } from "@/types/student";
 import Link from "next/link";
 import { AiOutlineQrcode } from "react-icons/ai";
@@ -31,7 +32,7 @@ async function fetchClassroom(id: string): Promise<Classroom | null> {
  *  `ensure-today` call upfront catches the edge case where admin created the
  *  schedule after the daily 06:00 session-generator already ran. */
 async function fetchTodaySession(classroomId: string): Promise<SessionLite | null> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
   try {
     // Idempotent — creates today's row only if missing.
     await backendFetch(`/sessions/classrooms/${classroomId}/ensure-today`, {

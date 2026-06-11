@@ -1,4 +1,5 @@
 import { backendFetch } from "@/lib/api-fetch";
+import { todayIso } from "@/lib/school-time";
 
 export interface ClassroomSummary {
   id: number;
@@ -29,10 +30,6 @@ interface TeacherSession {
 interface StudentSummary {
   className?: string;
   gender?: string;
-}
-
-function isoDate(d: Date) {
-  return d.toISOString().slice(0, 10);
 }
 
 export async function fetchAllClassrooms(size = 200): Promise<ClassroomSummary[]> {
@@ -71,14 +68,14 @@ export async function fetchClassCounts(): Promise<Record<string, { total: number
  */
 export async function fetchTeacherClassrooms(teacherId: string, size = 200): Promise<ClassroomSummary[]> {
   try {
-    const today = new Date();
-    const from = new Date(today); from.setDate(from.getDate() - 7);
-    const to   = new Date(today); to.setDate(to.getDate() + 30);
+    const date = new Date();
+    const from = new Date(date); from.setDate(from.getDate() - 7);
+    const to = new Date(date); to.setDate(to.getDate() + 30);
 
     const [schedRes, clsRes, sessRes] = await Promise.all([
       backendFetch(`/schedules/teachers/${teacherId}?size=${size}`),
       backendFetch(`/classrooms?size=${size}`),
-      backendFetch(`/sessions/teachers/${teacherId}?from=${isoDate(from)}&to=${isoDate(to)}&size=${size}`),
+      backendFetch(`/sessions/teachers/${teacherId}?from=${todayIso(from)}&to=${todayIso(to)}&size=${size}`),
     ]);
     const schedules: ScheduleSummary[] =
       (await schedRes.json())?.payload?.content ?? [];

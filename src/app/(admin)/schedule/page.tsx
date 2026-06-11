@@ -97,12 +97,14 @@ async function fetchTodaySessions(teacherId: string): Promise<SessionItem[]> {
 }
 
 const statusBg: Record<string, string> = {
+  UPCOMING: "border-l-blue-400  bg-blue-50",
   SCHEDULED: "border-l-blue-400  bg-blue-50",
   ACTIVE:    "border-l-green-500 bg-green-50",
   COMPLETED: "border-l-gray-300  bg-muted/50",
   CANCELLED: "border-l-red-400   bg-red-50",
 };
 const statusText: Record<string, string> = {
+  UPCOMING: "text-blue-700",
   SCHEDULED: "text-blue-700",
   ACTIVE:    "text-green-700",
   COMPLETED: "text-muted-foreground",
@@ -280,13 +282,13 @@ export default async function SchedulePage({
                       {todaySession && (
                         <Badge className={`text-xs ${statusText[todaySession.status] ?? ""} ${
                           todaySession.status === "ACTIVE" ? "bg-green-100" :
-                          todaySession.status === "SCHEDULED" ? "bg-blue-100" :
+                          (todaySession.status === "SCHEDULED" || todaySession.status === "UPCOMING") ? "bg-blue-100" :
                           todaySession.status === "CANCELLED" ? "bg-red-100" : "bg-muted"
                         } hover:bg-opacity-100`}>
                           {todaySession.status}
                         </Badge>
                       )}
-                      {todaySession && (todaySession.status === "SCHEDULED" || todaySession.status === "ACTIVE") && (
+                      {todaySession && (todaySession.status === "SCHEDULED" || todaySession.status === "UPCOMING" || todaySession.status === "ACTIVE") && (
                         <Link href={`/sessions/${todaySession.id}`}>
                           <Button size="sm" className="h-7 gap-1 bg-primary px-2 text-sm hover:bg-primary/90">
                             <QrCodeIcon className="size-3" />
@@ -360,7 +362,7 @@ export default async function SchedulePage({
                           {todaySession && (
                             <div className="mt-1 pt-1.5 border-t border-border/50 flex items-center justify-between gap-1">
                               <span className={`text-[10px] font-semibold ${cardTxt}`}>{todaySession.status}</span>
-                              {(todaySession.status === "SCHEDULED" || todaySession.status === "ACTIVE") && (
+                              {(todaySession.status === "SCHEDULED" || todaySession.status === "UPCOMING" || todaySession.status === "ACTIVE") && (
                                 <Link href={`/sessions/${todaySession.id}`}>
                                   <Button size="sm" className="h-5 px-1.5 text-[10px] bg-primary hover:bg-primary/90 gap-1">
                                     <QrCodeIcon className="size-2.5" />

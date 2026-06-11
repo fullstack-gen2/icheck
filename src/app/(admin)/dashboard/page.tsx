@@ -5,6 +5,8 @@ import { ClassCard } from "@/components/ui/class-card";
 import { ClassroomAddButton } from "@/components/classroom-add-button";
 import { UsersIcon, GraduationCapIcon, BookOpenIcon, ClipboardCheckIcon } from "lucide-react";
 import { fetchAllClassrooms, fetchTeacherClassrooms, fetchClassCounts } from "@/lib/classroom-helpers";
+import { fetchTeacherActiveClassrooms, type TeacherClassroomView } from "@/lib/session-helpers";
+import { formatTime12 } from "@/lib/school-time";
 
 interface Summary {
   totalStudents: number;
@@ -27,17 +29,31 @@ async function fetchSummary(): Promise<Summary | null> {
   } catch { return null; }
 }
 
-export default async function DashboardPage() {
+function teacherClassPeriod(c: TeacherClassroomView) {
+  return c.activeSession?.startTime
+    ? `${formatTime12(c.activeSession.startTime)} - ${formatTime12(c.activeSession.endTime)}`
+    : `${c.startDate ?? "?"} - ${c.endDate ?? "?"}`;
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
   const user = await getServerUser();
   const role      = user?.role ?? "ADMIN";
   const userId    = user?.id ?? "";
   const isTeacher = role === "TEACHER";
+  const { view } = await searchParams;
+  const teacherView = view === "active" ? "active" : "all";
 
-  const [summary, classrooms, classCounts] = await Promise.all([
+  const [summary, allClassrooms, activeClassrooms, classCounts] = await Promise.all([
     isTeacher ? Promise.resolve(null) : fetchSummary(),
     isTeacher ? fetchTeacherClassrooms(userId) : fetchAllClassrooms(100),
+    isTeacher ? fetchTeacherActiveClassrooms(userId) : Promise.resolve([]),
     fetchClassCounts(),
   ]);
+  const classrooms = isTeacher && teacherView === "active" ? activeClassrooms : allClassrooms;
 
   const stats = [
     { label: "Total Students",   value: summary?.totalStudents  ?? 0, icon: UsersIcon,           color: "bg-blue-50 text-blue-600"   },
@@ -67,9 +83,31 @@ export default async function DashboardPage() {
       )}
 
       <div className="flex items-center justify-between mb-5">
-        <h2 className="text-xl font-semibold text-foreground">
-          {isTeacher ? "My Classes" : "Class Info"}
-        </h2>
+        <div>
+          <h2 className="text-xl font-semibold text-foreground">
+            {isTeacher ? "My Classes" : "Class Info"}
+          </h2>
+          {isTeacher && (
+            <div className="mt-3 inline-flex rounded-xl bg-muted p-1">
+              <Link
+                href="/dashboard?view=all"
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                  teacherView === "all" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                }`}
+              >
+                All My Classes
+              </Link>
+              <Link
+                href="/dashboard?view=active"
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                  teacherView === "active" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
+                }`}
+              >
+                Active Class
+              </Link>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-3">
           {!isTeacher && <ClassroomAddButton />}
           <span className="text-sm pr-2 text-muted-foreground/70">{classrooms.length} classes</span>
@@ -79,7 +117,7 @@ export default async function DashboardPage() {
       {classrooms.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground/70 bg-card rounded-2xl border border-border">
           <BookOpenIcon className="size-10 mx-auto mb-3 opacity-40" />
-          <p>{isTeacher ? "You have no classes assigned." : "No classes found."}</p>
+          <p>{isTeacher && teacherView === "active" ? "No class is ready to start right now." : isTeacher ? "You have no classes assigned." : "No classes found."}</p>
         </div>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-6">
@@ -92,10 +130,10 @@ export default async function DashboardPage() {
               className="block hover:scale-[1.01] transition-transform">
               <ClassCard
                 title={c.programTypeName ?? "Class"}
-                status={c.status ? "Active" : "Inactive"}
+                status={isTeacher && teacherView === "active" ? "Active" : c.status ? "Active" : "Inactive"}
                 classNameValue={c.className}
                 shift={shiftLabel[c.shift] ?? c.shift ?? "—"}
-                time={`${c.startDate ?? "?"} – ${c.endDate ?? "?"}`}
+                time={isTeacher ? teacherClassPeriod(c as TeacherClassroomView) : `${c.startDate ?? "?"} - ${c.endDate ?? "?"}`}
                 lab={c.lab ?? undefined}
                 students={counts ? `${counts.total}/${counts.female}` : "0/0"}
                 code={c.classCode ?? String(c.id)}
