@@ -1,35 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ResetDeviceButton } from "@/components/reset-device-button";
 import { useUser } from "@/components/user-provider";
-import { UsersIcon, ChevronDownIcon, SearchIcon, XIcon } from "lucide-react";
-
-interface Student {
-  id: number;
-  studentNo: string;
-  name: string;
-  gender: string;
-  email: string;
-  phone: string | null;
-  className: string;
-  status: string;
-}
-
-interface Classroom {
-  id: number;
-  className: string;
-  classCode: string;
-  programTypeName: string;
-  generation: number;
-  year: number | null;
-  semester: number | null;
-  shift: string;
-  status: boolean;
-}
+import { UsersIcon, ChevronDownIcon, SearchIcon, XIcon, PlusIcon, LoaderCircleIcon } from "lucide-react";
+import { useGetClassroomsQuery, type ClassroomDto } from "@/store/api/attendanceApi";
+import { useCreateStudentMutation, useGetStudentsQuery } from "@/store/api/userApi";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const SHIFTS = ["MORNING", "AFTERNOON", "EVENING"];
 const SHIFT_LABEL: Record<string, string> = { MORNING: "Morning", AFTERNOON: "Afternoon", EVENING: "Evening" };
@@ -39,10 +27,17 @@ const SCHOLARSHIP_COURSES = ["Fullstack", "Foundation", "Pre-Uni", "ITP", "ITE"]
 
 export default function StudentsPage() {
   const user = useUser();
-
-  const [students, setStudents]   = useState<Student[]>([]);
-  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-  const [loading, setLoading]     = useState(true);
+  const { data: students = [], isLoading: loadingStudents } = useGetStudentsQuery();
+  const { data: classrooms = [], isLoading: loadingClassrooms } = useGetClassroomsQuery({ size: 1000 });
+  const [createStudent, { isLoading: creatingStudent }] = useCreateStudentMutation();
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [registerForm, setRegisterForm] = useState({
+    name: "",
+    email: "",
+    studentNo: "",
+    gender: "",
+    phone: "",
+  });
 
   // Filters
   const [search, setSearch] = useState("");
@@ -53,25 +48,9 @@ export default function StudentsPage() {
   const [filterGeneration, setFilterGeneration] = useState("");
   const [filterCourse, setFilterCourse]     = useState(""); // scholarship only
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      const [sRes, cRes] = await Promise.all([
-        fetch("https://attendance.icheck.today/api/v1/attendance/users"),
-        fetch("https://attendance.icheck.today/api/v1/attendance/classrooms"),
-      ]);
-      const sJson = await sRes.json();
-      const cJson = await cRes.json();
-      setStudents(sJson?.payload?.content ?? []);
-      setClassrooms(cJson?.payload?.content ?? []);
-      setLoading(false);
-    }
-    load();
-  }, []);
-
   // Build class → metadata lookup
   const classMap = useMemo(() => {
-    const m = new Map<string, Classroom>();
+    const m = new Map<string, ClassroomDto>();
     for (const c of classrooms) m.set(c.className, c);
     return m;
   }, [classrooms]);
@@ -98,7 +77,7 @@ export default function StudentsPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return students.filter((s) => {
-      const cls = classMap.get(s.className);
+      const cls = classMap.get(s.className ?? "");
 
       // Program-type-specific filters
       if (programType === "BACHELOR") {
@@ -109,7 +88,7 @@ export default function StudentsPage() {
         if (filterGeneration && String(cls?.generation) !== filterGeneration) return false;
       } else if (programType === "SCHOLARSHIP") {
         if (!cls?.programTypeName?.toUpperCase().includes("SCHOLARSHIP")) return false;
-        if (filterCourse && !getCourse(s.className)?.toLowerCase().includes(filterCourse.toLowerCase())) return false;
+        if (filterCourse && !getCourse(s.className ?? "")?.toLowerCase().includes(filterCourse.toLowerCase())) return false;
         if (filterShift && cls?.shift !== filterShift) return false;
         if (filterGeneration && String(cls?.generation) !== filterGeneration) return false;
       }
@@ -133,12 +112,44 @@ export default function StudentsPage() {
   }
 
   const isAdmin = user?.role === "ADMIN";
+  const loading = loadingStudents || loadingClassrooms;
+
+  async function submitRegisterStudent() {
+    if (!registerForm.name.trim() || !registerForm.email.trim()) {
+      toast.error("Student name and email are required.");
+      return;
+    }
+
+    try {
+      await createStudent({
+        name: registerForm.name.trim(),
+        email: registerForm.email.trim(),
+        studentNo: registerForm.studentNo.trim(),
+        gender: registerForm.gender.trim(),
+        phone: registerForm.phone.trim() || null,
+        status: "ACTIVE",
+      }).unwrap();
+      toast.success("Student registered.");
+      setRegisterOpen(false);
+      setRegisterForm({ name: "", email: "", studentNo: "", gender: "", phone: "" });
+    } catch {
+      toast.error("Could not register student.");
+    }
+  }
 
   return (
     <div className="px-4 sm:px-5 py-6 sm:py-8">
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Students</h1>
-        <span className="text-sm text-muted-foreground">{filtered.length} of {students.length}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">{filtered.length} of {students.length}</span>
+          {isAdmin && (
+            <Button className="gap-1.5" onClick={() => setRegisterOpen(true)}>
+              <PlusIcon className="size-4" />
+              Register Student
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Search */}
@@ -261,13 +272,13 @@ export default function StudentsPage() {
                 >
                   <td className="px-4 py-3">
                     <div className="font-medium text-foreground">{student.name}</div>
-                    <div className="text-sm text-muted-foreground/70">{student.email}</div>
+                    <div className="text-sm text-muted-foreground/70">{student.email ?? "—"}</div>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
                     {student.className ?? "—"}
                   </td>
                   <td className="hidden px-4 py-3 font-mono text-sm text-muted-foreground sm:table-cell">
-                    {student.studentNo}
+                    {student.studentNo ?? "—"}
                   </td>
                   <td className="px-4 py-3">
                     <Badge
@@ -277,7 +288,7 @@ export default function StudentsPage() {
                           : "bg-muted text-muted-foreground hover:bg-muted"
                       }
                     >
-                      {student.status}
+                      {student.status ?? "—"}
                     </Badge>
                   </td>
                   {isAdmin && (
@@ -291,6 +302,56 @@ export default function StudentsPage() {
           </table>
         </div>
       )}
+
+      <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Register Student</DialogTitle>
+            <DialogDescription>
+              Create a student account from live API data.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <Input
+              value={registerForm.name}
+              onChange={(event) => setRegisterForm((form) => ({ ...form, name: event.target.value }))}
+              placeholder="Full name"
+            />
+            <Input
+              value={registerForm.email}
+              onChange={(event) => setRegisterForm((form) => ({ ...form, email: event.target.value }))}
+              placeholder="Email"
+              type="email"
+            />
+            <Input
+              value={registerForm.studentNo}
+              onChange={(event) => setRegisterForm((form) => ({ ...form, studentNo: event.target.value }))}
+              placeholder="Student number"
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                value={registerForm.gender}
+                onChange={(event) => setRegisterForm((form) => ({ ...form, gender: event.target.value }))}
+                placeholder="Gender"
+              />
+              <Input
+                value={registerForm.phone}
+                onChange={(event) => setRegisterForm((form) => ({ ...form, phone: event.target.value }))}
+                placeholder="Phone"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRegisterOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={submitRegisterStudent} disabled={creatingStudent} className="gap-1.5">
+              {creatingStudent ? <LoaderCircleIcon className="size-4 animate-spin" /> : <PlusIcon className="size-4" />}
+              Register
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -26,7 +26,15 @@ import {
 } from "@/components/ui/combobox";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { CalendarIcon } from "lucide-react";
-import { mockupData } from "@/lib/data/data";
+
+const classFormOptions = {
+  programTypes: ["Scholarship", "Associate", "Bachelor"],
+  classNames: ["Full-Stack", "Foundation", "IT Professional", "Pre-Fundamental"],
+  generations: ["Generation 1", "Generation 2", "Generation 3"],
+  years: ["Year 1", "Year 2", "Year 3", "Year 4"],
+  semesters: ["Semester 1", "Semester 2"],
+  shifts: ["Morning", "Afternoon", "Evening"],
+};
 
 const createClassSchema = z.object({
   programType: z.string().min(1, "required to select"),
@@ -114,7 +122,7 @@ export default function CreatingClassForm({
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel>Program type</FieldLabel>
                     <Combobox
-                      items={mockupData.programTypes}
+                      items={classFormOptions.programTypes}
                       name={field.name}
                       value={field.value || null}
                       onValueChange={(value) => field.onChange(value ?? "")}
@@ -152,7 +160,7 @@ export default function CreatingClassForm({
                     <FieldLabel>Class Name</FieldLabel>
 
                     <Combobox
-                      items={mockupData.classNames}
+                      items={classFormOptions.classNames}
                       name={field.name}
                       value={field.value || null}
                       onValueChange={(value) => field.onChange(value ?? "")}
@@ -193,18 +201,18 @@ export default function CreatingClassForm({
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel>Generation</FieldLabel>
 
-                    <Combobox
-                      items={mockupData.generations}
-                      name={field.name}
-                      value={field.value || null}
-                      onValueChange={(value) => field.onChange(value ?? "")}
-                    >
-                      <ComboboxInput
-                        className="w-full"
-                        ref={field.ref}
-                        onBlur={field.onBlur}
-                        placeholder="Select generation"
-                      />
+                      <Combobox
+                        items={classFormOptions.generations}
+                        name={field.name}
+                        value={field.value || null}
+                        onValueChange={(value) => field.onChange(value ?? "")}
+                      >
+                        <ComboboxInput
+                          className="w-full"
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          placeholder="Select generation"
+                        />
 
                       <ComboboxContent>
                         <ComboboxEmpty>No items found.</ComboboxEmpty>
@@ -233,31 +241,19 @@ export default function CreatingClassForm({
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel>Year</FieldLabel>
 
-                    <Combobox
-                      items={mockupData.years}
-                      name={field.name}
-                      value={field.value || null}
-                      onValueChange={(value) => field.onChange(value ?? "")}
-                    >
-                      <ComboboxInput
-                        className="w-full"
-                        ref={field.ref}
-                        onBlur={field.onBlur}
-                        placeholder="Select year"
-                      />
 
-                      <ComboboxContent>
-                        <ComboboxEmpty>No items found.</ComboboxEmpty>
-
-                        <ComboboxList>
-                          {(item) => (
-                            <ComboboxItem key={item} value={item}>
-                              {item}
-                            </ComboboxItem>
-                          )}
-                        </ComboboxList>
-                      </ComboboxContent>
-                    </Combobox>
+                      <Combobox
+                        items={classFormOptions.years}
+                        name={field.name}
+                        value={field.value || null}
+                        onValueChange={(value) => field.onChange(value ?? "")}
+                      >
+                        <ComboboxInput
+                          className="w-full"
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          placeholder="Select year"
+                        />
 
                     {fieldState.invalid && (
                       <FieldError errors={[fieldState.error]} />
@@ -273,21 +269,18 @@ export default function CreatingClassForm({
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel>Semester</FieldLabel>
 
-                    <Combobox
-                      items={mockupData.semesters}
-                      name={field.name}
-                      value={field.value || null}
-                      onValueChange={(value) => field.onChange(value ?? "")}
-                    >
-                      <ComboboxInput
-                        className="w-full"
-                        ref={field.ref}
-                        onBlur={field.onBlur}
-                        placeholder="Select semester"
-                      />
-
-                      <ComboboxContent>
-                        <ComboboxEmpty>No items found.</ComboboxEmpty>
+                      <Combobox
+                        items={classFormOptions.semesters}
+                        name={field.name}
+                        value={field.value || null}
+                        onValueChange={(value) => field.onChange(value ?? "")}
+                      >
+                        <ComboboxInput
+                          className="w-full"
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          placeholder="Select semester"
+                        />
 
                         <ComboboxList>
                           {(item) => (
@@ -316,7 +309,7 @@ export default function CreatingClassForm({
                     <FieldLabel>Shift</FieldLabel>
 
                     <Combobox
-                      items={mockupData.shifts}
+                      items={classFormOptions.shifts}
                       name={field.name}
                       value={field.value || null}
                       onValueChange={(value) => field.onChange(value ?? "")}

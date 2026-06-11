@@ -57,7 +57,7 @@ function CheckInContent() {
 
       // The proxy reads the HttpOnly device cookie server-side, so we never
       // expose or send the device id from client JS.
-      const res = await fetch("/attendance/api/attendance/check-in", {
+      const res = await fetch("/api/attendance/check-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,

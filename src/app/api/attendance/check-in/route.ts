@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { GATEWAY_URL } from "@/auth";
-import { API_URL } from "@/lib/api-config";
+import { ACCESS_TOKEN_COOKIE, ATTENDANCE_API_URL } from "@/auth";
 import { getDeviceId } from "@/lib/device-cookie";
 import { getRequestUser } from "@/lib/server-user";
 
@@ -8,9 +7,14 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
+  const accessToken = cookieHeader
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${ACCESS_TOKEN_COOKIE}=`))
+    ?.slice(ACCESS_TOKEN_COOKIE.length + 1);
   const user = await getRequestUser(cookieHeader);
 
-  if (!user || user.role !== "STUDENT") {
+  if (!accessToken || !user || user.role !== "STUDENT") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -24,10 +28,13 @@ export async function POST(req: Request) {
 
   const body = await req.json();
   const res = await fetch(
-    `${GATEWAY_URL}${API_URL}/attendances/dynamic-qr-check-in`,
+    `${ATTENDANCE_API_URL}/attendances/dynamic-qr-check-in`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json", Cookie: cookieHeader },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
       body: JSON.stringify({
         studentId: Number(user.id),
         qrToken:   body.qrToken,

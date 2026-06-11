@@ -39,8 +39,6 @@ export function NavMain({
                   isActive={isActive}
                   className="text-base"
                 >
-                  {/* Use next/link so basePath ("/attendance") is auto-prepended.
-                      A plain <a href="/students"> would 404. */}
                   <Link href={item.url}>
                     {item.icon}
                     <span>{item.title}</span>

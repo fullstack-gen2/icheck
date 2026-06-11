@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ClipboardCheckIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react";
+import { API_URL } from "@/lib/api-config";
 
 interface Session {
   id: number;
@@ -55,8 +56,8 @@ export default function AttendancePage() {
     async function load() {
       setLoading(true);
       const [sesRes, clsRes] = await Promise.all([
-        fetch("https://attendance.icheck.today/api/v1/attendance/sessions?size=100"),
-        fetch("https://attendance.icheck.today/api/v1/attendance/classrooms?size=200"),
+        fetch(`${API_URL}/sessions?size=100`),
+        fetch(`${API_URL}/classrooms?size=200`),
       ]);
       const sesJson = await sesRes.json();
       const clsJson = await clsRes.json();

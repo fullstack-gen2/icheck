@@ -1,16 +1,4 @@
-/**
- * Time helpers pinned to the school's wall clock.
- *
- * The Next.js server runs inside a Docker container whose system TZ is UTC,
- * so a bare `new Date().toLocaleDateString(...)` would tell us it's Thursday
- * at 18:00 UTC even when it is already Friday 01:00 in Phnom Penh. Anything
- * that needs to ask "what day / date is it right now at school?" must go
- * through these helpers so the answer is always in school local time.
- *
- * Override at deploy time with:
- *   SCHOOL_TZ=Asia/Phnom_Penh         (server)
- *   NEXT_PUBLIC_SCHOOL_TZ=Asia/...    (client)
- */
+
 export const SCHOOL_TZ =
   process.env.SCHOOL_TZ ??
   process.env.NEXT_PUBLIC_SCHOOL_TZ ??
@@ -33,12 +21,12 @@ export function todayIso(now: Date = new Date()): string {
   }).format(now);
 }
 
-/** "MONDAY" / "TUESDAY" / … in the school's timezone. */
 export function todayWeekday(now: Date = new Date()): WeekdayName {
   const name = new Intl.DateTimeFormat("en-US", {
     timeZone: SCHOOL_TZ,
     weekday: "long",
   }).format(now).toUpperCase();
+  
   // Narrow to our union — if Intl ever returns something off, default to MONDAY.
   return (DAY_NAMES as readonly string[]).includes(name)
     ? (name as WeekdayName)

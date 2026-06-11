@@ -1,15 +1,4 @@
-/**
- * Tiny client-side fetch helper for the BFF gateway.
- * Same-origin, cookies travel automatically.
- *
- *   await api.get("/classrooms?size=100")
- *   await api.post("/classrooms", body)
- *   await api.patch(`/classrooms/${id}`, body)
- *   await api.del(`/classrooms/${id}`)
- *
- * Throws an Error with a friendly message on non-2xx so callers can catch
- * once and surface via toast.
- */
+
 import { API_URL } from "@/lib/api-config";
 
 async function request(

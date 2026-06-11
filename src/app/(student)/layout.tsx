@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { OAUTH2_LOGIN_URL } from "@/lib/api-config";
 
 export default async function StudentLayout({
   children,
@@ -11,7 +12,7 @@ export default async function StudentLayout({
 }) {
   const user = await getServerUser();
 
-  // Non-students should not access student routes.
+  if (!user) redirect(OAUTH2_LOGIN_URL);
   if (user && user.role !== "STUDENT") redirect("/dashboard");
 
   const displayUser = {
@@ -19,6 +20,7 @@ export default async function StudentLayout({
     email:       user?.email ?? "",
     role:        user?.role  ?? "STUDENT",
     displayRole: user?.displayRole ?? "Student",
+    profileImage: user?.profileImage ?? null,
   };
 
   return (

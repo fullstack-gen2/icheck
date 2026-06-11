@@ -8,7 +8,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { data } from "@/lib/data/mockData/student";
 import { AttendanceStatus, Student } from "@/types/student";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import Image from "next/image";
@@ -23,7 +22,7 @@ type AttendanceCheckingListProps = {
 };
 
 export default function AttendanceCheckingList({
-  students = data,
+  students = [],
   studentProfileBasePath,
 }: AttendanceCheckingListProps) {
   const params = useParams<{ id?: string | string[] }>();

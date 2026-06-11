@@ -33,7 +33,7 @@ import { useUser } from "@/components/user-provider"
 // STUDENT role sees the student home plus student/class shortcuts.
 const ALL_MAIN = [
   { title: "Dashboard", url: "/dashboard",             icon: <LayoutDashboardIcon />, roles: ["ADMIN", "TEACHER"] },
-  { title: "Dashboard", url: "/student",               icon: <LayoutDashboardIcon />, roles: ["STUDENT"] },
+  { title: "My Information", url: "/student",          icon: <LayoutDashboardIcon />, roles: ["STUDENT"] },
   { title: "Require Permission", url: "/student/require-permission",  icon: <FaWpforms />, roles: ["STUDENT"] },
   { title: "Classes",    url: "/dashboard/classrooms",  icon: <BookOpenIcon />,        roles: ["ADMIN", "TEACHER"] },
   { title: "Students",   url: "/students",              icon: <UsersIcon />,           roles: ["ADMIN", "TEACHER"] },
@@ -46,7 +46,7 @@ const ALL_SECONDARY = [
 ];
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-  user: { name: string; email: string; role: string; displayRole?: string };
+  user: { name: string; email: string; role: string; displayRole?: string; profileImage?: string | null };
 }
 
 export function AppSidebar({ user, ...props }: AppSidebarProps) {

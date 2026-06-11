@@ -1,9 +1,1 @@
-{
-  "redirects": [
-    {
-      "source": "/",
-      "destination": "https://insight.istad.co/attendance",
-      "permanent": true
-    }
-  ]
-}
+{}

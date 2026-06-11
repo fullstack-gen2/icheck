@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
 import { XIcon, CameraIcon, CheckCircleIcon, AlertCircleIcon } from "lucide-react";
@@ -15,6 +15,43 @@ export function QrScanner({ onClose }: Props) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [scanState, setScanState] = useState<ScanState>("scanning");
   const [message, setMessage] = useState("");
+
+  const handleCheckIn = useCallback(async (qrToken: string) => {
+    setScanState("submitting");
+    try {
+      // Get geolocation if available
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      try {
+        const pos = await new Promise<GeolocationPosition>((res, rej) =>
+          navigator.geolocation.getCurrentPosition(res, rej, { timeout: 3000 })
+        );
+        latitude = pos.coords.latitude;
+        longitude = pos.coords.longitude;
+      } catch {}
+
+      // deviceId is read from the HttpOnly cookie by the proxy route.
+      const res = await fetch("/api/attendance/check-in", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qrToken, latitude, longitude }),
+      });
+      const json = await res.json();
+
+      if (res.ok) {
+        setScanState("success");
+        setMessage("Attendance recorded successfully!");
+      } else {
+        setScanState("error");
+        setMessage(
+          json?.payload?.message ?? json?.message ?? "Check-in failed. Try again."
+        );
+      }
+    } catch {
+      setScanState("error");
+      setMessage("Network error. Check your connection.");
+    }
+  }, []);
 
   useEffect(() => {
     const scanner = new Html5Qrcode("qr-reader");
@@ -39,43 +76,6 @@ export function QrScanner({ onClose }: Props) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const handleCheckIn = async (qrToken: string) => {
-    setScanState("submitting");
-    try {
-      // Get geolocation if available
-      let latitude: number | null = null;
-      let longitude: number | null = null;
-      try {
-        const pos = await new Promise<GeolocationPosition>((res, rej) =>
-          navigator.geolocation.getCurrentPosition(res, rej, { timeout: 3000 })
-        );
-        latitude = pos.coords.latitude;
-        longitude = pos.coords.longitude;
-      } catch {}
-
-      // deviceId is read from the HttpOnly cookie by the proxy route.
-      const res = await fetch("/attendance/api/attendance/check-in", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ qrToken, latitude, longitude }),
-      });
-      const json = await res.json();
-
-      if (res.ok) {
-        setScanState("success");
-        setMessage("Attendance recorded successfully!");
-      } else {
-        setScanState("error");
-        setMessage(
-          json?.payload?.message ?? json?.message ?? "Check-in failed. Try again."
-        );
-      }
-    } catch {
-      setScanState("error");
-      setMessage("Network error. Check your connection.");
-    }
-  };
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">

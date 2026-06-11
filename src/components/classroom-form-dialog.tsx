@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,8 +21,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoaderCircleIcon } from "lucide-react";
-import { api } from "@/lib/api-client";
 import { todayIso } from "@/lib/school-time";
+import {
+  useCreateClassroomMutation,
+  useUpdateClassroomMutation,
+} from "@/store/api/attendanceApi";
 
 export interface ClassroomFormValue {
   id?: number;
@@ -66,12 +69,17 @@ const empty: ClassroomFormValue = {
 
 export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Props) {
   const editing = !!initial?.id;
-  const [form, setForm] = useState<ClassroomFormValue>(empty);
-  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<ClassroomFormValue>(initial ? { ...empty, ...initial } : empty);
+  const [createClassroom, { isLoading: creating }] = useCreateClassroomMutation();
+  const [updateClassroom, { isLoading: updating }] = useUpdateClassroomMutation();
+  const saving = creating || updating;
 
-  useEffect(() => {
-    if (open) setForm(initial ? { ...empty, ...initial } : empty);
-  }, [open, initial]);
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) {
+      setForm(initial ? { ...empty, ...initial } : empty);
+    }
+    onOpenChange(nextOpen);
+  }
 
   const isScholarship = /scholarship/i.test(form.programTypeName);
 
@@ -84,7 +92,6 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
       toast.error("Class name and code are required.");
       return;
     }
-    setSaving(true);
     try {
       const body = {
         className:        form.className.trim(),
@@ -100,23 +107,21 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
         status:           form.status,
       };
       if (editing) {
-        await api.patch(`/classrooms/${form.id}`, body);
+        await updateClassroom({ id: form.id!, body }).unwrap();
         toast.success("Class updated.");
       } else {
-        await api.post(`/classrooms`, body);
+        await createClassroom(body).unwrap();
         toast.success("Class created.");
       }
       onSaved?.();
       onOpenChange(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed.");
-    } finally {
-      setSaving(false);
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{editing ? "Edit Class" : "Create Class"}</DialogTitle>

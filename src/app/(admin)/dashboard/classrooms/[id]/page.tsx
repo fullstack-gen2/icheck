@@ -2,8 +2,14 @@ import { backendFetch } from "@/lib/api-fetch";
 import AlertDialogDemo from "@/components/popup/start_session";
 import { columns } from "@/components/classdetail/column";
 import { DataTableList } from "@/components/classdetail/data-table";
-import { Classroom, mockAttendanceData, mockClassroom } from "@/lib/data/mockData/test-with-table/mock-table";
+import type { AttendanceList } from "@/types/attendance";
 
+interface Classroom {
+  id: number;
+  className: string;
+  classCode: string;
+  programTypeName: string;
+}
 
 async function fetchClassroom(id: string): Promise<Classroom | null> {
   try {
@@ -14,13 +20,39 @@ async function fetchClassroom(id: string): Promise<Classroom | null> {
   } catch { return null; }
 }
 
+async function fetchStudents(id: string): Promise<AttendanceList[]> {
+  try {
+    const res = await backendFetch(`/classrooms/${id}/students?size=500`);
+    if (!res.ok) return [];
+    const json = await res.json();
+    const rows = json?.payload?.content ?? json?.payload ?? [];
+    if (!Array.isArray(rows)) return [];
+
+    return rows.map((student, index) => ({
+      order: index + 1,
+      id: String(student.id ?? student.studentNo ?? ""),
+      name: String(student.name ?? student.fullName ?? student.username ?? "—"),
+      gender: String(student.gender ?? "—"),
+      profile: String(student.profileImage ?? student.profile ?? ""),
+      phoneNumber: String(student.phone ?? student.phoneNumber ?? "—"),
+      dateOfBirth: String(student.dateOfBirth ?? student.dob ?? "—"),
+      status: student.status ? String(student.status) : undefined,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export default async function ClassroomDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const classroom = (await fetchClassroom(id)) ?? mockClassroom;
+  const [classroom, students] = await Promise.all([
+    fetchClassroom(id),
+    fetchStudents(id),
+  ]);
 
   return (
     <div className="px-7 py-7">
@@ -28,7 +60,7 @@ export default async function ClassroomDetailPage({
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="mb-3 text-3xl font-semibold tracking-tight text-black dark:text-white">
-              {classroom.className}
+              {classroom?.className ?? "Classroom"}
             </h1>
             <h2 className="text-2xl leading-tight text-black dark:text-white">
               បញ្ជីរាយឈ្មោះសិស្ស- Student List
@@ -44,7 +76,7 @@ export default async function ClassroomDetailPage({
               id={id}/>
             {/* Students */}
           <div className="flex justify-end mt-2">
-            <span className="text-sm text-muted-foreground/70">total students ({mockAttendanceData.length})</span>
+            <span className="text-sm text-muted-foreground/70">total students ({students.length})</span>
           </div>
         </div>
       </section>
@@ -53,7 +85,7 @@ export default async function ClassroomDetailPage({
 
         <DataTableList
           columns={columns}
-          data={mockAttendanceData}
+          data={students}
           showStudentActions
           studentProfileBasePath={`/dashboard/classrooms/${id}/student-profile`}
         />

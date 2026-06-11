@@ -1,24 +1,24 @@
 
 import { cookies } from "next/headers";
-import { GATEWAY_URL } from "@/auth";
-import { API_URL, ICHECK_URL } from "@/lib/api-config";
+import { ACCESS_TOKEN_COOKIE, ATTENDANCE_API_URL, SPRING_BOOT_URL } from "@/auth";
 
 export async function backendFetch(
   path: string,
   init?: RequestInit
 ): Promise<Response> {
   const cookieStore = await cookies();
-  const cookieHeader = cookieStore
-    .getAll()
-    .map((c) => `${c.name}=${c.value}`)
-    .join("; ");
+  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
 
   const headers: Record<string, string> = {
-    ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     ...(init?.headers as Record<string, string> | undefined),
   };
 
-  return fetch(`${ICHECK_URL}${API_URL}${path}`, {
+  const url = path.startsWith("/api/")
+    ? `${SPRING_BOOT_URL}${path}`
+    : `${ATTENDANCE_API_URL}${path}`;
+
+  return fetch(url, {
     cache: "no-store",
     ...init,
     headers,
