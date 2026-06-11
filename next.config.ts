@@ -1,39 +1,3 @@
-function trimTrailingSlash(value: string) {
-  return value.replace(/\/+$/, "");
-}
-
-const DEFAULT_ATTENDANCE_SERVICE_URL = "https://attendance.icheck.today";
-
-function normalizeServiceUrl(value: string) {
-  return trimTrailingSlash(value)
-    .replace(/\/api\/v1\/attendance$/, "")
-    .replace(/\/api\/v1$/, "");
-}
-
-function resolveServiceUrl() {
-  const configured = normalizeServiceUrl(
-    process.env.ATTENDANCE_SERVICE_URL ??
-    process.env.BASE_API_URL ??
-    process.env.BACKEND_URL ??
-    DEFAULT_ATTENDANCE_SERVICE_URL
-  );
-
-  if (process.env.NODE_ENV === "production") {
-    try {
-      const hostname = new URL(configured).hostname;
-      if (hostname === "localhost" || hostname === "127.0.0.1") {
-        return DEFAULT_ATTENDANCE_SERVICE_URL;
-      }
-    } catch {
-      return DEFAULT_ATTENDANCE_SERVICE_URL;
-    }
-  }
-
-  return configured;
-}
-
-const springBootUrl = resolveServiceUrl();
-
 const nextConfig = {
   images: {
     remotePatterns: [
@@ -50,14 +14,12 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
-  async rewrites() {
-    return [
-      {
-        source: "/api/v1/:path*",
-        destination: `${springBootUrl}/api/v1/:path*`,
-      },
-    ];
-  },
+  // NOTE: `/api/v1/*` is handled by `src/app/api/v1/[...path]/route.ts`, which
+  // proxies to the attendance-service backend AND attaches the
+  // `Authorization: Bearer <token>` header from the httpOnly access-token
+  // cookie (the backend ignores cookies — it's an OAuth2 resource server that
+  // only reads the bearer token). A plain `rewrites()` proxy can't add that
+  // header, which previously caused every RTK Query call to fail with 401.
 };
 
 export default nextConfig;

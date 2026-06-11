@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { QRCodeCanvas } from "qrcode.react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -20,12 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { LoaderCircleIcon } from "lucide-react";
+import { CheckCircle2Icon, LoaderCircleIcon, QrCodeIcon } from "lucide-react";
 import { todayIso } from "@/lib/school-time";
 import {
   useCreateClassroomMutation,
   useUpdateClassroomMutation,
 } from "@/store/api/attendanceApi";
+import { useGetClassroomStaticQrMutation } from "@/store/api/qrApi";
 
 export interface ClassroomFormValue {
   id?: number;
@@ -70,13 +73,19 @@ const empty: ClassroomFormValue = {
 export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Props) {
   const editing = !!initial?.id;
   const [form, setForm] = useState<ClassroomFormValue>(initial ? { ...empty, ...initial } : empty);
+  const [generateStaticQr, setGenerateStaticQr] = useState(true);
+  const [createdQr, setCreatedQr] = useState<{ className: string; codeValue: string } | null>(null);
+  const [generatingQr, setGeneratingQr] = useState(false);
   const [createClassroom, { isLoading: creating }] = useCreateClassroomMutation();
   const [updateClassroom, { isLoading: updating }] = useUpdateClassroomMutation();
-  const saving = creating || updating;
+  const [getClassroomStaticQr] = useGetClassroomStaticQrMutation();
+  const saving = creating || updating || generatingQr;
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
       setForm(initial ? { ...empty, ...initial } : empty);
+      setGenerateStaticQr(true);
+      setCreatedQr(null);
     }
     onOpenChange(nextOpen);
   }
@@ -109,15 +118,66 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
       if (editing) {
         await updateClassroom({ id: form.id!, body }).unwrap();
         toast.success("Class updated.");
-      } else {
-        await createClassroom(body).unwrap();
-        toast.success("Class created.");
+        onSaved?.();
+        onOpenChange(false);
+        return;
       }
+
+      const created = await createClassroom(body).unwrap();
+      toast.success("Class created.");
       onSaved?.();
+
+      if (generateStaticQr && created?.id) {
+        setGeneratingQr(true);
+        try {
+          const qr = await getClassroomStaticQr(created.id).unwrap();
+          setCreatedQr({ className: created.className, codeValue: qr.codeValue });
+          return; // keep the dialog open to show the static QR
+        } catch {
+          toast.error("Class created, but the static QR code could not be generated.");
+        } finally {
+          setGeneratingQr(false);
+        }
+      }
+
       onOpenChange(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed.");
     }
+  }
+
+  const checkInUrl =
+    createdQr && typeof window !== "undefined"
+      ? `${window.location.origin}/check-in?token=${createdQr.codeValue}`
+      : "";
+
+  if (createdQr) {
+    return (
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2Icon className="size-5 text-green-600" />
+              Class created
+            </DialogTitle>
+            <DialogDescription>
+              Here&apos;s the permanent static QR code for <strong>{createdQr.className}</strong>.
+              Print it or display it in the classroom — students scan it to check in.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center gap-3 py-2">
+            <div className="rounded-xl border bg-white p-4">
+              <QRCodeCanvas value={checkInUrl} size={220} level="H" includeMargin />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => handleOpenChange(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   return (
@@ -237,13 +297,36 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
           </Field>
         </div>
 
+        {!editing && (
+          <label
+            htmlFor="generate-static-qr"
+            className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 hover:bg-muted/50"
+          >
+            <Checkbox
+              id="generate-static-qr"
+              checked={generateStaticQr}
+              onCheckedChange={(v) => setGenerateStaticQr(v === true)}
+              className="mt-0.5"
+            />
+            <span className="space-y-0.5">
+              <span className="flex items-center gap-1.5 text-sm font-medium">
+                <QrCodeIcon className="size-4" />
+                Generate static QR code
+              </span>
+              <span className="block text-xs text-muted-foreground/70">
+                Creates a permanent QR code for this classroom that students can scan to check in.
+              </span>
+            </span>
+          </label>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={saving}>
             {saving && <LoaderCircleIcon className="size-4 animate-spin mr-2" />}
-            {editing ? "Save Changes" : "Create"}
+            {generatingQr ? "Generating QR…" : editing ? "Save Changes" : "Create"}
           </Button>
         </DialogFooter>
       </DialogContent>

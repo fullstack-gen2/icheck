@@ -1,4 +1,4 @@
-import { baseApi, unwrapContent, type ApiEnvelope, type PagePayload } from "@/store/api/baseApi";
+import { baseApi, unwrapContent, unwrapPayload, type ApiEnvelope, type PagePayload } from "@/store/api/baseApi";
 
 export interface ClassroomDto {
   id: number;
@@ -38,6 +38,7 @@ export const attendanceApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
+      transformResponse: (response: ApiEnvelope<ClassroomDto>) => unwrapPayload(response),
       invalidatesTags: ["Classroom"],
     }),
     updateClassroom: builder.mutation<ClassroomDto, { id: number; body: Partial<ClassroomDto> }>({
@@ -46,6 +47,7 @@ export const attendanceApi = baseApi.injectEndpoints({
         method: "PATCH",
         body,
       }),
+      transformResponse: (response: ApiEnvelope<ClassroomDto>) => unwrapPayload(response),
       invalidatesTags: ["Classroom"],
     }),
     getSettings: builder.query<SettingDto[], void>({
