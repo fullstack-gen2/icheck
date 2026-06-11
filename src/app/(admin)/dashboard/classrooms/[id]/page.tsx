@@ -13,6 +13,7 @@ interface Classroom {
   className: string;
   classCode: string;
   programTypeName: string;
+  lab?: string | null;
 }
 
 async function fetchClassroom(id: string): Promise<Classroom | null> {
@@ -77,6 +78,11 @@ export default async function ClassroomDetailPage({
             <h2 className="text-2xl leading-tight text-black dark:text-white">
               បញ្ជីរាយឈ្មោះសិស្ស- Student List
             </h2>
+            {/* Lab is admin-entered at class-create time and surfaced on every
+                class entry point (card, detail, take-attendance) for parity. */}
+            <p className="mt-1 text-sm text-muted-foreground/80">
+              Lab: <span className="text-foreground">{classroom?.lab ?? "—"}</span>
+            </p>
           </div>
         </div>
         <div className="flex-col">

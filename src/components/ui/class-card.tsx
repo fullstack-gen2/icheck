@@ -114,15 +114,16 @@ export function ClassCard({
 
       {/* Body */}
       <div className="flex flex-col gap-2.5 px-5 py-4 flex-1">
-        {lab && (
-          <div className="flex justify-between items-center w-full">
-            <div className="flex items-center gap-2">
-              <MdOutlineMeetingRoom className="size-3.5 text-muted-foreground/70 shrink-0" />
-              <p className="text-base font-medium text-foreground">Lab: </p>
-            </div>
-            <span className="text-sm text-muted-foreground truncate ml-2">{lab}</span>
+        {/* Lab row is always rendered (filled or em-dash) so every card has the
+            same shape — admin enters the lab name when creating the class, and
+            cards created before that field existed (or left blank) show "—". */}
+        <div className="flex justify-between items-center w-full">
+          <div className="flex items-center gap-2">
+            <MdOutlineMeetingRoom className="size-3.5 text-muted-foreground/70 shrink-0" />
+            <p className="text-base font-medium text-foreground">Lab: </p>
           </div>
-        )}
+          <span className="text-sm text-muted-foreground truncate ml-2">{lab ?? "—"}</span>
+        </div>
 
         {infoLine && (
           <div className="flex justify-between items-center w-full">

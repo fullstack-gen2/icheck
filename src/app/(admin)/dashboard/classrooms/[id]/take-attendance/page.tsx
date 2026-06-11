@@ -8,6 +8,7 @@ import { AiOutlineQrcode } from "react-icons/ai";
 interface Classroom {
   className: string;
   classCode?: string;
+  lab?: string | null;
 }
 
 interface SessionLite {
@@ -96,6 +97,9 @@ export default async function TakeAttendance({
                   <h2 className="text-2xl leading-tight text-black dark:text-white">
                     បញ្ជីរាយវត្តមានសិស្ស-Student Attendance List-Today
                   </h2>
+                  <p className="mt-1 text-sm text-muted-foreground/80">
+                    Lab: <span className="text-foreground">{classroom?.lab ?? "—"}</span>
+                  </p>
                 </div>
         </div>
         <div className="flex justify-between">
