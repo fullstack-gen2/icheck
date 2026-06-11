@@ -1,4 +1,10 @@
-# Local-only Keycloak for development.
+# Optional local-only Keycloak for development.
+#
+# Current project rule: normal dev uses production IAM
+# (https://iam.icheck.today/realms/icheck) and only changes frontend/backend/DB.
+# You do not need this compose file unless you intentionally want a separate
+# local Keycloak sandbox.
+#
 # Spin it up:    docker compose -f docker-compose.dev.yml up -d
 # Tear it down:  docker compose -f docker-compose.dev.yml down -v
 #
