@@ -85,7 +85,7 @@ function scheduleToSession(schedule: ScheduleSummary): SessionSummary {
   };
 }
 
-function chooseBestSession(sessions: SessionSummary[]) {
+export function chooseBestSession(sessions: SessionSummary[]) {
   const sorted = [...sessions].sort(sessionSort);
   return (
     sorted.find((session) => session.status === "ACTIVE") ??
@@ -135,6 +135,7 @@ export async function fetchTeacherActiveClassrooms(
   const today = schoolToday();
   const classrooms = allClassrooms ?? await fetchTeacherClassrooms(teacherId, 200);
   const classByName = new Map(classrooms.map((classroom) => [classroom.className, classroom]));
+  const sessionsByClassName = new Map<string, SessionSummary[]>();
   const activeByName = new Map<string, SessionSummary>();
 
   try {
@@ -144,8 +145,14 @@ export async function fetchTeacherActiveClassrooms(
     if (sessionRes.ok) {
       for (const session of pageContent<SessionSummary>(await sessionRes.json())) {
         if (session.classroomName && isTeacherStartableSession(session)) {
-          activeByName.set(session.classroomName, session);
+          const sessions = sessionsByClassName.get(session.classroomName) ?? [];
+          sessions.push(session);
+          sessionsByClassName.set(session.classroomName, sessions);
         }
+      }
+      for (const [className, sessions] of sessionsByClassName.entries()) {
+        const best = chooseBestSession(sessions);
+        if (best) activeByName.set(className, best);
       }
     }
   } catch {
