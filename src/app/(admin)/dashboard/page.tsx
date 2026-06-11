@@ -2,6 +2,7 @@ import { getServerUser } from "@/auth-server";
 import { backendFetch } from "@/lib/api-fetch";
 import Link from "next/link";
 import { ClassCard } from "@/components/ui/class-card";
+import { ClassroomAddButton } from "@/components/classroom-add-button";
 import { UsersIcon, GraduationCapIcon, BookOpenIcon, ClipboardCheckIcon } from "lucide-react";
 import { fetchAllClassrooms, fetchTeacherClassrooms, fetchClassCounts } from "@/lib/classroom-helpers";
 
@@ -69,7 +70,10 @@ export default async function DashboardPage() {
         <h2 className="text-xl font-semibold text-foreground">
           {isTeacher ? "My Classes" : "Class Info"}
         </h2>
-        <span className="text-sm pr-2 text-muted-foreground/70">{classrooms.length} classes</span>
+        <div className="flex items-center gap-3">
+          {!isTeacher && <ClassroomAddButton />}
+          <span className="text-sm pr-2 text-muted-foreground/70">{classrooms.length} classes</span>
+        </div>
       </div>
 
       {classrooms.length === 0 ? (

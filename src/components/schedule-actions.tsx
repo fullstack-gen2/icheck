@@ -34,9 +34,10 @@ import {
 import { api } from "@/lib/api-client";
 
 interface ClassroomOpt { id: number; className: string; }
+interface SubjectOpt { id: number; name: string; }
 
 /** "Add Schedule" header button — opens an empty form. */
-export function ScheduleAddButton({ classrooms }: { classrooms?: ClassroomOpt[] }) {
+export function ScheduleAddButton({ classrooms, subjects }: { classrooms?: ClassroomOpt[]; subjects?: SubjectOpt[] }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -47,6 +48,7 @@ export function ScheduleAddButton({ classrooms }: { classrooms?: ClassroomOpt[] 
         open={open}
         onOpenChange={setOpen}
         classrooms={classrooms}
+        subjects={subjects}
       />
     </>
   );
@@ -56,9 +58,11 @@ export function ScheduleAddButton({ classrooms }: { classrooms?: ClassroomOpt[] 
 export function ScheduleRowActions({
   schedule,
   classrooms,
+  subjects,
 }: {
   schedule: ScheduleFormValue;
   classrooms?: ClassroomOpt[];
+  subjects?: SubjectOpt[];
 }) {
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
@@ -102,6 +106,7 @@ export function ScheduleRowActions({
         onOpenChange={setEditOpen}
         initial={schedule}
         classrooms={classrooms}
+        subjects={subjects}
       />
 
       <AlertDialog open={delOpen} onOpenChange={setDelOpen}>

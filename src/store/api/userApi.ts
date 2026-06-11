@@ -15,12 +15,31 @@ export interface StudentDto {
   deviceId?: string | null;
 }
 
+export interface StudentInput {
+  studentNo: string;
+  name: string;
+  gender?: string;
+  email: string;
+  phone?: string | null;
+  classId?: number | null;
+  status?: string;
+}
+
 export interface TeacherDto {
   id: number;
   name: string;
   email?: string;
+  phone?: string | null;
+  specialization?: string | null;
   status?: string;
   profileImage?: string | null;
+}
+
+export interface TeacherInput {
+  name: string;
+  email: string;
+  phone?: string | null;
+  specialization?: string | null;
 }
 
 export interface CurrentUserDto {
@@ -69,7 +88,7 @@ export const userApi = baseApi.injectEndpoints({
       },
       providesTags: ["User"],
     }),
-    createStudent: builder.mutation<StudentDto, Partial<StudentDto>>({
+    createStudent: builder.mutation<StudentDto, Partial<StudentInput>>({
       query: (body) => ({
         url: "/users/students",
         method: "POST",
@@ -78,12 +97,66 @@ export const userApi = baseApi.injectEndpoints({
       transformResponse: (response: ApiEnvelope<StudentDto>) => unwrapPayload(response),
       invalidatesTags: ["Student", "User"],
     }),
+    updateStudent: builder.mutation<StudentDto, { id: number; body: Partial<StudentInput> }>({
+      query: ({ id, body }) => ({
+        url: `/users/students/${id}`,
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: ApiEnvelope<StudentDto>) => unwrapPayload(response),
+      invalidatesTags: ["Student", "User"],
+    }),
+    deleteStudent: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/users/students/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Student", "User"],
+    }),
+    resetStudentDevice: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/users/students/${id}/device`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Student", "User"],
+    }),
+    createTeacher: builder.mutation<TeacherDto, Partial<TeacherInput>>({
+      query: (body) => ({
+        url: "/users/lecturers",
+        method: "POST",
+        body,
+      }),
+      transformResponse: (response: ApiEnvelope<TeacherDto>) => unwrapPayload(response),
+      invalidatesTags: ["Teacher", "User"],
+    }),
+    updateTeacher: builder.mutation<TeacherDto, { id: number; body: Partial<TeacherInput> }>({
+      query: ({ id, body }) => ({
+        url: `/users/lecturers/${id}`,
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: ApiEnvelope<TeacherDto>) => unwrapPayload(response),
+      invalidatesTags: ["Teacher", "User"],
+    }),
+    deleteTeacher: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/users/lecturers/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Teacher", "User"],
+    }),
   }),
 });
 
 export const {
   useCreateStudentMutation,
+  useUpdateStudentMutation,
+  useDeleteStudentMutation,
+  useResetStudentDeviceMutation,
   useGetCurrentUserQuery,
   useGetStudentsQuery,
   useGetTeachersQuery,
+  useCreateTeacherMutation,
+  useUpdateTeacherMutation,
+  useDeleteTeacherMutation,
 } = userApi;

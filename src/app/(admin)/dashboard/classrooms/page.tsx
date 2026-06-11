@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BookOpenIcon } from "lucide-react";
 import { ClassCard } from "@/components/ui/class-card";
+import { ClassroomAddButton } from "@/components/classroom-add-button";
 import { getServerUser } from "@/auth-server";
 import { MyDropdownMenuCheckboxes } from "@/components/drop-donw";
 import { fetchAllClassrooms, fetchTeacherClassrooms, fetchClassCounts, type ClassroomSummary } from "@/lib/classroom-helpers";
@@ -46,8 +47,11 @@ export default async function ClassroomsPage() {
               : "All classrooms across programs."}
           </p>
         </div>
-        <div className="flex flex-col  items-end sm:items-end gap-2">
-          <MyDropdownMenuCheckboxes />
+        <div className="flex flex-col items-end sm:items-end gap-2">
+          <div className="flex items-center gap-2">
+            {!isTeacher && <ClassroomAddButton />}
+            <MyDropdownMenuCheckboxes />
+          </div>
 
           <span className="text-sm pr-2 text-muted-foreground">
             ({activeClassrooms.length}) {activeClassrooms.length === 1 ? "class" : "classes"}

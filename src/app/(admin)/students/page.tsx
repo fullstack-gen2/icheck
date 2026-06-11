@@ -5,21 +5,54 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ResetDeviceButton } from "@/components/reset-device-button";
 import { useUser } from "@/components/user-provider";
-import { UsersIcon, ChevronDownIcon, SearchIcon, XIcon, PlusIcon, LoaderCircleIcon } from "lucide-react";
-import { useGetClassroomsQuery, type ClassroomDto } from "@/store/api/attendanceApi";
-import { useCreateStudentMutation, useGetStudentsQuery } from "@/store/api/userApi";
-import { useEnrollStudentMutation } from "@/store/api/enrollmentApi";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  UsersIcon,
+  ChevronDownIcon,
+  SearchIcon,
+  XIcon,
+  PlusIcon,
+  GraduationCapIcon,
+  MoreVerticalIcon,
+  PencilIcon,
+  TrashIcon,
+} from "lucide-react";
+import { useGetClassroomsQuery, type ClassroomDto } from "@/store/api/attendanceApi";
+import {
+  useGetStudentsQuery,
+  useGetTeachersQuery,
+  useDeleteStudentMutation,
+  useDeleteTeacherMutation,
+  type StudentDto,
+  type TeacherDto,
+} from "@/store/api/userApi";
+import { StudentFormDialog, type StudentFormValue } from "@/components/student-form-dialog";
+import { TeacherFormDialog, type TeacherFormValue } from "@/components/teacher-form-dialog";
+import { getErrorMessage } from "@/lib/error-utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const SHIFTS = ["MORNING", "AFTERNOON", "EVENING"];
 const SHIFT_LABEL: Record<string, string> = { MORNING: "Morning", AFTERNOON: "Afternoon", EVENING: "Evening" };
@@ -27,23 +60,48 @@ const SHIFT_LABEL: Record<string, string> = { MORNING: "Morning", AFTERNOON: "Af
 // Course types visible under Scholarship program
 const SCHOLARSHIP_COURSES = ["Fullstack", "Foundation", "Pre-Uni", "ITP", "ITE"];
 
-export default function StudentsPage() {
+type View = "STUDENTS" | "TEACHERS";
+
+export default function UsersPage() {
   const user = useUser();
+  const isAdmin = user?.role === "ADMIN";
+  const [view, setView] = useState<View>("STUDENTS");
+
+  return (
+    <div className="px-4 sm:px-5 py-6 sm:py-8">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+            {isAdmin ? "Users" : "Students"}
+          </h1>
+          {isAdmin && (
+            <Select value={view} onValueChange={(v) => setView(v as View)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="STUDENTS">Students</SelectItem>
+                <SelectItem value="TEACHERS">Teachers</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      </div>
+
+      {view === "STUDENTS" || !isAdmin ? <StudentsView isAdmin={isAdmin} /> : <TeachersView />}
+    </div>
+  );
+}
+
+// ── Students view ───────────────────────────────────────────────────────────
+function StudentsView({ isAdmin }: { isAdmin: boolean }) {
   const { data: students = [], isLoading: loadingStudents } = useGetStudentsQuery();
   const { data: classrooms = [], isLoading: loadingClassrooms } = useGetClassroomsQuery({ size: 1000 });
-  const [createStudent, { isLoading: creatingStudent }] = useCreateStudentMutation();
-  const [enrollStudent] = useEnrollStudentMutation();
-  const [registerOpen, setRegisterOpen] = useState(false);
-  const [registerForm, setRegisterForm] = useState({
-    name: "",
-    email: "",
-    studentNo: "",
-    gender: "",
-    phone: "",
-  });
-  // A student can be registered into more than one class (Enrollment table).
-  const [selectedClassIds, setSelectedClassIds] = useState<number[]>([]);
-  const [enrolling, setEnrolling] = useState(false);
+  const [deleteStudent] = useDeleteStudentMutation();
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<StudentFormValue | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -117,71 +175,46 @@ export default function StudentsPage() {
     setFilterGeneration(""); setFilterCourse("");
   }
 
-  const isAdmin = user?.role === "ADMIN";
   const loading = loadingStudents || loadingClassrooms;
 
-  function toggleClassroom(id: number) {
-    setSelectedClassIds((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
-    );
+  function openNew() {
+    setEditing(null);
+    setFormOpen(true);
   }
-
-  async function submitRegisterStudent() {
-    if (!registerForm.name.trim() || !registerForm.email.trim()) {
-      toast.error("Student name and email are required.");
-      return;
-    }
-
+  function openEdit(s: StudentDto) {
+    setEditing({
+      id: s.id,
+      name: s.name,
+      email: s.email ?? "",
+      studentNo: s.studentNo ?? "",
+      gender: s.gender ?? "",
+      phone: s.phone ?? "",
+      classId: s.classId ?? null,
+      status: s.status ?? "ACTIVE",
+    });
+    setFormOpen(true);
+  }
+  async function confirmDelete() {
+    if (deletingId == null) return;
     try {
-      const created = await createStudent({
-        name: registerForm.name.trim(),
-        email: registerForm.email.trim(),
-        studentNo: registerForm.studentNo.trim(),
-        gender: registerForm.gender.trim(),
-        phone: registerForm.phone.trim() || null,
-        status: "ACTIVE",
-        // Backend StudentRequest accepts an optional primary classId.
-        classId: selectedClassIds[0] ?? null,
-      }).unwrap();
-
-      // A student can be registered into more than one class — enroll into
-      // every selected classroom (Enrollment table, many-to-many).
-      if (created?.id && selectedClassIds.length > 0) {
-        setEnrolling(true);
-        const results = await Promise.allSettled(
-          selectedClassIds.map((classroomId) =>
-            enrollStudent({ classroomId, userId: created.id }).unwrap()
-          )
-        );
-        setEnrolling(false);
-        const failed = results.filter((r) => r.status === "rejected").length;
-        if (failed > 0) {
-          toast.error(`Student created, but failed to register ${failed} class${failed === 1 ? "" : "es"}.`);
-        }
-      }
-
-      toast.success("Student registered.");
-      setRegisterOpen(false);
-      setRegisterForm({ name: "", email: "", studentNo: "", gender: "", phone: "" });
-      setSelectedClassIds([]);
-    } catch {
-      toast.error("Could not register student.");
+      await deleteStudent(deletingId).unwrap();
+      toast.success("Student deleted.");
+      setDeletingId(null);
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Could not delete student."));
     }
   }
 
   return (
-    <div className="px-4 sm:px-5 py-6 sm:py-8">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Students</h1>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">{filtered.length} of {students.length}</span>
-          {isAdmin && (
-            <Button className="gap-1.5" onClick={() => setRegisterOpen(true)}>
-              <PlusIcon className="size-4" />
-              Register Student
-            </Button>
-          )}
-        </div>
+    <>
+      <div className="flex items-center justify-end mb-4 flex-wrap gap-3">
+        <span className="text-sm text-muted-foreground">{filtered.length} of {students.length}</span>
+        {isAdmin && (
+          <Button className="gap-1.5" onClick={openNew}>
+            <PlusIcon className="size-4" />
+            Register Student
+          </Button>
+        )}
       </div>
 
       {/* Search */}
@@ -290,7 +323,7 @@ export default function StudentsPage() {
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">Student No.</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Status</th>
                 {isAdmin && (
-                  <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Device</th>
+                  <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Actions</th>
                 )}
               </tr>
             </thead>
@@ -324,8 +357,28 @@ export default function StudentsPage() {
                     </Badge>
                   </td>
                   {isAdmin && (
-                    <td className="px-4 py-3 text-right">
-                      <ResetDeviceButton studentId={student.id} />
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-2">
+                        <ResetDeviceButton studentId={student.id} />
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="size-8">
+                              <MoreVerticalIcon className="size-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEdit(student)}>
+                              <PencilIcon className="size-4 mr-2" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
+                              onClick={() => setDeletingId(student.id)}
+                            >
+                              <TrashIcon className="size-4 mr-2" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -335,86 +388,208 @@ export default function StudentsPage() {
         </div>
       )}
 
-      <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Register Student</DialogTitle>
-            <DialogDescription>
-              Create a student account from live API data.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3">
-            <Input
-              value={registerForm.name}
-              onChange={(event) => setRegisterForm((form) => ({ ...form, name: event.target.value }))}
-              placeholder="Full name"
-            />
-            <Input
-              value={registerForm.email}
-              onChange={(event) => setRegisterForm((form) => ({ ...form, email: event.target.value }))}
-              placeholder="Email"
-              type="email"
-            />
-            <Input
-              value={registerForm.studentNo}
-              onChange={(event) => setRegisterForm((form) => ({ ...form, studentNo: event.target.value }))}
-              placeholder="Student number"
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                value={registerForm.gender}
-                onChange={(event) => setRegisterForm((form) => ({ ...form, gender: event.target.value }))}
-                placeholder="Gender"
-              />
-              <Input
-                value={registerForm.phone}
-                onChange={(event) => setRegisterForm((form) => ({ ...form, phone: event.target.value }))}
-                placeholder="Phone"
-              />
-            </div>
+      <StudentFormDialog
+        open={formOpen}
+        initial={editing}
+        classrooms={classrooms}
+        onOpenChange={setFormOpen}
+      />
 
-            {/* A student can be registered into more than one class. */}
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">
-                Classes ({selectedClassIds.length} selected)
-              </p>
-              <div className="max-h-40 overflow-y-auto rounded-lg border divide-y divide-border/50">
-                {classrooms.length === 0 ? (
-                  <p className="px-3 py-2 text-sm text-muted-foreground/70">No classes available.</p>
-                ) : (
-                  classrooms.map((c) => (
-                    <label
-                      key={c.id}
-                      htmlFor={`reg-class-${c.id}`}
-                      className="flex cursor-pointer items-center gap-2.5 px-3 py-2 hover:bg-muted/50"
+      <AlertDialog open={deletingId != null} onOpenChange={(o) => !o && setDeletingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this student?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the student account and unenrolls them from all classes.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+// ── Teachers view (admin only) ──────────────────────────────────────────────
+function TeachersView() {
+  const { data: teachers = [], isLoading } = useGetTeachersQuery();
+  const [deleteTeacher] = useDeleteTeacherMutation();
+
+  const [search, setSearch] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<TeacherFormValue | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return teachers;
+    return teachers.filter((t) =>
+      [t.name, t.email, t.specialization].filter(Boolean).join(" ").toLowerCase().includes(q)
+    );
+  }, [search, teachers]);
+
+  function openNew() {
+    setEditing(null);
+    setFormOpen(true);
+  }
+  function openEdit(t: TeacherDto) {
+    setEditing({
+      id: t.id,
+      name: t.name,
+      email: t.email ?? "",
+      phone: t.phone ?? "",
+      specialization: t.specialization ?? "",
+    });
+    setFormOpen(true);
+  }
+  async function confirmDelete() {
+    if (deletingId == null) return;
+    try {
+      await deleteTeacher(deletingId).unwrap();
+      toast.success("Teacher deleted.");
+      setDeletingId(null);
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Could not delete teacher."));
+    }
+  }
+
+  return (
+    <>
+      <div className="flex items-center justify-end mb-4 flex-wrap gap-3">
+        <span className="text-sm text-muted-foreground">{filtered.length} of {teachers.length}</span>
+        <Button className="gap-1.5" onClick={openNew}>
+          <PlusIcon className="size-4" />
+          Register Teacher
+        </Button>
+      </div>
+
+      {/* Search */}
+      <div className="relative max-w-md mb-4">
+        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name, email, specialization…"
+          className="pl-9 pr-9"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted"
+            aria-label="Clear search"
+          >
+            <XIcon className="size-4" />
+          </button>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="text-center py-16 text-muted-foreground/70">Loading teachers…</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16 text-muted-foreground/70 bg-card rounded-2xl border border-border">
+          <GraduationCapIcon className="size-10 mx-auto mb-3 opacity-40" />
+          <p className="font-medium">No teachers match your search.</p>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border overflow-hidden bg-card">
+          <table className="w-full text-base">
+            <thead>
+              <tr className="bg-muted/50 border-b border-border">
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Teacher</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">Phone</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">Specialization</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Status</th>
+                <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((teacher, index) => (
+                <tr
+                  key={teacher.id}
+                  className={`border-b border-border/50 hover:bg-muted/50 transition-colors ${
+                    index === filtered.length - 1 ? "border-b-0" : ""
+                  }`}
+                >
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-foreground">{teacher.name}</div>
+                    <div className="text-sm text-muted-foreground/70">{teacher.email ?? "—"}</div>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
+                    {teacher.phone ?? "—"}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
+                    {teacher.specialization ?? "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge
+                      className={
+                        teacher.status === "ACTIVE"
+                          ? "bg-green-100 text-green-700 hover:bg-green-100"
+                          : "bg-muted text-muted-foreground hover:bg-muted"
+                      }
                     >
-                      <Checkbox
-                        id={`reg-class-${c.id}`}
-                        checked={selectedClassIds.includes(c.id)}
-                        onCheckedChange={() => toggleClassroom(c.id)}
-                      />
-                      <span className="text-sm">
-                        {c.className}
-                        <span className="ml-1.5 text-xs text-muted-foreground/70 font-mono">{c.classCode}</span>
-                      </span>
-                    </label>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRegisterOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={submitRegisterStudent} disabled={creatingStudent || enrolling} className="gap-1.5">
-              {(creatingStudent || enrolling) ? <LoaderCircleIcon className="size-4 animate-spin" /> : <PlusIcon className="size-4" />}
-              {enrolling ? "Enrolling…" : "Register"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+                      {teacher.status ?? "—"}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-8">
+                          <MoreVerticalIcon className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEdit(teacher)}>
+                          <PencilIcon className="size-4 mr-2" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
+                          onClick={() => setDeletingId(teacher.id)}
+                        >
+                          <TrashIcon className="size-4 mr-2" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <TeacherFormDialog open={formOpen} initial={editing} onOpenChange={setFormOpen} />
+
+      <AlertDialog open={deletingId != null} onOpenChange={(o) => !o && setDeletingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this teacher?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the teacher account. Schedules assigned to this
+              teacher will need to be reassigned. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

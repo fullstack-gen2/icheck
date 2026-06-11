@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -29,59 +29,67 @@ const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] as const;
 
 export interface ScheduleFormValue {
   id?: number;
+  classId?: number;
   className: string;
+  subjectId?: number;
   subjectName: string;
+  teacherId?: number;
   teacherName: string;
   dayOfWeek: string;
   startTime: string;
   endTime: string;
   slot: number;
+  attendanceRequired?: boolean;
   status: boolean;
 }
 
 const empty: ScheduleFormValue = {
+  classId:     undefined,
   className:   "",
+  subjectId:   undefined,
   subjectName: "",
+  teacherId:   undefined,
   teacherName: "",
   dayOfWeek:   "MONDAY",
   startTime:   "08:00",
   endTime:     "10:00",
   slot:        1,
+  attendanceRequired: true,
   status:      true,
 };
 
 interface ClassroomOpt { id: number; className: string; }
+interface SubjectOpt { id: number; name: string; }
 
 interface Props {
   open: boolean;
   initial?: ScheduleFormValue | null;
   classrooms?: ClassroomOpt[];
+  subjects?: SubjectOpt[];
   onOpenChange: (o: boolean) => void;
 }
 
-export function ScheduleFormDialog({ open, initial, classrooms = [], onOpenChange }: Props) {
+export function ScheduleFormDialog({ open, initial, classrooms = [], subjects = [], onOpenChange }: Props) {
   const router = useRouter();
   const editing = !!initial?.id;
   const { data: teachers = [], isLoading: loadingTeachers } = useGetTeachersQuery();
   const [form, setForm] = useState<ScheduleFormValue>(empty);
   const [saving, setSaving] = useState(false);
 
-  const teacherOptions = useMemo(() => {
-    const names = new Set(teachers.map((teacher) => teacher.name).filter(Boolean));
-    if (form.teacherName && !names.has(form.teacherName)) names.add(form.teacherName);
-    return [...names].sort((a, b) => a.localeCompare(b));
-  }, [form.teacherName, teachers]);
-
-  useEffect(() => {
+  // Reset the form whenever the dialog transitions to open (adjusting state
+  // during render avoids the cascading-render set-state-in-effect pitfall).
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) setForm(initial ? { ...empty, ...initial } : empty);
-  }, [open, initial]);
+  }
 
   function patch<K extends keyof ScheduleFormValue>(k: K, v: ScheduleFormValue[K]) {
     setForm((f) => ({ ...f, [k]: v }));
   }
 
   async function handleSave() {
-    if (!form.className.trim() || !form.subjectName.trim() || !form.teacherName.trim()) {
+    if (!form.classId || !form.subjectId || !form.teacherId) {
       toast.error("Class, subject and teacher are required.");
       return;
     }
@@ -92,20 +100,28 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], onOpenChang
     setSaving(true);
     try {
       const body = {
-        className:   form.className.trim(),
-        subjectName: form.subjectName.trim(),
-        teacherName: form.teacherName.trim(),
-        dayOfWeek:   form.dayOfWeek,
-        startTime:   form.startTime.length === 5 ? form.startTime + ":00" : form.startTime,
-        endTime:     form.endTime.length === 5   ? form.endTime + ":00"   : form.endTime,
-        slot:        Number(form.slot),
-        status:      form.status,
+        classId:   form.classId,
+        subjectId: form.subjectId,
+        teacherId: form.teacherId,
+        dayOfWeek: form.dayOfWeek,
+        startTime: form.startTime.length === 5 ? form.startTime + ":00" : form.startTime,
+        endTime:   form.endTime.length === 5   ? form.endTime + ":00"   : form.endTime,
+        slot:      Number(form.slot),
+        attendanceRequired: form.attendanceRequired ?? true,
       };
       if (editing) {
-        await api.patch(`/schedules/${form.id}`, body);
+        await api.put(`/schedules/${form.id}`, body);
+        // Active/Inactive status isn't part of ScheduleRequest — toggle separately.
+        if (form.status !== initial?.status) {
+          await api.patch(`/schedules/${form.id}/status?active=${form.status}`, undefined);
+        }
         toast.success("Schedule updated.");
       } else {
-        await api.post(`/schedules`, body);
+        const created = await api.post(`/schedules`, body);
+        const newId = (created as { payload?: { id?: number } } | null)?.payload?.id;
+        if (!form.status && newId) {
+          await api.patch(`/schedules/${newId}/status?active=false`, undefined);
+        }
         toast.success("Schedule created.");
       }
       onOpenChange(false);
@@ -129,49 +145,61 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], onOpenChang
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Class" required>
-            {classrooms.length > 0 ? (
-              <Select value={form.className} onValueChange={(v) => patch("className", v)}>
-                <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
-                <SelectContent>
-                  {classrooms.map((c) => (
-                    <SelectItem key={c.id} value={c.className}>{c.className}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input value={form.className} onChange={(e) => patch("className", e.target.value)} />
-            )}
+            <Select
+              value={form.classId ? String(form.classId) : ""}
+              onValueChange={(v) => {
+                const c = classrooms.find((cl) => cl.id === Number(v));
+                patch("classId", Number(v));
+                patch("className", c?.className ?? "");
+              }}
+            >
+              <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
+              <SelectContent>
+                {classrooms.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>{c.className}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
 
           <Field label="Subject" required>
-            <Input
-              value={form.subjectName}
-              onChange={(e) => patch("subjectName", e.target.value)}
-              placeholder="e.g. Web Development"
-            />
+            <Select
+              value={form.subjectId ? String(form.subjectId) : ""}
+              onValueChange={(v) => {
+                const s = subjects.find((sub) => sub.id === Number(v));
+                patch("subjectId", Number(v));
+                patch("subjectName", s?.name ?? "");
+              }}
+            >
+              <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
+              <SelectContent>
+                {subjects.map((s) => (
+                  <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
 
           <Field label="Teacher" required>
-            {teacherOptions.length > 0 ? (
-              <Select value={form.teacherName} onValueChange={(v) => patch("teacherName", v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder={loadingTeachers ? "Loading teachers..." : "Select teacher"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {teacherOptions.map((teacherName) => (
-                    <SelectItem key={teacherName} value={teacherName}>
-                      {teacherName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                value={form.teacherName}
-                onChange={(e) => patch("teacherName", e.target.value)}
-                placeholder={loadingTeachers ? "Loading teachers..." : "Teacher's full name"}
-              />
-            )}
+            <Select
+              value={form.teacherId ? String(form.teacherId) : ""}
+              onValueChange={(v) => {
+                const t = teachers.find((teacher) => teacher.id === Number(v));
+                patch("teacherId", Number(v));
+                patch("teacherName", t?.name ?? "");
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={loadingTeachers ? "Loading teachers..." : "Select teacher"} />
+              </SelectTrigger>
+              <SelectContent>
+                {teachers.map((t) => (
+                  <SelectItem key={t.id} value={String(t.id)}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
 
           <Field label="Day">
