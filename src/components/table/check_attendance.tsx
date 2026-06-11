@@ -43,7 +43,7 @@ function fmt12(raw?: string | null): string {
   return `${hour12}:${mm ?? "00"} ${period}`;
 }
 
-/** "yyyy-MM-dd" → "11-Nov-2026". Falls back to the raw value on parse failure. */
+/** Formats "yyyy-MM-dd" into a readable day-month-year label. */
 function fmtDate(raw?: string | null): string {
   if (!raw) return "—";
   const d = new Date(raw);

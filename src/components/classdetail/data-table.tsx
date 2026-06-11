@@ -40,6 +40,12 @@ interface DataTableProps<TData, TValue> {
   studentSummaryText?: string;
   showNote?: boolean;
   studentProfileBasePath?: string;
+  sessionDate?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  classCode?: string | null;
+  totalStudents?: number;
+  femaleStudents?: number;
 }
 
 declare module "@tanstack/react-table" {
@@ -58,6 +64,12 @@ export function DataTableList<TData, TValue>({
   studentSummaryText,
   showNote = true,
   studentProfileBasePath,
+  sessionDate,
+  startTime,
+  endTime,
+  classCode,
+  totalStudents,
+  femaleStudents,
 }: DataTableProps<TData, TValue>) {
   const params = useParams<{
     id?: string | string[];
@@ -90,13 +102,36 @@ export function DataTableList<TData, TValue>({
         header: "Status",
         enableSorting: false,
         enableColumnFilter: false,
-        cell: () => (
-          <span className="font-medium text-gray-500">pending</span>
-        ),
+        cell: ({ row }) => {
+          const rowData = row.original as TData & { status?: string | null };
+          return (
+            <span className="font-medium text-gray-500">
+              {rowData.status || "pending"}
+            </span>
+          );
+        },
       },
     ],
     [columns],
   );
+
+  function formatDate(raw?: string | null) {
+    if (!raw) return "—";
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return raw;
+    const month = date.toLocaleString("en-US", { month: "short" });
+    return `${String(date.getDate()).padStart(2, "0")}-${month}-${date.getFullYear()}`;
+  }
+
+  function formatTime(raw?: string | null) {
+    if (!raw) return "—";
+    const [hoursRaw, minutes = "00"] = raw.split(":");
+    const hours = Number(hoursRaw);
+    if (Number.isNaN(hours)) return raw;
+    const period = hours >= 12 ? "PM" : "AM";
+    const hour12 = hours % 12 === 0 ? 12 : hours % 12;
+    return `${hour12}:${minutes} ${period}`;
+  }
 
   const table = useReactTable({
     data,
@@ -199,16 +234,16 @@ export function DataTableList<TData, TValue>({
           !showReportActions && (
             <div className="flex justify-start text-sm items-center gap-4 text-gray-600 border px-4 py-2 rounded-lg">
               <div>
-                <p>Date: <span className="text-primary">11-Nov-2026</span></p>
-                <p className="text-right">Student(Total/ False): <span className="text-primary"> 11/03</span></p>
+                <p>Date: <span className="text-primary">{formatDate(sessionDate)}</span></p>
+                <p className="text-right">Student(Total/ Female): <span className="text-primary"> {totalStudents ?? data.length}/{femaleStudents ?? 0}</span></p>
               </div>
               <div>
                 <p className="text-primary">|</p>
                 <p className="text-primary">|</p>
               </div>
               <div>
-                <p >Time: <span className="text-primary"> 8:00 - 12:00PM</span></p>
-                <p >Class Code: <span className="text-primary">A001</span> </p>
+                <p >Time: <span className="text-primary"> {formatTime(startTime)} - {formatTime(endTime)}</span></p>
+                <p >Class Code: <span className="text-primary">{classCode ?? "—"}</span> </p>
               </div>
             </div>
           )

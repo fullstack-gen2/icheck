@@ -19,6 +19,12 @@ import { Input } from "../ui/input";
 type ReportTodayProps = {
   students?: Student[];
   studentProfileBasePath?: string;
+  sessionDate?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  classCode?: string | null;
+  totalStudents?: number;
+  femaleStudents?: number;
 };
 
 function AttendanceMark({
@@ -41,6 +47,12 @@ function AttendanceMark({
 export default function ReportToday({
   students = [],
   studentProfileBasePath,
+  sessionDate,
+  startTime,
+  endTime,
+  classCode,
+  totalStudents,
+  femaleStudents,
 }: ReportTodayProps) {
   const params = useParams<{ id?: string | string[] }>();
   const classroomId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -59,6 +71,24 @@ export default function ReportToday({
   const lateCount = students.filter(
     (student) => student.status === AttendanceStatus.LATE,
   ).length;
+
+  function formatDate(raw?: string | null) {
+    if (!raw) return "—";
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return raw;
+    const month = date.toLocaleString("en-US", { month: "short" });
+    return `${String(date.getDate()).padStart(2, "0")}-${month}-${date.getFullYear()}`;
+  }
+
+  function formatTime(raw?: string | null) {
+    if (!raw) return "—";
+    const [hoursRaw, minutes = "00"] = raw.split(":");
+    const hours = Number(hoursRaw);
+    if (Number.isNaN(hours)) return raw;
+    const period = hours >= 12 ? "PM" : "AM";
+    const hour12 = hours % 12 === 0 ? 12 : hours % 12;
+    return `${hour12}:${minutes} ${period}`;
+  }
 
   const toggleExpanded = (studentId: string) => {
     setExpandedRowId((prev) => (prev === studentId ? null : studentId));
@@ -98,16 +128,16 @@ export default function ReportToday({
 
          <div className="flex justify-start text-sm items-center gap-4 text-gray-600 border px-4 py-2 rounded-lg">
               <div>
-                <p>Date: <span className="text-black dark:text-white">11-Nov-2026</span></p>
-                <p className="text-right">Student(Total/ False): <span className="text-black dark:text-white"> 11/03</span></p>
+                <p>Date: <span className="text-black dark:text-white">{formatDate(sessionDate)}</span></p>
+                <p className="text-right">Student(Total/ Female): <span className="text-black dark:text-white"> {totalStudents ?? students.length}/{femaleStudents ?? 0}</span></p>
               </div>
               <div>
                 <p className="text-black dark:text-white">|</p>
                 <p className="text-black dark:text-white">|</p>
               </div>
               <div>
-                <p >Time: <span className="text-black dark:text-white"> 8:00 - 12:00PM</span></p>
-                <p >Class Code: <span className="text-black dark:text-white">A001</span> </p>
+                <p >Time: <span className="text-black dark:text-white"> {formatTime(startTime)} - {formatTime(endTime)}</span></p>
+                <p >Class Code: <span className="text-black dark:text-white">{classCode ?? "—"}</span> </p>
               </div>
             </div>        
       </div>

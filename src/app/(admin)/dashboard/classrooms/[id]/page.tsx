@@ -16,6 +16,7 @@ interface Classroom {
 
 interface SessionInfo {
   id: number;
+  sessionDate: string | null;
   startTime: string | null;
   endTime: string | null;
   substituteTeacherName: string | null;
@@ -78,6 +79,10 @@ export default async function ClassroomDetailPage({
   ]);
 
   const isAdmin = (user?.role ?? "").toUpperCase() === "ADMIN";
+  const femaleStudents = students.filter((student) => {
+    const gender = student.gender?.toLowerCase?.() ?? "";
+    return gender === "female" || gender === "f";
+  }).length;
 
   return (
     <div className="px-7 py-7">
@@ -121,6 +126,12 @@ export default async function ClassroomDetailPage({
           data={students}
           showStudentActions
           studentProfileBasePath={`/dashboard/classrooms/${id}/student-profile`}
+          sessionDate={session?.sessionDate ?? null}
+          startTime={session?.startTime ?? null}
+          endTime={session?.endTime ?? null}
+          classCode={classroom?.classCode ?? null}
+          totalStudents={students.length}
+          femaleStudents={femaleStudents}
         />
 
 
