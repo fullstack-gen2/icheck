@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ACCESS_TOKEN_COOKIE, BASE_API_URL } from "@/auth";
+import { applyRefreshedTokens, refreshTokensFromCookie } from "@/lib/refresh-tokens";
 
 /**
  * Generic authenticated proxy for the RTK Query `baseApi` (`baseUrl: "/api/v1"`).
@@ -28,37 +29,74 @@ function getCookie(req: Request, name: string) {
 }
 
 async function proxy(req: Request, path: string[]) {
-  const accessToken = getCookie(req, ACCESS_TOKEN_COOKIE);
-
   const url = new URL(req.url);
   const target = `${BASE_API_URL}/${path.map(encodeURIComponent).join("/")}${url.search}`;
 
-  const headers: Record<string, string> = {};
-  const contentType = req.headers.get("content-type");
-  if (contentType) headers["Content-Type"] = contentType;
-  const accept = req.headers.get("accept");
-  if (accept) headers["Accept"] = accept;
-  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-
-  const init: RequestInit = {
-    method: req.method,
-    headers,
-    cache: "no-store",
-  };
-
+  // Cache the body once so we can replay it for a refresh-then-retry without
+  // having to re-read the stream (which is one-shot on a Request).
+  let bodyBuf: ArrayBuffer | undefined;
   if (req.method !== "GET" && req.method !== "HEAD") {
     const body = await req.arrayBuffer();
-    if (body.byteLength > 0) init.body = body;
+    if (body.byteLength > 0) bodyBuf = body;
   }
 
+  const baseHeaders: Record<string, string> = {};
+  const contentType = req.headers.get("content-type");
+  if (contentType) baseHeaders["Content-Type"] = contentType;
+  const accept = req.headers.get("accept");
+  if (accept) baseHeaders["Accept"] = accept;
+
+  async function fetchUpstream(accessToken: string | undefined): Promise<Response> {
+    const headers: Record<string, string> = { ...baseHeaders };
+    if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+    return fetch(target, {
+      method: req.method,
+      headers,
+      body: bodyBuf,
+      cache: "no-store",
+    });
+  }
+
+  let accessToken = getCookie(req, ACCESS_TOKEN_COOKIE);
   let res: Response;
   try {
-    res = await fetch(target, init);
+    res = await fetchUpstream(accessToken);
   } catch {
     return NextResponse.json(
       { error: "Upstream attendance service unreachable." },
       { status: 502 }
     );
+  }
+
+  // Access-token expired? Swap it for a fresh one via the refresh-token cookie
+  // and retry once. The refreshed tokens are written to the outbound response
+  // so the browser keeps the rotation in lockstep.
+  let refreshedCookiesOnOutbound = false;
+  if (res.status === 401) {
+    const refreshed = await refreshTokensFromCookie(req);
+    if (refreshed) {
+      accessToken = refreshed.accessToken;
+      try {
+        res = await fetchUpstream(accessToken);
+        refreshedCookiesOnOutbound = true;
+        const responseHeaders = new Headers();
+        const resContentType = res.headers.get("content-type");
+        if (resContentType) responseHeaders.set("content-type", resContentType);
+
+        if (res.status === 204 || res.status === 304) {
+          const out = new NextResponse(null, { status: res.status, headers: responseHeaders });
+          applyRefreshedTokens(out, refreshed, new URL(req.url).protocol === "https:");
+          return out;
+        }
+
+        const buf = await res.arrayBuffer();
+        const out = new NextResponse(buf, { status: res.status, headers: responseHeaders });
+        applyRefreshedTokens(out, refreshed, new URL(req.url).protocol === "https:");
+        return out;
+      } catch {
+        // fall through to the 401 response below
+      }
+    }
   }
 
   if (res.status === 204 || res.status === 304) {
@@ -70,7 +108,10 @@ async function proxy(req: Request, path: string[]) {
   if (resContentType) responseHeaders.set("content-type", resContentType);
 
   const buf = await res.arrayBuffer();
-  return new NextResponse(buf, { status: res.status, headers: responseHeaders });
+  const out = new NextResponse(buf, { status: res.status, headers: responseHeaders });
+  // Quiet the "unused" warning when refresh isn't triggered.
+  void refreshedCookiesOnOutbound;
+  return out;
 }
 
 type RouteContext = { params: Promise<{ path: string[] }> };

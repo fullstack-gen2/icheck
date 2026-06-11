@@ -5,9 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@/components/user-provider";
 import { CheckCircleIcon, AlertCircleIcon, LoaderCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/logo";
 
-type State = "loading" | "success" | "error" | "noToken";
+type State = "loading" | "success" | "error" | "noToken" | "needReason";
 
 const FETCH_TIMEOUT_MS = 12_000;
 
@@ -35,13 +36,18 @@ function CheckInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+  // Static (classroom-printed) QR redirects with ?kind=static — those scans
+  // always require the student to give a reason (Rule 7 / late explanation).
+  const kindParam = searchParams.get("kind");
+  const isStatic = kindParam === "static";
   const user = useUser();
   const [state, setState] = useState<State>("loading");
   const [message, setMessage] = useState("");
+  const [reason, setReason] = useState("");
   const didSubmit = useRef(false);
   const viewState: State = token ? state : "noToken";
 
-  const doCheckIn = async (qrToken: string) => {
+  const doCheckIn = async (qrToken: string, reasonOverride?: string) => {
     if (didSubmit.current) return;
     didSubmit.current = true;
     setState("loading");
@@ -63,6 +69,8 @@ function CheckInContent() {
         signal: controller.signal,
         body: JSON.stringify({
           qrToken,
+          kind: isStatic ? "static" : "dynamic",
+          reason: reasonOverride ?? (isStatic ? reason : undefined),
           latitude: coords?.latitude ?? null,
           longitude: coords?.longitude ?? null,
         }),
@@ -73,14 +81,26 @@ function CheckInContent() {
 
       if (res.ok) {
         setState("success");
-        setMessage(`Attendance recorded for ${user?.name ?? "you"}.`);
-      } else {
-        setState("error");
         setMessage(
+          isStatic
+            ? "Reason submitted. Status will appear after admin review."
+            : `Attendance recorded for ${user?.name ?? "you"}.`
+        );
+      } else {
+        const errMsg: string =
           json?.payload?.message ??
           json?.message ??
-          "Check-in failed. The QR may have expired — ask your teacher to refresh it."
-        );
+          "Check-in failed. The QR may have expired — ask your teacher to refresh it.";
+
+        // Backend signal that a reason is required (static QR, missing reason).
+        if (/reason is required/i.test(errMsg)) {
+          setState("needReason");
+          setMessage("This is a static (classroom) QR — please give a short reason for your late scan.");
+          didSubmit.current = false;
+          return;
+        }
+        setState("error");
+        setMessage(errMsg);
       }
     } catch (err: unknown) {
       clearTimeout(timeout);
@@ -95,14 +115,26 @@ function CheckInContent() {
     }
   };
 
+  // Static-QR pre-prompt: we already know the backend will demand a reason, so
+  // surface the form immediately rather than burn a guaranteed-to-fail round
+  // trip. Adjusting state during render (with a prev-prop guard) avoids the
+  // `set-state-in-effect` lint and matches React's recommended pattern for
+  // "reset state in response to a prop change".
+  const [staticPromptApplied, setStaticPromptApplied] = useState(false);
+  if (isStatic && token && !staticPromptApplied) {
+    setStaticPromptApplied(true);
+    setState("needReason");
+    setMessage("This is a static (classroom) QR — please give a short reason for your late scan.");
+  }
+
   useEffect(() => {
-    if (!token) return;
+    if (!token || isStatic) return;
     const timer = window.setTimeout(() => {
       doCheckIn(token);
     }, 0);
     return () => window.clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, isStatic]);
 
   return (
     <div className="min-h-screen bg-muted/50 flex items-center justify-center p-6">
@@ -131,6 +163,39 @@ function CheckInContent() {
               onClick={() => router.push("/student")}
             >
               Go to My Attendance
+            </Button>
+          </div>
+        )}
+
+        {viewState === "needReason" && (
+          <div className="flex flex-col items-center gap-4 py-4">
+            <AlertCircleIcon className="size-12 text-amber-500" />
+            <h2 className="text-xl font-bold text-foreground">Reason required</h2>
+            <p className="text-muted-foreground text-sm">{message}</p>
+            <Input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g. Traffic delay, ran late from lab…"
+              className="w-full"
+              autoFocus
+            />
+            <Button
+              className="mt-2 w-full bg-primary hover:bg-primary/90"
+              disabled={reason.trim().length < 3}
+              onClick={() => {
+                if (!token) return;
+                didSubmit.current = false;
+                doCheckIn(token, reason.trim());
+              }}
+            >
+              Submit reason &amp; check in
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full text-muted-foreground/70"
+              onClick={() => router.push("/student")}
+            >
+              Cancel
             </Button>
           </div>
         )}
