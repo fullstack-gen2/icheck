@@ -1,4 +1,6 @@
 "use client";
+import { useState } from "react";
+
 import {
   Field,
   FieldLabel,
@@ -23,29 +25,49 @@ import {
 } from "@/components/ui/combobox";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
+import { CheckCircleIcon } from "lucide-react";
 
 const classIds = ["CLS001", "CLS002", "CLS003"];
 const classNames = ["Bachelor Class", "Associate Class", "Scholarship Class"];
 const shifts = ["Morning", "Afternoon", "Evening"];
 
-export default function RequirePermissionForm() {
-  const formSchema = z.object({
-    "text-0": z.string(),
-    "student-id": z.string(),
-    "student-name": z.string(),
-    "class-id": z.string(),
-    "class-name": z.string(),
-    shift: z.string(),
-    "permission-type": z.string(),
-    reason: z.string(),
-    submit: z.string().optional(),
-    cancel: z.string().optional(),
-  });
+const formSchema = z.object({
+  "student-id": z.string().trim().min(1, {
+    message: "Student ID is required",
+  }),
+  "student-name": z.string().trim().min(1, {
+    message: "Student name is required",
+  }),
+  "class-id": z.string().min(1, {
+    message: "Class ID is required",
+  }),
+  "class-name": z.string().min(1, {
+    message: "Class name is required",
+  }),
+  shift: z.string().min(1, {
+    message: "Shift is required",
+  }),
+  "permission-type": z.string().min(1, {
+    message: "Permission type is required",
+  }),
+  reason: z.string().trim().min(1, {
+    message: "Reason is required",
+  }),
+});
 
-  const form = useForm<z.infer<typeof formSchema>>({
+type RequirePermissionFormValues = z.infer<typeof formSchema>;
+
+export default function RequirePermissionForm() {
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  const form = useForm<RequirePermissionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      "text-0": "",
       "student-id": "",
       "student-name": "",
       "class-id": "",
@@ -56,13 +78,15 @@ export default function RequirePermissionForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  function onSubmit(values: RequirePermissionFormValues) {
     console.log(values);
+    setSubmitSuccess(true);
   }
 
   function onReset() {
     form.reset();
     form.clearErrors();
+    setSubmitSuccess(false);
   }
 
   return (
@@ -78,6 +102,16 @@ export default function RequirePermissionForm() {
             Submit your class permission request details.
           </p>
         </div>
+
+        {submitSuccess && (
+          <Alert variant="success">
+            <CheckCircleIcon />
+            <AlertTitle>Request submitted successfully</AlertTitle>
+            <AlertDescription>
+              Your permission request has been sent.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid gap-5 sm:grid-cols-2">
           <Controller
@@ -272,6 +306,9 @@ export default function RequirePermissionForm() {
                 onBlur={field.onBlur}
                 ref={field.ref}
               >
+                <NativeSelectOption value="" disabled>
+                  Select permission type
+                </NativeSelectOption>
                 <NativeSelectOption value="late">Late</NativeSelectOption>
                 <NativeSelectOption value="permission">
                   Permission
@@ -305,61 +342,26 @@ export default function RequirePermissionForm() {
           )}
         />
         <div className="grid gap-3 sm:grid-cols-2">
-
-          <Controller
-            control={form.control}
+          <Button
+            key="reset-button-0"
+            id="cancel"
             name="cancel"
-            render={({ fieldState }) => (
-              <Field
-                className="flex self-end flex-col gap-2 space-y-0 items-start"
-                data-invalid={fieldState.invalid}
-              >
-                <FieldLabel className="hidden w-auto!">Reset</FieldLabel>
-
-                <Button
-                  key="reset-button-0"
-                  id="cancel"
-                  name="cancel"
-                  className="w-full"
-                  type="button"
-                  variant="outline"
-                >
-                  Cancel
-                </Button>
-
-                {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
-                )}
-              </Field>
-            )}
-          />
-                    <Controller
-            control={form.control}
+            className="h-12 w-full border-muted-foreground/30 text-base font-semibold"
+            type="reset"
+            variant="outline"
+          >
+            Cancel
+          </Button>
+          <Button
+            key="submit-button-0"
+            id="submit"
             name="submit"
-            render={({ fieldState }) => (
-              <Field
-                className="flex self-end flex-col gap-2 space-y-0 items-start"
-                data-invalid={fieldState.invalid}
-              >
-                <FieldLabel className="hidden w-auto!">Submit</FieldLabel>
-
-                <Button
-                  key="submit-button-0"
-                  id="submit"
-                  name="submit"
-                  className="w-full"
-                  type="submit"
-                  variant="default"
-                >
-                  Submit
-                </Button>
-
-                {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
-                )}
-              </Field>
-            )}
-          />
+            className="h-12 w-full text-base font-semibold shadow-sm"
+            type="submit"
+            variant="default"
+          >
+            Submit
+          </Button>
         </div>
       </div>
     </form>
