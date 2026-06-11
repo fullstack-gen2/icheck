@@ -21,6 +21,7 @@ import {
   Settings2Icon,
   FileChartColumnIcon,
   BookOpenIcon,
+  GraduationCapIcon,
 } from "lucide-react"
 import { LogoWordmark } from "@/components/logo"
 import { GrSchedules } from "react-icons/gr";
@@ -37,6 +38,7 @@ const ALL_MAIN = [
   { title: "Require Permission", url: "/student/require-permission",  icon: <FaWpforms />, roles: ["STUDENT"] },
   { title: "Classes",    url: "/dashboard/classrooms",  icon: <BookOpenIcon />,        roles: ["ADMIN", "TEACHER"] },
   { title: "Students",   url: "/students",              icon: <UsersIcon />,           roles: ["ADMIN", "TEACHER"] },
+  { title: "Teachers",   url: "/teachers",              icon: <GraduationCapIcon />,   roles: ["ADMIN"] },
   { title: "Schedule",   url: "/schedule",              icon: <GrSchedules />,            roles: ["ADMIN", "TEACHER"] },
   { title: "Reports",    url: "/reports",               icon: <FileChartColumnIcon />, roles: ["ADMIN", "TEACHER"] },
 ];

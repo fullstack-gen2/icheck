@@ -13,7 +13,6 @@ import {
   SearchIcon,
   XIcon,
   PlusIcon,
-  GraduationCapIcon,
   MoreVerticalIcon,
   PencilIcon,
   TrashIcon,
@@ -21,14 +20,11 @@ import {
 import { useGetClassroomsQuery, type ClassroomDto } from "@/store/api/attendanceApi";
 import {
   useGetStudentsQuery,
-  useGetTeachersQuery,
   useDeleteStudentMutation,
-  useDeleteTeacherMutation,
   type StudentDto,
-  type TeacherDto,
 } from "@/store/api/userApi";
 import { StudentFormDialog, type StudentFormValue } from "@/components/student-form-dialog";
-import { TeacherFormDialog, type TeacherFormValue } from "@/components/teacher-form-dialog";
+import { TeachersView } from "@/components/teachers-view";
 import { getErrorMessage } from "@/lib/error-utils";
 import {
   Select,
@@ -419,179 +415,6 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
-// ── Teachers view (admin only) ──────────────────────────────────────────────
-function TeachersView() {
-  const { data: teachers = [], isLoading } = useGetTeachersQuery();
-  const [deleteTeacher] = useDeleteTeacherMutation();
-
-  const [search, setSearch] = useState("");
-  const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<TeacherFormValue | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return teachers;
-    return teachers.filter((t) =>
-      [t.name, t.email, t.specialization].filter(Boolean).join(" ").toLowerCase().includes(q)
-    );
-  }, [search, teachers]);
-
-  function openNew() {
-    setEditing(null);
-    setFormOpen(true);
-  }
-  function openEdit(t: TeacherDto) {
-    setEditing({
-      id: t.id,
-      name: t.name,
-      email: t.email ?? "",
-      phone: t.phone ?? "",
-      specialization: t.specialization ?? "",
-    });
-    setFormOpen(true);
-  }
-  async function confirmDelete() {
-    if (deletingId == null) return;
-    try {
-      await deleteTeacher(deletingId).unwrap();
-      toast.success("Teacher deleted.");
-      setDeletingId(null);
-    } catch (e) {
-      toast.error(getErrorMessage(e, "Could not delete teacher."));
-    }
-  }
-
-  return (
-    <>
-      <div className="flex items-center justify-end mb-4 flex-wrap gap-3">
-        <span className="text-sm text-muted-foreground">{filtered.length} of {teachers.length}</span>
-        <Button className="gap-1.5" onClick={openNew}>
-          <PlusIcon className="size-4" />
-          Register Teacher
-        </Button>
-      </div>
-
-      {/* Search */}
-      <div className="relative max-w-md mb-4">
-        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, email, specialization…"
-          className="pl-9 pr-9"
-        />
-        {search && (
-          <button
-            onClick={() => setSearch("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted"
-            aria-label="Clear search"
-          >
-            <XIcon className="size-4" />
-          </button>
-        )}
-      </div>
-
-      {isLoading ? (
-        <div className="text-center py-16 text-muted-foreground/70">Loading teachers…</div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground/70 bg-card rounded-2xl border border-border">
-          <GraduationCapIcon className="size-10 mx-auto mb-3 opacity-40" />
-          <p className="font-medium">No teachers match your search.</p>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-border overflow-hidden bg-card">
-          <table className="w-full text-base">
-            <thead>
-              <tr className="bg-muted/50 border-b border-border">
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Teacher</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">Phone</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">Specialization</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Status</th>
-                <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((teacher, index) => (
-                <tr
-                  key={teacher.id}
-                  className={`border-b border-border/50 hover:bg-muted/50 transition-colors ${
-                    index === filtered.length - 1 ? "border-b-0" : ""
-                  }`}
-                >
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-foreground">{teacher.name}</div>
-                    <div className="text-sm text-muted-foreground/70">{teacher.email ?? "—"}</div>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
-                    {teacher.phone ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
-                    {teacher.specialization ?? "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge
-                      className={
-                        teacher.status === "ACTIVE"
-                          ? "bg-green-100 text-green-700 hover:bg-green-100"
-                          : "bg-muted text-muted-foreground hover:bg-muted"
-                      }
-                    >
-                      {teacher.status ?? "—"}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-8">
-                          <MoreVerticalIcon className="size-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEdit(teacher)}>
-                          <PencilIcon className="size-4 mr-2" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
-                          onClick={() => setDeletingId(teacher.id)}
-                        >
-                          <TrashIcon className="size-4 mr-2" /> Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <TeacherFormDialog open={formOpen} initial={editing} onOpenChange={setFormOpen} />
-
-      <AlertDialog open={deletingId != null} onOpenChange={(o) => !o && setDeletingId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this teacher?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This permanently removes the teacher account. Schedules assigned to this
-              teacher will need to be reassigned. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
-  );
-}
 
 // ── Reusable filter select ──────────────────────────────────────────────────
 function FilterSelect({
