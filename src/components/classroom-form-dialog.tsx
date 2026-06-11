@@ -44,11 +44,23 @@ export interface ClassroomFormValue {
   academicYear: number;
   startDate: string;
   endDate: string;
+  /** Lab/room name, e.g. "Lab DevOps", "Lab AI". */
+  lab?: string | null;
   status: boolean;
 }
 
 const SHIFTS  = ["MORNING", "AFTERNOON", "EVENING"];
 const PROGRAMS = ["Bachelor", "Scholarship"]; // tweak to match your real list
+
+// Common school lab/room names — admin can also type a custom one.
+const LABS = [
+  "Lab DevOps",
+  "Lab Data Analytics",
+  "Lab AI",
+  "Lab Fullstack",
+  "Lab BlockChain",
+  "Lab Mobile",
+];
 
 interface Props {
   open: boolean;
@@ -69,6 +81,7 @@ const empty: ClassroomFormValue = {
   // school local date, not UTC — same reason as schedule/page.tsx
   startDate: todayIso(),
   endDate: todayIso(),
+  lab: "",
   status: true,
 };
 
@@ -127,6 +140,7 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
         academicYear:     Number(form.academicYear),
         startDate:        form.startDate,
         endDate:          form.endDate,
+        lab:              form.lab?.trim() || null,
         status:           form.status,
       };
       if (editing) {
@@ -301,6 +315,20 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
               value={form.endDate}
               onChange={(e) => patch("endDate", e.target.value)}
             />
+          </Field>
+
+          <Field label="Lab / Room">
+            <Input
+              list="lab-options"
+              value={form.lab ?? ""}
+              onChange={(e) => patch("lab", e.target.value)}
+              placeholder="e.g. Lab DevOps"
+            />
+            <datalist id="lab-options">
+              {LABS.map((l) => (
+                <option key={l} value={l} />
+              ))}
+            </datalist>
           </Field>
 
           <Field label="Status">

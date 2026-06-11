@@ -92,6 +92,7 @@ export default async function DashboardPage() {
                 classNameValue={c.className}
                 shift={shiftLabel[c.shift] ?? c.shift ?? "—"}
                 time={`${c.startDate ?? "?"} – ${c.endDate ?? "?"}`}
+                lab={c.lab ?? undefined}
                 students={counts ? `${counts.total}/${counts.female}` : "0/0"}
                 code={c.classCode ?? String(c.id)}
                 year={c.year}

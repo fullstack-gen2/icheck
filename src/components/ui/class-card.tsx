@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, ClockIcon, UsersIcon } from "lucide-react";
+import { CalendarIcon, ClockIcon, LayersIcon, UsersIcon } from "lucide-react";
 import { MdOutlineMeetingRoom } from "react-icons/md";  
 import { LuUsers } from "react-icons/lu";
 
@@ -74,15 +74,13 @@ export function ClassCard({
     ? "border-zinc-300 bg-zinc-50/70 shadow-none grayscale-[0.15] dark:border-zinc-700 dark:bg-zinc-900/40"
     : "border-border bg-card shadow-sm hover:shadow-md";
 
-  // When no `lab` is supplied, fall back to a Generation/Year/Semester/Course summary.
+  // Generation/Year/Semester/Course summary, shown alongside (or instead of) the lab.
   const infoParts: string[] = [];
   if (generation != null) infoParts.push(`Gen ${generation}`);
   if (year != null) infoParts.push(`Year ${year}`);
   if (semester != null) infoParts.push(`Sem ${semester}`);
   if (course) infoParts.push(course);
   const infoLine = infoParts.length ? infoParts.join(" · ") : null;
-  const infoLabel = lab ? "Lab" : "Cohort";
-  const infoValue = lab || infoLine;
 
   return (
     <div className={`group relative flex w-full flex-col overflow-hidden rounded-2xl border transition-shadow duration-200 ${cardClass}`}>
@@ -116,16 +114,23 @@ export function ClassCard({
 
       {/* Body */}
       <div className="flex flex-col gap-2.5 px-5 py-4 flex-1">
-        {infoValue && (
-          <div className="flex items-center gap-2">
-            {/* each row */}
-            <div className="flex justify-between items-center w-full">
-              <div className="flex items-center gap-2">
-                <MdOutlineMeetingRoom className="size-3.5 text-muted-foreground/70 shrink-0" />
-                <p className="text-base font-medium text-foreground">{infoLabel}: </p>
-              </div>
-              <span className="text-sm text-muted-foreground truncate ml-2">{infoValue}</span>
+        {lab && (
+          <div className="flex justify-between items-center w-full">
+            <div className="flex items-center gap-2">
+              <MdOutlineMeetingRoom className="size-3.5 text-muted-foreground/70 shrink-0" />
+              <p className="text-base font-medium text-foreground">Lab: </p>
             </div>
+            <span className="text-sm text-muted-foreground truncate ml-2">{lab}</span>
+          </div>
+        )}
+
+        {infoLine && (
+          <div className="flex justify-between items-center w-full">
+            <div className="flex items-center gap-2">
+              <LayersIcon className="size-3.5 text-muted-foreground/70 shrink-0" />
+              <p className="text-base font-medium text-foreground">Cohort: </p>
+            </div>
+            <span className="text-sm text-muted-foreground truncate ml-2">{infoLine}</span>
           </div>
         )}
 

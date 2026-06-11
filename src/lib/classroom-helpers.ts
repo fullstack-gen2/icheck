@@ -12,6 +12,8 @@ export interface ClassroomSummary {
   academicYear: number;
   startDate: string;
   endDate: string;
+  /** Lab/room name, e.g. "Lab DevOps", "Lab AI", "Lab Data Analytics". */
+  lab?: string | null;
   status: boolean;
 }
 

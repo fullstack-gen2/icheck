@@ -12,6 +12,8 @@ export interface ClassroomDto {
   academicYear?: number;
   startDate?: string;
   endDate?: string;
+  /** Lab/room name, e.g. "Lab DevOps", "Lab AI", "Lab Data Analytics". */
+  lab?: string | null;
   status: boolean;
 }
 
@@ -30,6 +32,7 @@ export interface ClassroomRequestBody {
   telegramChatId?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  lab?: string | null;
   status: boolean;
 }
 

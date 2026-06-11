@@ -49,6 +49,7 @@ export interface ClassroomItem {
   academicYear: number;
   startDate: string;
   endDate: string;
+  lab?: string | null;
   status: boolean;
 }
 
@@ -172,6 +173,7 @@ export function ClassroomsList({ classrooms, emptyMessage, canManage = false }: 
                         classNameValue={c.className}
                         shift={SHIFT_LABEL[c.shift] ?? c.shift ?? "—"}
                         time={`${c.startDate ?? "?"} – ${c.endDate ?? "?"}`}
+                        lab={c.lab ?? undefined}
                         students=""
                         code={c.classCode ?? String(c.id)}
                         year={c.year}
