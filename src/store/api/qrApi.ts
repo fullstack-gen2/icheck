@@ -36,6 +36,21 @@ function todayIso() {
 
 export const qrApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
+    /**
+     * Idempotent on-demand session generator. The daily backend job runs at
+     * 06:00 Phnom Penh time — schedules added later in the day produce no
+     * session row until tomorrow. Call this first so today's session always
+     * exists for the classroom you're about to take attendance for.
+     */
+    ensureTodaySessionsForClassroom: builder.mutation<{ created: number }, number>({
+      query: (classroomId) => ({
+        url: `/sessions/classrooms/${classroomId}/ensure-today`,
+        method: "POST",
+      }),
+      transformResponse: (response: ApiEnvelope<{ created: number }>) =>
+        unwrapPayload(response) ?? { created: 0 },
+      invalidatesTags: ["Session"],
+    }),
     /** Today's sessions for a classroom — used to find the session to run "Take Attendance" for. */
     getTodaySessionsForClassroom: builder.query<SessionDto[], { classroomId: number }>({
       query: ({ classroomId }) => {
@@ -97,6 +112,7 @@ export const qrApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useEnsureTodaySessionsForClassroomMutation,
   useGetTodaySessionsForClassroomQuery,
   useGetSessionQuery,
   useOpenSessionMutation,

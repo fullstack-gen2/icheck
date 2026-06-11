@@ -27,10 +27,16 @@ async function fetchClassroom(id: string): Promise<Classroom | null> {
 }
 
 /** Today's session for this classroom (if any). Defaults to the first row the
- *  backend returns — the same window we use for live attendance. */
+ *  backend returns — the same window we use for live attendance. The
+ *  `ensure-today` call upfront catches the edge case where admin created the
+ *  schedule after the daily 06:00 session-generator already ran. */
 async function fetchTodaySession(classroomId: string): Promise<SessionLite | null> {
   const today = new Date().toISOString().slice(0, 10);
   try {
+    // Idempotent — creates today's row only if missing.
+    await backendFetch(`/sessions/classrooms/${classroomId}/ensure-today`, {
+      method: "POST",
+    });
     const res = await backendFetch(
       `/sessions/classrooms/${classroomId}?from=${today}&to=${today}&size=1`
     );

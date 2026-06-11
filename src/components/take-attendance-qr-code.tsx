@@ -6,6 +6,7 @@ import { QRCodeCanvas } from "qrcode.react";
 import { AlertCircleIcon, LoaderCircleIcon, RefreshCwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
+  useEnsureTodaySessionsForClassroomMutation,
   useGetTodaySessionsForClassroomQuery,
   useOpenSessionMutation,
   useGenerateDynamicQrMutation,
@@ -47,6 +48,18 @@ export function TakeAttendanceQrCode({
   logoSize = 220,
 }: TakeAttendanceQrCodeProps) {
   const router = useRouter();
+
+  // Make sure today's session row exists (the 06:00 generator may have missed
+  // schedules created after it ran). Idempotent — runs once on mount and
+  // invalidates Session tags so the query below refetches with the new row.
+  const [ensureToday, { isLoading: ensuringToday }] =
+    useEnsureTodaySessionsForClassroomMutation();
+  const ensuredRef = useRef(false);
+  useEffect(() => {
+    if (ensuredRef.current) return;
+    ensuredRef.current = true;
+    void ensureToday(classroomId);
+  }, [ensureToday, classroomId]);
 
   const {
     data: sessions,
@@ -92,6 +105,10 @@ export function TakeAttendanceQrCode({
   // Find (and open, if needed) today's session for this classroom, then generate the first QR.
   useEffect(() => {
     if (initRef.current) return;
+    // Wait for the on-demand session generator to finish — otherwise the first
+    // pass through this effect can see an empty list and short-circuit before
+    // the row materialises.
+    if (ensuringToday) return;
     if (!sessions) return;
     initRef.current = true;
 
@@ -118,7 +135,7 @@ export function TakeAttendanceQrCode({
 
       await generate(target.id);
     })();
-  }, [sessions, openSession, generate]);
+  }, [sessions, ensuringToday, openSession, generate]);
 
   // Countdown ticker — auto-rotates the QR when it expires.
   useEffect(() => {
@@ -214,11 +231,13 @@ export function TakeAttendanceQrCode({
           </div>
 
           <p className="text-sm text-muted-foreground/70">
-            {loadingSessions
-              ? "Loading session…"
-              : sessionsErrored
-                ? "Could not load today's sessions."
-                : "Students scan this QR with i-Check to mark attendance"}
+            {ensuringToday
+              ? "Preparing today's session…"
+              : loadingSessions
+                ? "Loading session…"
+                : sessionsErrored
+                  ? "Could not load today's sessions."
+                  : "Students scan this QR with i-Check to mark attendance"}
           </p>
         </>
       )}
