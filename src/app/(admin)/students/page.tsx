@@ -24,15 +24,7 @@ import {
   type StudentDto,
 } from "@/store/api/userApi";
 import { StudentFormDialog, type StudentFormValue } from "@/components/student-form-dialog";
-import { TeachersView } from "@/components/teachers-view";
 import { getErrorMessage } from "@/lib/error-utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,35 +48,19 @@ const SHIFT_LABEL: Record<string, string> = { MORNING: "Morning", AFTERNOON: "Af
 // Course types visible under Scholarship program
 const SCHOLARSHIP_COURSES = ["Fullstack", "Foundation", "Pre-Uni", "ITP", "ITE"];
 
-type View = "STUDENTS" | "TEACHERS";
-
-export default function UsersPage() {
+export default function StudentsPage() {
   const user = useUser();
   const isAdmin = user?.role === "ADMIN";
-  const [view, setView] = useState<View>("STUDENTS");
 
+  // Teachers now live on the dedicated /teachers sidebar route — this page is
+  // exclusively the Students list (no in-page Students/Teachers switcher).
   return (
     <div className="px-4 sm:px-5 py-6 sm:py-8">
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-            {isAdmin ? "Users" : "Students"}
-          </h1>
-          {isAdmin && (
-            <Select value={view} onValueChange={(v) => setView(v as View)}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="STUDENTS">Students</SelectItem>
-                <SelectItem value="TEACHERS">Teachers</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Students</h1>
       </div>
 
-      {view === "STUDENTS" || !isAdmin ? <StudentsView isAdmin={isAdmin} /> : <TeachersView />}
+      <StudentsView isAdmin={isAdmin} />
     </div>
   );
 }
