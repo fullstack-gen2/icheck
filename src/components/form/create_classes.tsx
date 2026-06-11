@@ -58,7 +58,11 @@ const createClassSchema = z.object({
 
 type CreateClassForm = z.infer<typeof createClassSchema>;
 
-export default function CreatingClassForm() {
+export default function CreatingClassForm({
+  showHeader = true,
+}: {
+  showHeader?: boolean;
+}) {
   const form = useForm<CreateClassForm>({
     resolver: zodResolver(createClassSchema),
     defaultValues: {
@@ -90,14 +94,16 @@ export default function CreatingClassForm() {
     >
       <FieldGroup className="gap-6">
         <FieldSet className="gap-6">
-          <div className="space-y-1">
-            <FieldLegend className="text-xl font-semibold">
-              Create Class
-            </FieldLegend>
-            <FieldDescription>
-              Set the program, class details, shift, and study dates.
-            </FieldDescription>
-          </div>
+          {showHeader && (
+            <div className="space-y-1">
+              <FieldLegend className="text-xl font-semibold">
+                <h1 className="text-2xl mb-5 border-b">Create Class</h1>
+              </FieldLegend>
+              <FieldDescription>
+                Set the program, class details, shift, and study dates.
+              </FieldDescription>
+            </div>
+          )}
 
           <FieldGroup className="gap-6">
             <div className="grid gap-5 md:grid-cols-2">
@@ -187,35 +193,35 @@ export default function CreatingClassForm() {
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel>Generation</FieldLabel>
 
-                      <Combobox
-                        items={mockupData.generations}
-                        name={field.name}
-                        value={field.value || null}
-                        onValueChange={(value) => field.onChange(value ?? "")}
-                      >
-                        <ComboboxInput
-                          className="w-full"
-                          ref={field.ref}
-                          onBlur={field.onBlur}
-                          placeholder="Select generation"
-                        />
+                    <Combobox
+                      items={mockupData.generations}
+                      name={field.name}
+                      value={field.value || null}
+                      onValueChange={(value) => field.onChange(value ?? "")}
+                    >
+                      <ComboboxInput
+                        className="w-full"
+                        ref={field.ref}
+                        onBlur={field.onBlur}
+                        placeholder="Select generation"
+                      />
 
-                        <ComboboxContent>
-                          <ComboboxEmpty>No items found.</ComboboxEmpty>
+                      <ComboboxContent>
+                        <ComboboxEmpty>No items found.</ComboboxEmpty>
 
-                          <ComboboxList>
-                            {(item) => (
-                              <ComboboxItem key={item} value={item}>
-                                {item}
-                              </ComboboxItem>
-                            )}
-                          </ComboboxList>
-                        </ComboboxContent>
-                      </Combobox>
+                        <ComboboxList>
+                          {(item) => (
+                            <ComboboxItem key={item} value={item}>
+                              {item}
+                            </ComboboxItem>
+                          )}
+                        </ComboboxList>
+                      </ComboboxContent>
+                    </Combobox>
 
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -227,35 +233,35 @@ export default function CreatingClassForm() {
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel>Year</FieldLabel>
 
-                      <Combobox
-                        items={mockupData.years}
-                        name={field.name}
-                        value={field.value || null}
-                        onValueChange={(value) => field.onChange(value ?? "")}
-                      >
-                        <ComboboxInput
-                          className="w-full"
-                          ref={field.ref}
-                          onBlur={field.onBlur}
-                          placeholder="Select year"
-                        />
+                    <Combobox
+                      items={mockupData.years}
+                      name={field.name}
+                      value={field.value || null}
+                      onValueChange={(value) => field.onChange(value ?? "")}
+                    >
+                      <ComboboxInput
+                        className="w-full"
+                        ref={field.ref}
+                        onBlur={field.onBlur}
+                        placeholder="Select year"
+                      />
 
-                        <ComboboxContent>
-                          <ComboboxEmpty>No items found.</ComboboxEmpty>
+                      <ComboboxContent>
+                        <ComboboxEmpty>No items found.</ComboboxEmpty>
 
-                          <ComboboxList>
-                            {(item) => (
-                              <ComboboxItem key={item} value={item}>
-                                {item}
-                              </ComboboxItem>
-                            )}
-                          </ComboboxList>
-                        </ComboboxContent>
-                      </Combobox>
+                        <ComboboxList>
+                          {(item) => (
+                            <ComboboxItem key={item} value={item}>
+                              {item}
+                            </ComboboxItem>
+                          )}
+                        </ComboboxList>
+                      </ComboboxContent>
+                    </Combobox>
 
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -267,35 +273,35 @@ export default function CreatingClassForm() {
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel>Semester</FieldLabel>
 
-                      <Combobox
-                        items={mockupData.semesters}
-                        name={field.name}
-                        value={field.value || null}
-                        onValueChange={(value) => field.onChange(value ?? "")}
-                      >
-                        <ComboboxInput
-                          className="w-full"
-                          ref={field.ref}
-                          onBlur={field.onBlur}
-                          placeholder="Select semester"
-                        />
+                    <Combobox
+                      items={mockupData.semesters}
+                      name={field.name}
+                      value={field.value || null}
+                      onValueChange={(value) => field.onChange(value ?? "")}
+                    >
+                      <ComboboxInput
+                        className="w-full"
+                        ref={field.ref}
+                        onBlur={field.onBlur}
+                        placeholder="Select semester"
+                      />
 
-                        <ComboboxContent>
-                          <ComboboxEmpty>No items found.</ComboboxEmpty>
+                      <ComboboxContent>
+                        <ComboboxEmpty>No items found.</ComboboxEmpty>
 
-                          <ComboboxList>
-                            {(item) => (
-                              <ComboboxItem key={item} value={item}>
-                                {item}
-                              </ComboboxItem>
-                            )}
-                          </ComboboxList>
-                        </ComboboxContent>
-                      </Combobox>
+                        <ComboboxList>
+                          {(item) => (
+                            <ComboboxItem key={item} value={item}>
+                              {item}
+                            </ComboboxItem>
+                          )}
+                        </ComboboxList>
+                      </ComboboxContent>
+                    </Combobox>
 
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -351,39 +357,39 @@ export default function CreatingClassForm() {
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel>Start at</FieldLabel>
 
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            type="button"
-                            className="w-full min-w-0 justify-start text-left font-normal"
-                          >
-                            <CalendarIcon className="mr-2 size-4 shrink-0" />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          type="button"
+                          className="w-full min-w-0 justify-start text-left font-normal"
+                        >
+                          <CalendarIcon className="mr-2 size-4 shrink-0" />
 
-                            {field.value ? (
-                              <span className="truncate">
-                                {format(field.value, "PPP")}
-                              </span>
-                            ) : (
-                              <span className="truncate text-muted-foreground">
-                                Pick start date
-                              </span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
+                          {field.value ? (
+                            <span className="truncate">
+                              {format(field.value, "PPP")}
+                            </span>
+                          ) : (
+                            <span className="truncate text-muted-foreground">
+                              Pick start date
+                            </span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
 
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                        />
+                      </PopoverContent>
+                    </Popover>
 
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -395,39 +401,39 @@ export default function CreatingClassForm() {
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel>End at</FieldLabel>
 
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            type="button"
-                            className="w-full min-w-0 justify-start text-left font-normal"
-                          >
-                            <CalendarIcon className="mr-2 size-4 shrink-0" />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          type="button"
+                          className="w-full min-w-0 justify-start text-left font-normal"
+                        >
+                          <CalendarIcon className="mr-2 size-4 shrink-0" />
 
-                            {field.value ? (
-                              <span className="truncate">
-                                {format(field.value, "PPP")}
-                              </span>
-                            ) : (
-                              <span className="truncate text-muted-foreground">
-                                Pick end date
-                              </span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
+                          {field.value ? (
+                            <span className="truncate">
+                              {format(field.value, "PPP")}
+                            </span>
+                          ) : (
+                            <span className="truncate text-muted-foreground">
+                              Pick end date
+                            </span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
 
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                        />
+                      </PopoverContent>
+                    </Popover>
 
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -438,11 +444,11 @@ export default function CreatingClassForm() {
         <FieldSeparator />
 
         <Field className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Button className="sm:w-24" variant="outline" type="reset">
-            Cancel
+          <Button className="h-10 w-full sm:w-24" variant="outline" type="reset">
+            Reset
           </Button>
 
-          <Button type="submit" className="bg-blue-600 sm:w-24">
+          <Button type="submit" className="h-10 w-full bg-blue-600 sm:w-24">
             Start
           </Button>
         </Field>
