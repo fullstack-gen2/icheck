@@ -12,6 +12,7 @@ import {
   ClockIcon,
 } from "lucide-react";
 import { API_URL } from "@/lib/api-config";
+import { useUser } from "@/components/user-provider";
 
 const QR_TTL_SECONDS = 30;
 
@@ -23,6 +24,7 @@ interface QrData {
 export default function SessionQrPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const user = useUser();
 
   const [qr, setQr] = useState<QrData | null>(null);
   const [countdown, setCountdown] = useState(QR_TTL_SECONDS);
@@ -30,7 +32,7 @@ export default function SessionQrPage() {
   const [error, setError] = useState("");
   const [sessionInfo, setSessionInfo] = useState<{
     classroomName: string;
-    subjectName: string;
+    subjectName: string | null;
     teacherName: string;
     startTime: string;
     endTime: string;
@@ -39,6 +41,7 @@ export default function SessionQrPage() {
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const refreshRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initRef = useRef(false);
 
   const generateQr = useCallback(async () => {
     setLoading(true);
@@ -69,12 +72,25 @@ export default function SessionQrPage() {
 
   // Open session then generate first QR
   useEffect(() => {
+    if (initRef.current || !user) return;
+    initRef.current = true;
+
     const init = async () => {
-      await fetch(`${API_URL}/sessions/${id}/open`, { method: "POST" });
+      if (user?.role === "ADMIN") {
+        const res = await fetch(`${API_URL}/sessions/${id}/open`, { method: "POST" });
+        if (!res.ok) throw new Error("Could not start this session yet.");
+      } else if (user?.id) {
+        const res = await fetch(`${API_URL}/sessions/${id}/teacher-check-in`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ teacherId: Number(user.id), deviceId: null }),
+        });
+        if (!res.ok) throw new Error("Could not start this session yet.");
+      }
       await generateQr();
     };
-    init();
-  }, [id, generateQr]);
+    init().catch((e) => setError(e instanceof Error ? e.message : "Could not start this session yet."));
+  }, [id, generateQr, user?.id, user?.role]);
 
   // Countdown ticker
   useEffect(() => {
@@ -103,7 +119,7 @@ export default function SessionQrPage() {
         <div>
           <p className="text-white/60 text-sm uppercase tracking-wider">Live Session</p>
           <h1 className="text-xl font-bold">
-            {sessionInfo?.subjectName ?? "Loading…"}
+            {sessionInfo ? (sessionInfo.subjectName || "Attendance Session") : "Loading…"}
           </h1>
           <p className="text-white/70 text-sm">
             {sessionInfo?.classroomName} &nbsp;·&nbsp;

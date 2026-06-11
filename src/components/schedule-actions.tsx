@@ -114,7 +114,7 @@ export function ScheduleRowActions({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this schedule?</AlertDialogTitle>
             <AlertDialogDescription>
-              {schedule.subjectName} · {schedule.className} ·{" "}
+              {schedule.subjectName || "Attendance Session"} · {schedule.className} ·{" "}
               {schedule.startTime?.slice(0, 5)}–{schedule.endTime?.slice(0, 5)}
               <br />
               This permanently removes the slot from the timetable.

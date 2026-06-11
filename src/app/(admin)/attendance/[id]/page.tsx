@@ -7,7 +7,7 @@ import { backendFetch } from "@/lib/api-fetch";
 interface Session {
   id: number;
   classroomName: string;
-  subjectName: string;
+  subjectName: string | null;
   teacherName: string;
   sessionDate: string;
   startTime: string;
@@ -18,7 +18,7 @@ interface Session {
 interface AttendanceRecord {
   id: number;
   studentName: string;
-  subjectName: string;
+  subjectName: string | null;
   status: string;
   method: string;
   checkInTime: string;
@@ -90,7 +90,7 @@ export default async function AttendanceDetailPage({
         <div className="bg-card rounded-2xl border border-border p-5 mb-6">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">{session.subjectName}</h1>
+              <h1 className="text-2xl font-bold text-foreground">{session.subjectName || "Attendance Session"}</h1>
               <p className="text-muted-foreground mt-1">{session.classroomName} &nbsp;·&nbsp; {session.teacherName}</p>
               <p className="mt-0.5 text-sm text-muted-foreground/70">
                 {session.sessionDate} &nbsp;·&nbsp; {session.startTime?.slice(0, 5)} – {session.endTime?.slice(0, 5)}

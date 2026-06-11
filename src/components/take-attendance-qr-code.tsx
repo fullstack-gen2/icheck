@@ -9,9 +9,11 @@ import {
   useEnsureTodaySessionsForClassroomMutation,
   useGetTodaySessionsForClassroomQuery,
   useOpenSessionMutation,
+  useTeacherCheckInSessionMutation,
   useGenerateDynamicQrMutation,
   type SessionDto,
 } from "@/store/api/qrApi";
+import { useUser } from "@/components/user-provider";
 
 const QR_LOGO_URL =
   "https://res.cloudinary.com/dsmqsivcj/image/upload/v1780286128/c4lgj7uipplt47mergga.png";
@@ -48,6 +50,7 @@ export function TakeAttendanceQrCode({
   logoSize = 220,
 }: TakeAttendanceQrCodeProps) {
   const router = useRouter();
+  const user = useUser();
 
   // Make sure today's session row exists (the 06:00 generator may have missed
   // schedules created after it ran). Idempotent — runs once on mount and
@@ -67,6 +70,7 @@ export function TakeAttendanceQrCode({
     isError: sessionsErrored,
   } = useGetTodaySessionsForClassroomQuery({ classroomId });
   const [openSession] = useOpenSessionMutation();
+  const [teacherCheckInSession] = useTeacherCheckInSessionMutation();
   const [generateDynamicQr] = useGenerateDynamicQrMutation();
 
   const [session, setSession] = useState<SessionDto | null>(null);
@@ -110,6 +114,7 @@ export function TakeAttendanceQrCode({
     // the row materialises.
     if (ensuringToday) return;
     if (!sessions) return;
+    if (!user) return;
     initRef.current = true;
 
     (async () => {
@@ -126,16 +131,22 @@ export function TakeAttendanceQrCode({
 
       if (target.status === "UPCOMING") {
         try {
-          await openSession(target.id).unwrap();
+          if (user?.role === "ADMIN") {
+            await openSession(target.id).unwrap();
+          } else if (user?.id) {
+            await teacherCheckInSession({ sessionId: target.id, teacherId: user.id }).unwrap();
+          } else {
+            throw new Error("Could not identify the current teacher.");
+          }
         } catch (e) {
-          setError(extractMessage(e, "Could not start the session yet — check the session schedule."));
+          setError(e instanceof Error ? e.message : extractMessage(e, "Could not start the session yet — check the session schedule."));
           return;
         }
       }
 
       await generate(target.id);
     })();
-  }, [sessions, ensuringToday, openSession, generate]);
+  }, [sessions, ensuringToday, openSession, teacherCheckInSession, generate, user?.id, user?.role]);
 
   // Countdown ticker — auto-rotates the QR when it expires.
   useEffect(() => {
@@ -163,7 +174,7 @@ export function TakeAttendanceQrCode({
     <div className="flex h-full min-h-0 flex-col items-center justify-center gap-5">
       {session && (
         <div className="text-center">
-          <p className="text-sm font-medium text-muted-foreground">{session.subjectName}</p>
+          <p className="text-sm font-medium text-muted-foreground">{session.subjectName || "Attendance Session"}</p>
           <p className="text-xs text-muted-foreground/70">
             {session.classroomName} &nbsp;·&nbsp; {session.startTime?.slice(0, 5)}–
             {session.endTime?.slice(0, 5)}

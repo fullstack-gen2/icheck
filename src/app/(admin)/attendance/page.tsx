@@ -11,7 +11,7 @@ interface Session {
   id: number;
   classroomId: number;
   classroomName: string;
-  subjectName: string;
+  subjectName: string | null;
   teacherName: string;
   sessionDate: string;
   startTime: string;
@@ -186,7 +186,7 @@ export default function AttendancePage() {
               {filtered.map((s, index) => (
                 <tr key={s.id}
                   className={`border-b border-border/50 hover:bg-muted/50 transition-colors ${index === filtered.length - 1 ? "border-b-0" : ""}`}>
-                  <td className="px-4 py-3 font-medium text-foreground">{s.subjectName}</td>
+                  <td className="px-4 py-3 font-medium text-foreground">{s.subjectName || "Attendance Session"}</td>
                   <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{s.classroomName}</td>
                   <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{s.sessionDate}</td>
                   <td className="hidden px-4 py-3 text-sm text-muted-foreground/70 lg:table-cell">

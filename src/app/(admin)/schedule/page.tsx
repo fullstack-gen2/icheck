@@ -42,7 +42,7 @@ interface ScheduleItem {
   classId?: number;
   className: string;
   subjectId?: number;
-  subjectName: string;
+  subjectName: string | null;
   teacherId?: number;
   teacherName: string;
   dayOfWeek: string;
@@ -54,11 +54,19 @@ interface ScheduleItem {
 interface SessionItem {
   id: number;
   classroomName: string;
-  subjectName: string;
+  subjectName: string | null;
   sessionDate: string;
   startTime: string;
   endTime: string;
   status: string;
+}
+
+function scheduleTitle(subjectName: string | null | undefined) {
+  return subjectName || "Attendance Session";
+}
+
+function sessionKey(className: string, startTime: string, endTime: string) {
+  return `${className}:${startTime?.slice(0, 5)}:${endTime?.slice(0, 5)}`;
 }
 
 async function fetchAllSchedules(): Promise<ScheduleItem[]> {
@@ -130,7 +138,9 @@ export default async function SchedulePage({
   for (const day of DAYS) byDay[day].sort((a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? ""));
 
   const todayMap = new Map<string, SessionItem>();
-  for (const ts of todaySessions) todayMap.set(`${ts.subjectName}:${ts.classroomName}`, ts);
+  for (const ts of todaySessions) {
+    todayMap.set(sessionKey(ts.classroomName, ts.startTime, ts.endTime), ts);
+  }
 
   // "Today" must reflect the school's wall clock, not the container's UTC clock.
   const todayDow = schoolToday().weekday as Day;
@@ -240,7 +250,7 @@ export default async function SchedulePage({
             <div className="flex flex-col gap-4">
               {byDay[selectedDay].map((item) => {
                 const todaySession = selectedDay === todayDow
-                  ? todayMap.get(`${item.subjectName}:${item.className}`)
+                  ? todayMap.get(sessionKey(item.className, item.startTime, item.endTime))
                   : undefined;
                 const cardBg  = todaySession ? (statusBg[todaySession.status] ?? "border-l-gray-300 bg-card") : "border-l-[#273C97] bg-card";
                 const cardTxt = todaySession ? (statusText[todaySession.status] ?? "text-muted-foreground") : "";
@@ -256,7 +266,7 @@ export default async function SchedulePage({
                       <p className="text-base font-bold text-foreground">{item.endTime?.slice(0, 5)}</p>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-base font-semibold text-foreground">{item.subjectName}</p>
+                      <p className="text-base font-semibold text-foreground">{scheduleTitle(item.subjectName)}</p>
                       <p className="mt-0.5 text-sm text-muted-foreground">{item.className}</p>
                       {role === "ADMIN" && (
                         <p className="mt-0.5 text-sm text-muted-foreground/70">{item.teacherName}</p>
@@ -323,7 +333,7 @@ export default async function SchedulePage({
                   ) : (
                     items.map((item) => {
                       const todaySession = isToday
-                        ? todayMap.get(`${item.subjectName}:${item.className}`)
+                        ? todayMap.get(sessionKey(item.className, item.startTime, item.endTime))
                         : undefined;
                       const cardBg  = todaySession ? (statusBg[todaySession.status] ?? "border-l-gray-300 bg-card") : "border-l-gray-300 bg-card";
                       const cardTxt = todaySession ? (statusText[todaySession.status] ?? "text-muted-foreground") : "";
@@ -333,7 +343,7 @@ export default async function SchedulePage({
                           key={item.id}
                           className={`rounded-xl border border-border/50 border-l-4 p-3 flex flex-col gap-1.5 ${cardBg} ${!item.status ? "opacity-50" : ""}`}
                         >
-                          <p className="line-clamp-2 text-sm font-bold leading-tight text-foreground">{item.subjectName}</p>
+                          <p className="line-clamp-2 text-sm font-bold leading-tight text-foreground">{scheduleTitle(item.subjectName)}</p>
                           <p className="truncate text-xs text-muted-foreground">{item.className}</p>
                           {role === "ADMIN" && (
                             <p className="truncate text-xs text-muted-foreground/70">{item.teacherName}</p>

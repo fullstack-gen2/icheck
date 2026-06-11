@@ -4,7 +4,7 @@ export interface SessionDto {
   id: number;
   classroomId: number;
   classroomName: string;
-  subjectName: string;
+  subjectName: string | null;
   teacherName: string;
   substituteTeacherId: number | null;
   substituteTeacherName: string | null;
@@ -74,6 +74,14 @@ export const qrApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_r, _e, id) => [{ type: "Session", id }, "Session"],
     }),
+    teacherCheckInSession: builder.mutation<void, { sessionId: number; teacherId: number | string; deviceId?: string | null }>({
+      query: ({ sessionId, teacherId, deviceId }) => ({
+        url: `/sessions/${sessionId}/teacher-check-in`,
+        method: "POST",
+        body: { teacherId: Number(teacherId), deviceId: deviceId ?? null },
+      }),
+      invalidatesTags: (_r, _e, { sessionId }) => [{ type: "Session", id: sessionId }, "Session"],
+    }),
     /** Generates (and rotates) the dynamic QR for an ACTIVE session. */
     generateDynamicQr: builder.mutation<QrCodeDto, number>({
       query: (sessionId) => ({
@@ -116,6 +124,7 @@ export const {
   useGetTodaySessionsForClassroomQuery,
   useGetSessionQuery,
   useOpenSessionMutation,
+  useTeacherCheckInSessionMutation,
   useGenerateDynamicQrMutation,
   useGetClassroomStaticQrMutation,
   useGetSessionsForTeacherQuery,

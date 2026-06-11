@@ -26,13 +26,14 @@ import { api } from "@/lib/api-client";
 import { useGetTeachersQuery } from "@/store/api/userApi";
 
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] as const;
+const NO_SUBJECT_VALUE = "__none";
 
 export interface ScheduleFormValue {
   id?: number;
   classId?: number;
   className: string;
   subjectId?: number;
-  subjectName: string;
+  subjectName: string | null;
   teacherId?: number;
   teacherName: string;
   dayOfWeek: string;
@@ -88,9 +89,25 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], subjects = 
     setForm((f) => ({ ...f, [k]: v }));
   }
 
+  function isIteClassName(className: string) {
+    return className.toUpperCase().includes("ITE");
+  }
+
+  function applySlot(slot: number) {
+    patch("slot", slot);
+    if (!isIteClassName(form.className)) return;
+    if (slot === 1) {
+      patch("startTime", "13:30");
+      patch("endTime", "17:30");
+    } else if (slot === 2) {
+      patch("startTime", "18:00");
+      patch("endTime", "20:30");
+    }
+  }
+
   async function handleSave() {
-    if (!form.classId || !form.subjectId || !form.teacherId) {
-      toast.error("Class, subject and teacher are required.");
+    if (!form.classId || !form.teacherId) {
+      toast.error("Class and teacher are required.");
       return;
     }
     if (form.startTime >= form.endTime) {
@@ -101,7 +118,7 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], subjects = 
     try {
       const body = {
         classId:   form.classId,
-        subjectId: form.subjectId,
+        subjectId: form.subjectId ?? null,
         teacherId: form.teacherId,
         dayOfWeek: form.dayOfWeek,
         startTime: form.startTime.length === 5 ? form.startTime + ":00" : form.startTime,
@@ -151,6 +168,11 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], subjects = 
                 const c = classrooms.find((cl) => cl.id === Number(v));
                 patch("classId", Number(v));
                 patch("className", c?.className ?? "");
+                if (c?.className && isIteClassName(c.className)) {
+                  patch("slot", 1);
+                  patch("startTime", "13:30");
+                  patch("endTime", "17:30");
+                }
               }}
             >
               <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
@@ -162,17 +184,23 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], subjects = 
             </Select>
           </Field>
 
-          <Field label="Subject" required>
+          <Field label="Subject">
             <Select
-              value={form.subjectId ? String(form.subjectId) : ""}
+              value={form.subjectId ? String(form.subjectId) : NO_SUBJECT_VALUE}
               onValueChange={(v) => {
+                if (v === NO_SUBJECT_VALUE) {
+                  patch("subjectId", undefined);
+                  patch("subjectName", "");
+                  return;
+                }
                 const s = subjects.find((sub) => sub.id === Number(v));
                 patch("subjectId", Number(v));
                 patch("subjectName", s?.name ?? "");
               }}
             >
-              <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Optional" /></SelectTrigger>
               <SelectContent>
+                <SelectItem value={NO_SUBJECT_VALUE}>No subject</SelectItem>
                 {subjects.map((s) => (
                   <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
                 ))}
@@ -234,8 +262,9 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], subjects = 
             <Input
               type="number"
               min={1}
+              max={isIteClassName(form.className) ? 2 : 1}
               value={form.slot}
-              onChange={(e) => patch("slot", Number(e.target.value))}
+              onChange={(e) => applySlot(Number(e.target.value))}
             />
           </Field>
           <Field label="Status">
