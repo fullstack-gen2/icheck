@@ -172,7 +172,6 @@ export function ClassroomsList({ classrooms, emptyMessage, canManage = false }: 
                         classNameValue={c.className}
                         shift={SHIFT_LABEL[c.shift] ?? c.shift ?? "—"}
                         time={`${c.startDate ?? "?"} – ${c.endDate ?? "?"}`}
-                        lab=""
                         students=""
                         code={c.classCode ?? String(c.id)}
                         year={c.year}

@@ -38,3 +38,15 @@ export function schoolToday(): { iso: string; weekday: WeekdayName } {
   const now = new Date();
   return { iso: todayIso(now), weekday: todayWeekday(now) };
 }
+
+/** "08:00:00" or "08:00" -> "8:00 AM". Returns "—" for null/empty/unparseable input. */
+export function formatTime12(t?: string | null): string {
+  if (!t) return "—";
+  const [hStr, mStr] = t.split(":");
+  const h = Number(hStr);
+  const m = Number(mStr ?? 0);
+  if (Number.isNaN(h) || Number.isNaN(m)) return t;
+  const period = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${period}`;
+}

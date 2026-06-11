@@ -9,8 +9,10 @@ export interface StudentDto {
   email?: string;
   phone?: string | null;
   className?: string;
+  classId?: number | null;
   status?: string;
   profileImage?: string | null;
+  deviceId?: string | null;
 }
 
 export interface TeacherDto {
@@ -73,6 +75,7 @@ export const userApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
+      transformResponse: (response: ApiEnvelope<StudentDto>) => unwrapPayload(response),
       invalidatesTags: ["Student", "User"],
     }),
   }),

@@ -3,31 +3,13 @@ import { backendFetch } from "@/lib/api-fetch";
 import Link from "next/link";
 import { ClassCard } from "@/components/ui/class-card";
 import { UsersIcon, GraduationCapIcon, BookOpenIcon, ClipboardCheckIcon } from "lucide-react";
+import { fetchAllClassrooms, fetchTeacherClassrooms, fetchClassCounts } from "@/lib/classroom-helpers";
 
 interface Summary {
   totalStudents: number;
   totalLecturers: number;
   totalClasses: number;
   totalAttendance: number;
-}
-
-interface Classroom {
-  id: number;
-  className: string;
-  classCode: string;
-  programTypeName: string;
-  generation: number;
-  year: number;
-  semester: number;
-  shift: string;
-  academicYear: number;
-  startDate: string;
-  endDate: string;
-  status: boolean;
-}
-
-interface Schedule {
-  className: string;
 }
 
 const shiftLabel: Record<string, string> = {
@@ -44,37 +26,16 @@ async function fetchSummary(): Promise<Summary | null> {
   } catch { return null; }
 }
 
-async function fetchAllClassrooms(): Promise<Classroom[]> {
-  try {
-    const res = await backendFetch(`/classrooms?size=100`);
-    if (!res.ok) return [];
-    return (await res.json())?.payload?.content ?? [];
-  } catch { return []; }
-}
-
-async function fetchTeacherClassrooms(teacherId: string): Promise<Classroom[]> {
-  try {
-    const [schedRes, clsRes] = await Promise.all([
-      backendFetch(`/schedules/teachers/${teacherId}?size=100`),
-      backendFetch(`/classrooms?size=100`),
-    ]);
-    const schedules: Schedule[] = (await schedRes.json())?.payload?.content ?? [];
-    const classrooms: Classroom[] = (await clsRes.json())?.payload?.content ?? [];
-
-    const teacherClassNames = new Set(schedules.map((s) => s.className));
-    return classrooms.filter((c) => teacherClassNames.has(c.className));
-  } catch { return []; }
-}
-
 export default async function DashboardPage() {
   const user = await getServerUser();
   const role      = user?.role ?? "ADMIN";
   const userId    = user?.id ?? "";
   const isTeacher = role === "TEACHER";
 
-  const [summary, classrooms] = await Promise.all([
+  const [summary, classrooms, classCounts] = await Promise.all([
     isTeacher ? Promise.resolve(null) : fetchSummary(),
-    isTeacher ? fetchTeacherClassrooms(userId) : fetchAllClassrooms(),
+    isTeacher ? fetchTeacherClassrooms(userId) : fetchAllClassrooms(100),
+    fetchClassCounts(),
   ]);
 
   const stats = [
@@ -118,7 +79,9 @@ export default async function DashboardPage() {
         </div>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-6">
-          {classrooms.map((c) => (
+          {classrooms.map((c) => {
+            const counts = classCounts[c.className];
+            return (
             <Link
               key={c.id}
               href={`/dashboard/classrooms/${c.id}`}
@@ -128,9 +91,8 @@ export default async function DashboardPage() {
                 status={c.status ? "Active" : "Inactive"}
                 classNameValue={c.className}
                 shift={shiftLabel[c.shift] ?? c.shift ?? "—"}
-                time={"8:00 - 10:00 PM"}
-                lab="Data Analytics"
-                students={`24/4`}
+                time={`${c.startDate ?? "?"} – ${c.endDate ?? "?"}`}
+                students={counts ? `${counts.total}/${counts.female}` : "0/0"}
                 code={c.classCode ?? String(c.id)}
                 year={c.year}
                 semester={c.semester}
@@ -140,7 +102,8 @@ export default async function DashboardPage() {
                   : null}
               />
             </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

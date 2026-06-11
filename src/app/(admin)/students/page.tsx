@@ -5,11 +5,13 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ResetDeviceButton } from "@/components/reset-device-button";
 import { useUser } from "@/components/user-provider";
 import { UsersIcon, ChevronDownIcon, SearchIcon, XIcon, PlusIcon, LoaderCircleIcon } from "lucide-react";
 import { useGetClassroomsQuery, type ClassroomDto } from "@/store/api/attendanceApi";
 import { useCreateStudentMutation, useGetStudentsQuery } from "@/store/api/userApi";
+import { useEnrollStudentMutation } from "@/store/api/enrollmentApi";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +32,7 @@ export default function StudentsPage() {
   const { data: students = [], isLoading: loadingStudents } = useGetStudentsQuery();
   const { data: classrooms = [], isLoading: loadingClassrooms } = useGetClassroomsQuery({ size: 1000 });
   const [createStudent, { isLoading: creatingStudent }] = useCreateStudentMutation();
+  const [enrollStudent] = useEnrollStudentMutation();
   const [registerOpen, setRegisterOpen] = useState(false);
   const [registerForm, setRegisterForm] = useState({
     name: "",
@@ -38,6 +41,9 @@ export default function StudentsPage() {
     gender: "",
     phone: "",
   });
+  // A student can be registered into more than one class (Enrollment table).
+  const [selectedClassIds, setSelectedClassIds] = useState<number[]>([]);
+  const [enrolling, setEnrolling] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -114,6 +120,12 @@ export default function StudentsPage() {
   const isAdmin = user?.role === "ADMIN";
   const loading = loadingStudents || loadingClassrooms;
 
+  function toggleClassroom(id: number) {
+    setSelectedClassIds((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+    );
+  }
+
   async function submitRegisterStudent() {
     if (!registerForm.name.trim() || !registerForm.email.trim()) {
       toast.error("Student name and email are required.");
@@ -121,17 +133,37 @@ export default function StudentsPage() {
     }
 
     try {
-      await createStudent({
+      const created = await createStudent({
         name: registerForm.name.trim(),
         email: registerForm.email.trim(),
         studentNo: registerForm.studentNo.trim(),
         gender: registerForm.gender.trim(),
         phone: registerForm.phone.trim() || null,
         status: "ACTIVE",
+        // Backend StudentRequest accepts an optional primary classId.
+        classId: selectedClassIds[0] ?? null,
       }).unwrap();
+
+      // A student can be registered into more than one class — enroll into
+      // every selected classroom (Enrollment table, many-to-many).
+      if (created?.id && selectedClassIds.length > 0) {
+        setEnrolling(true);
+        const results = await Promise.allSettled(
+          selectedClassIds.map((classroomId) =>
+            enrollStudent({ classroomId, userId: created.id }).unwrap()
+          )
+        );
+        setEnrolling(false);
+        const failed = results.filter((r) => r.status === "rejected").length;
+        if (failed > 0) {
+          toast.error(`Student created, but failed to register ${failed} class${failed === 1 ? "" : "es"}.`);
+        }
+      }
+
       toast.success("Student registered.");
       setRegisterOpen(false);
       setRegisterForm({ name: "", email: "", studentNo: "", gender: "", phone: "" });
+      setSelectedClassIds([]);
     } catch {
       toast.error("Could not register student.");
     }
@@ -340,14 +372,44 @@ export default function StudentsPage() {
                 placeholder="Phone"
               />
             </div>
+
+            {/* A student can be registered into more than one class. */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">
+                Classes ({selectedClassIds.length} selected)
+              </p>
+              <div className="max-h-40 overflow-y-auto rounded-lg border divide-y divide-border/50">
+                {classrooms.length === 0 ? (
+                  <p className="px-3 py-2 text-sm text-muted-foreground/70">No classes available.</p>
+                ) : (
+                  classrooms.map((c) => (
+                    <label
+                      key={c.id}
+                      htmlFor={`reg-class-${c.id}`}
+                      className="flex cursor-pointer items-center gap-2.5 px-3 py-2 hover:bg-muted/50"
+                    >
+                      <Checkbox
+                        id={`reg-class-${c.id}`}
+                        checked={selectedClassIds.includes(c.id)}
+                        onCheckedChange={() => toggleClassroom(c.id)}
+                      />
+                      <span className="text-sm">
+                        {c.className}
+                        <span className="ml-1.5 text-xs text-muted-foreground/70 font-mono">{c.classCode}</span>
+                      </span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRegisterOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={submitRegisterStudent} disabled={creatingStudent} className="gap-1.5">
-              {creatingStudent ? <LoaderCircleIcon className="size-4 animate-spin" /> : <PlusIcon className="size-4" />}
-              Register
+            <Button onClick={submitRegisterStudent} disabled={creatingStudent || enrolling} className="gap-1.5">
+              {(creatingStudent || enrolling) ? <LoaderCircleIcon className="size-4 animate-spin" /> : <PlusIcon className="size-4" />}
+              {enrolling ? "Enrolling…" : "Register"}
             </Button>
           </DialogFooter>
         </DialogContent>

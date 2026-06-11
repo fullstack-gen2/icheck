@@ -30,10 +30,10 @@ const AlertDialogDemo = ({btnName,title, firstTime, secondTime, id}: AlertType) 
         <AlertDialogHeader>
           <AlertDialogTitle className='font-bold'>{title}</AlertDialogTitle>
           <AlertDialogDescription className='pl-3'>
-            Start at: {firstTime} PM
+            Start at: {firstTime}
           </AlertDialogDescription>
           <AlertDialogDescription className='pl-3'>
-            End at: {secondTime} PM
+            End at: {secondTime}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -3,26 +3,9 @@ import { BookOpenIcon } from "lucide-react";
 import { ClassCard } from "@/components/ui/class-card";
 import { getServerUser } from "@/auth-server";
 import { MyDropdownMenuCheckboxes } from "@/components/drop-donw";
-interface Classroom {
-  id: number;
-  className: string;
-  classCode: string;
-  programTypeName: string;
-  generation: number;
-  year: number | null;
-  semester: number | null;
-  shift: string;
-  academicYear: number;
-  startDate: string;
-  endDate: string;
-  status: boolean;
-}
-import { backendFetch } from "@/lib/api-fetch";
-import { ClassroomsList, type ClassroomItem } from "@/components/classrooms-list";
+import { fetchAllClassrooms, fetchTeacherClassrooms, fetchClassCounts, type ClassroomSummary } from "@/lib/classroom-helpers";
 
-interface Schedule {
-  className: string;
-}
+type Classroom = ClassroomSummary;
 
 const shiftLabel: Record<string, string> = {
   MORNING: "Morning",
@@ -30,43 +13,16 @@ const shiftLabel: Record<string, string> = {
   EVENING: "Evening",
 };
 
-async function fetchAllClassrooms(): Promise<Classroom[]> {
-  try {
-    const res = await backendFetch(`/classrooms?size=200`);
-    if (!res.ok) return [];
-    return (await res.json())?.payload?.content ?? [];
-  } catch {
-    return [];
-  }
-}
-
-async function fetchTeacherClassrooms(teacherId: string): Promise<ClassroomItem[]> {
-  try {
-    const [schedRes, clsRes] = await Promise.all([
-      backendFetch(`/schedules/teachers/${teacherId}?size=200`),
-      backendFetch(`/classrooms?size=200`),
-    ]);
-    const schedules: Schedule[] =
-      (await schedRes.json())?.payload?.content ?? [];
-    const classrooms: Classroom[] =
-      (await clsRes.json())?.payload?.content ?? [];
-
-    const teacherClassNames = new Set(schedules.map((s) => s.className));
-    return classrooms.filter((c) => teacherClassNames.has(c.className));
-  } catch {
-    return [];
-  }
-}
-
 export default async function ClassroomsPage() {
   const user = await getServerUser();
   const role = user?.role ?? "ADMIN";
   const userId = user?.id ?? "";
   const isTeacher = role === "TEACHER";
 
-  const classrooms = isTeacher
-    ? await fetchTeacherClassrooms(userId)
-    : await fetchAllClassrooms();
+  const [classrooms, classCounts] = await Promise.all([
+    isTeacher ? fetchTeacherClassrooms(userId, 200) : fetchAllClassrooms(200),
+    fetchClassCounts(),
+  ]);
 
   const activeClassrooms = classrooms.filter((c) => c.status);
 
@@ -117,7 +73,9 @@ export default async function ClassroomsPage() {
                 </span>
               </h2>
               <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-6">
-                {grouped[group].map((c) => (
+                {grouped[group].map((c) => {
+                  const counts = classCounts[c.className];
+                  return (
                   <Link
                     key={c.id}
                     href={`/dashboard/classrooms/${c.id}`}
@@ -128,13 +86,16 @@ export default async function ClassroomsPage() {
                       status={c.status ? "Active" : "Inactive"}
                       classNameValue={c.className}
                       shift={shiftLabel[c.shift] ?? c.shift ?? "—"}
-                      time={"8:00 - 10:00 PM"}
-                      lab="Data Analytics"
-                      students={`24/4`}
+                      time={`${c.startDate ?? "?"} – ${c.endDate ?? "?"}`}
+                      students={counts ? `${counts.total}/${counts.female}` : "0/0"}
                       code={c.classCode ?? String(c.id)}
+                      year={c.year}
+                      semester={c.semester}
+                      generation={c.generation}
                     />
                   </Link>
-                ))}
+                  );
+                })}
               </div>
             </section>
           ))}

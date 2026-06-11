@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { SearchIcon, LoaderCircleIcon, UsersIcon, CheckIcon } from "lucide-react";
-import { api } from "@/lib/api-client";
+import { useEnrollStudentMutation, useUnenrollStudentMutation } from "@/store/api/enrollmentApi";
 
 export interface StudentRow {
   id: number;
@@ -33,6 +33,8 @@ export function EnrollmentClient({
   allStudents,
 }: Props) {
   const router = useRouter();
+  const [enrollStudent] = useEnrollStudentMutation();
+  const [unenrollStudent] = useUnenrollStudentMutation();
 
   const initiallyEnrolledIds = useMemo(
     () => new Set(initialEnrolled.map((s) => s.id)),
@@ -71,15 +73,13 @@ export function EnrollmentClient({
   async function save() {
     setSaving(true);
     try {
-      // Endpoints assumed:
-      //   POST   /classrooms/{id}/students         { studentIds: number[] }
-      //   DELETE /classrooms/{id}/students/{sid}
-      // Adjust if your backend uses different shapes.
-      if (toAdd.length > 0) {
-        await api.post(`/classrooms/${classroomId}/students`, { studentIds: toAdd });
-      }
-      for (const sid of toRemove) {
-        await api.del(`/classrooms/${classroomId}/students/${sid}`);
+      const results = await Promise.allSettled([
+        ...toAdd.map((userId) => enrollStudent({ classroomId, userId }).unwrap()),
+        ...toRemove.map((userId) => unenrollStudent({ classroomId, userId }).unwrap()),
+      ]);
+      const failed = results.filter((r) => r.status === "rejected").length;
+      if (failed > 0) {
+        toast.error(`${failed} change${failed === 1 ? "" : "s"} failed to save.`);
       }
       toast.success(
         `${toAdd.length ? `Added ${toAdd.length}` : ""}` +

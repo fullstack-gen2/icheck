@@ -22,13 +22,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckCircle2Icon, LoaderCircleIcon, QrCodeIcon } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2Icon, LoaderCircleIcon, QrCodeIcon, UsersIcon } from "lucide-react";
 import { todayIso } from "@/lib/school-time";
 import {
   useCreateClassroomMutation,
   useUpdateClassroomMutation,
 } from "@/store/api/attendanceApi";
 import { useGetClassroomStaticQrMutation } from "@/store/api/qrApi";
+import { useGetProgramTypesQuery } from "@/store/api/programTypeApi";
 
 export interface ClassroomFormValue {
   id?: number;
@@ -74,11 +76,12 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
   const editing = !!initial?.id;
   const [form, setForm] = useState<ClassroomFormValue>(initial ? { ...empty, ...initial } : empty);
   const [generateStaticQr, setGenerateStaticQr] = useState(true);
-  const [createdQr, setCreatedQr] = useState<{ className: string; codeValue: string } | null>(null);
+  const [createdQr, setCreatedQr] = useState<{ id: number; className: string; codeValue: string } | null>(null);
   const [generatingQr, setGeneratingQr] = useState(false);
   const [createClassroom, { isLoading: creating }] = useCreateClassroomMutation();
   const [updateClassroom, { isLoading: updating }] = useUpdateClassroomMutation();
   const [getClassroomStaticQr] = useGetClassroomStaticQrMutation();
+  const { data: programTypes = [] } = useGetProgramTypesQuery();
   const saving = creating || updating || generatingQr;
 
   function handleOpenChange(nextOpen: boolean) {
@@ -101,11 +104,22 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
       toast.error("Class name and code are required.");
       return;
     }
+
+    // Backend `ClassroomRequest` requires a numeric `programTypeId` (not the
+    // display name) — look it up from the live /program-types list.
+    const programType = programTypes.find(
+      (p) => p.name.toLowerCase() === form.programTypeName.toLowerCase()
+    );
+    if (!programType) {
+      toast.error(`Unknown program type "${form.programTypeName}". Reload and try again.`);
+      return;
+    }
+
     try {
       const body = {
         className:        form.className.trim(),
         classCode:        form.classCode.trim(),
-        programTypeName:  form.programTypeName,
+        programTypeId:    programType.id,
         generation:       Number(form.generation),
         year:             isScholarship ? null : Number(form.year),
         semester:         isScholarship ? null : Number(form.semester),
@@ -131,7 +145,7 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
         setGeneratingQr(true);
         try {
           const qr = await getClassroomStaticQr(created.id).unwrap();
-          setCreatedQr({ className: created.className, codeValue: qr.codeValue });
+          setCreatedQr({ id: created.id, className: created.className, codeValue: qr.codeValue });
           return; // keep the dialog open to show the static QR
         } catch {
           toast.error("Class created, but the static QR code could not be generated.");
@@ -172,7 +186,13 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="sm:justify-between">
+            <Button variant="outline" asChild className="gap-1.5">
+              <Link href={`/dashboard/classrooms/${createdQr.id}/enroll`} onClick={() => handleOpenChange(false)}>
+                <UsersIcon className="size-4" />
+                Register students
+              </Link>
+            </Button>
             <Button onClick={() => handleOpenChange(false)}>Done</Button>
           </DialogFooter>
         </DialogContent>

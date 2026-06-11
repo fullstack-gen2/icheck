@@ -15,6 +15,24 @@ export interface ClassroomDto {
   status: boolean;
 }
 
+/** Matches backend `ClassroomRequest` — used as the create/update body. */
+export interface ClassroomRequestBody {
+  className: string;
+  classCode: string;
+  programTypeId: number;
+  generation: number;
+  year: number | null;
+  semester: number | null;
+  shift: string | null;
+  academicYear: number;
+  startDate: string;
+  endDate: string;
+  telegramChatId?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  status: boolean;
+}
+
 export interface SettingDto {
   id: number;
   settingKey: string;
@@ -32,7 +50,7 @@ export const attendanceApi = baseApi.injectEndpoints({
         unwrapContent<ClassroomDto>(response),
       providesTags: ["Classroom"],
     }),
-    createClassroom: builder.mutation<ClassroomDto, Partial<ClassroomDto>>({
+    createClassroom: builder.mutation<ClassroomDto, ClassroomRequestBody>({
       query: (body) => ({
         url: "/classrooms",
         method: "POST",
@@ -41,7 +59,7 @@ export const attendanceApi = baseApi.injectEndpoints({
       transformResponse: (response: ApiEnvelope<ClassroomDto>) => unwrapPayload(response),
       invalidatesTags: ["Classroom"],
     }),
-    updateClassroom: builder.mutation<ClassroomDto, { id: number; body: Partial<ClassroomDto> }>({
+    updateClassroom: builder.mutation<ClassroomDto, { id: number; body: ClassroomRequestBody }>({
       query: ({ id, body }) => ({
         url: `/classrooms/${id}`,
         method: "PATCH",

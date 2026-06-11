@@ -1,8 +1,11 @@
 import { backendFetch } from "@/lib/api-fetch";
+import { getServerUser } from "@/auth-server";
 import AlertDialogDemo from "@/components/popup/start_session";
+import { AssignSubstituteDialog } from "@/components/assign-substitute-dialog";
 import { columns } from "@/components/classdetail/column";
 import { DataTableList } from "@/components/classdetail/data-table";
 import type { AttendanceList } from "@/types/attendance";
+import { todayIso, formatTime12 } from "@/lib/school-time";
 
 interface Classroom {
   id: number;
@@ -11,12 +14,30 @@ interface Classroom {
   programTypeName: string;
 }
 
+interface SessionInfo {
+  id: number;
+  startTime: string | null;
+  endTime: string | null;
+  substituteTeacherName: string | null;
+}
+
 async function fetchClassroom(id: string): Promise<Classroom | null> {
   try {
     const res = await backendFetch(`/classrooms/${id}`);
     if (!res.ok) return null;
     const json = await res.json();
     return json?.payload ?? null;
+  } catch { return null; }
+}
+
+/** Today's session for this classroom — drives the real Start Session times and substitute assignment. */
+async function fetchTodaySession(id: string): Promise<SessionInfo | null> {
+  try {
+    const today = todayIso();
+    const res = await backendFetch(`/sessions/classrooms/${id}?from=${today}&to=${today}&page=0&size=20`);
+    if (!res.ok) return null;
+    const sessions: SessionInfo[] = (await res.json())?.payload?.content ?? [];
+    return sessions[0] ?? null;
   } catch { return null; }
 }
 
@@ -49,10 +70,14 @@ export default async function ClassroomDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [classroom, students] = await Promise.all([
+  const [classroom, students, user, session] = await Promise.all([
     fetchClassroom(id),
     fetchStudents(id),
+    getServerUser(),
+    fetchTodaySession(id),
   ]);
+
+  const isAdmin = (user?.role ?? "").toUpperCase() === "ADMIN";
 
   return (
     <div className="px-7 py-7">
@@ -68,12 +93,20 @@ export default async function ClassroomDetailPage({
           </div>
         </div>
         <div className="flex-col">
-          <AlertDialogDemo
-              btnName="Start Session"
-              title="Start Session Now"
-              firstTime="8:00"
-              secondTime="12:00"
-              id={id}/>
+          <div className="flex items-center justify-end gap-2">
+            <AlertDialogDemo
+                btnName="Start Session"
+                title="Start Session Now"
+                firstTime={formatTime12(session?.startTime)}
+                secondTime={formatTime12(session?.endTime)}
+                id={id}/>
+            {isAdmin && (
+              <AssignSubstituteDialog
+                sessionId={session?.id ?? null}
+                currentSubstituteName={session?.substituteTeacherName ?? null}
+              />
+            )}
+          </div>
             {/* Students */}
           <div className="flex justify-end mt-2">
             <span className="text-sm text-muted-foreground/70">total students ({students.length})</span>

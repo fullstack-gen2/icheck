@@ -75,6 +75,23 @@ export const qrApi = baseApi.injectEndpoints({
       }),
       transformResponse: (response: ApiEnvelope<QrCodeDto>) => unwrapPayload(response),
     }),
+    /** All sessions (regular OR substitute) for a teacher in a date range — drives "My Classes" for substitutes. */
+    getSessionsForTeacher: builder.query<SessionDto[], { teacherId: number | string; from: string; to: string }>({
+      query: ({ teacherId, from, to }) =>
+        `/sessions/teachers/${teacherId}?from=${from}&to=${to}&size=200`,
+      transformResponse: (response: ApiEnvelope<PagePayload<SessionDto> | SessionDto[]>) =>
+        unwrapContent<SessionDto>(response),
+      providesTags: ["Session"],
+    }),
+    /** Admin assigns a substitute teacher for one specific session (Rule: substitute also sees the class in My Classes). */
+    assignSubstitute: builder.mutation<void, { sessionId: number; substituteTeacherId: number; reason?: string }>({
+      query: ({ sessionId, substituteTeacherId, reason }) => ({
+        url: `/sessions/${sessionId}/assign-substitute`,
+        method: "POST",
+        body: { substituteTeacherId, reason: reason ?? null },
+      }),
+      invalidatesTags: (_r, _e, { sessionId }) => [{ type: "Session", id: sessionId }, "Session"],
+    }),
   }),
   overrideExisting: false,
 });
@@ -85,4 +102,6 @@ export const {
   useOpenSessionMutation,
   useGenerateDynamicQrMutation,
   useGetClassroomStaticQrMutation,
+  useGetSessionsForTeacherQuery,
+  useAssignSubstituteMutation,
 } = qrApi;

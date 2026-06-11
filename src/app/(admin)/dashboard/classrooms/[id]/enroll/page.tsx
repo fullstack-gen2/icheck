@@ -19,17 +19,36 @@ async function fetchClassroom(id: string): Promise<Classroom | null> {
   } catch { return null; }
 }
 
+interface EnrollmentResponse {
+  id: number;
+  userId: number;
+  userName: string;
+  userEmail: string;
+  studentNo: string | null;
+  classroomName: string;
+  status: string | null;
+}
+
+/** Students currently enrolled in this classroom, via the Enrollment table (many-to-many). */
 async function fetchEnrolled(id: string): Promise<StudentRow[]> {
   try {
-    const res = await backendFetch(`/classrooms/${id}/students?size=500`);
+    const res = await backendFetch(`/classrooms/${id}/enrollments?size=500`);
     if (!res.ok) return [];
-    return (await res.json())?.payload?.content ?? [];
+    const enrollments: EnrollmentResponse[] = (await res.json())?.payload?.content ?? [];
+    return enrollments.map((e) => ({
+      id: e.userId,
+      studentNo: e.studentNo ?? "",
+      name: e.userName,
+      email: e.userEmail,
+      className: e.classroomName,
+      status: e.status ?? undefined,
+    }));
   } catch { return []; }
 }
 
 async function fetchAllStudents(): Promise<StudentRow[]> {
   try {
-    const res = await backendFetch(`/students?size=1000`);
+    const res = await backendFetch(`/users/students?size=1000`);
     if (!res.ok) return [];
     return (await res.json())?.payload?.content ?? [];
   } catch { return []; }
