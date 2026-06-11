@@ -91,6 +91,7 @@ export function NavUser({
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("profileImage", file);
 
     setUploading(true);
     try {
@@ -122,6 +123,13 @@ export function NavUser({
   return (
     <SidebarMenu>
       <SidebarMenuItem>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(event) => void uploadProfileImage(event.target.files?.[0])}
+        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
@@ -177,13 +185,6 @@ export function NavUser({
                       <CameraIcon className="size-3.5" />
                     )}
                   </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(event) => void uploadProfileImage(event.target.files?.[0])}
-                  />
                 </div>
                 <div className="grid flex-1 text-left leading-tight gap-0.5">
                   <span className="font-semibold text-foreground">{user.name || "—"}</span>

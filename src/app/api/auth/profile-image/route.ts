@@ -20,21 +20,14 @@ async function forward(req: Request, method: "PUT" | "DELETE") {
   }
 
   const contentType = req.headers.get("content-type") ?? "";
-  const body =
-    method === "PUT"
-      ? contentType.includes("multipart/form-data")
-        ? await req.formData()
-        : await req.text()
-      : undefined;
+  const body = method === "PUT" ? await req.arrayBuffer() : undefined;
 
   const res = await fetch(`${AUTH_API_URL}/me/profile-image`, {
     method,
     cache: "no-store",
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      ...(method === "PUT" && !contentType.includes("multipart/form-data")
-        ? { "Content-Type": "application/json" }
-        : {}),
+      ...(method === "PUT" && contentType ? { "Content-Type": contentType } : {}),
     },
     body,
   });
