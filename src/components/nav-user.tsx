@@ -91,7 +91,6 @@ export function NavUser({
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("profileImage", file);
 
     setUploading(true);
     try {
@@ -102,7 +101,7 @@ export function NavUser({
       const json = await res.json().catch(() => null);
 
       if (!res.ok) {
-        throw new Error(json?.message ?? json?.error ?? "Upload failed.");
+        throw new Error(json?.message ?? json?.error ?? `Upload failed (${res.status}).`);
       }
 
       const nextImage = pickProfileImage(json);
