@@ -2,7 +2,14 @@ import { getServerUser } from "@/auth-server";
 import { backendFetch } from "@/lib/api-fetch";
 import Link from "next/link";
 import { ClassCard } from "@/components/ui/class-card";
-import { UsersIcon, GraduationCapIcon, BookOpenIcon, ClipboardCheckIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  UsersIcon,
+  GraduationCapIcon,
+  BookOpenIcon,
+  ClipboardCheckIcon,
+  PlusIcon,
+} from "lucide-react";
 
 interface Summary {
   totalStudents: number;
@@ -70,6 +77,7 @@ export default async function DashboardPage() {
   const user = await getServerUser();
   const role      = user?.role ?? "ADMIN";
   const userId    = user?.id ?? "";
+  const isAdmin   = role === "ADMIN";
   const isTeacher = role === "TEACHER";
 
   const [summary, classrooms] = await Promise.all([
@@ -86,7 +94,18 @@ export default async function DashboardPage() {
 
   return (
     <div className="px-7 py-7">
-      <h1 className="text-3xl font-bold text-foreground mb-8">Dashboard</h1>
+      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+
+        {isAdmin && (
+          <Button asChild className="h-10 w-full sm:w-auto">
+            <Link href="/dashboard/create_class">
+              <PlusIcon />
+              Create Class
+            </Link>
+          </Button>
+        )}
+      </div>
 
       {!isTeacher && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
