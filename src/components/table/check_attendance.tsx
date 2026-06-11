@@ -19,11 +19,48 @@ import { Input } from "../ui/input";
 type AttendanceCheckingListProps = {
   students?: Student[];
   studentProfileBasePath?: string;
+  /** ISO date (yyyy-MM-dd) of today's session. */
+  sessionDate?: string | null;
+  /** HH:mm[:ss] start time of today's session. */
+  startTime?: string | null;
+  /** HH:mm[:ss] end time of today's session. */
+  endTime?: string | null;
+  /** Classroom code shown next to the date/time block. */
+  classCode?: string | null;
+  /** Counts shown in the header summary box. */
+  totalStudents?: number;
+  femaleStudents?: number;
 };
+
+/** Renders 14:30:00 / 14:30 → "2:30 PM" (12-hour with am/pm). */
+function fmt12(raw?: string | null): string {
+  if (!raw) return "—";
+  const [hh, mm] = raw.split(":");
+  const h = Number(hh);
+  if (Number.isNaN(h)) return raw;
+  const period = h >= 12 ? "PM" : "AM";
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  return `${hour12}:${mm ?? "00"} ${period}`;
+}
+
+/** "yyyy-MM-dd" → "11-Nov-2026". Falls back to the raw value on parse failure. */
+function fmtDate(raw?: string | null): string {
+  if (!raw) return "—";
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return raw;
+  const month = d.toLocaleString("en-US", { month: "short" });
+  return `${String(d.getDate()).padStart(2, "0")}-${month}-${d.getFullYear()}`;
+}
 
 export default function AttendanceCheckingList({
   students = [],
   studentProfileBasePath,
+  sessionDate,
+  startTime,
+  endTime,
+  classCode,
+  totalStudents,
+  femaleStudents,
 }: AttendanceCheckingListProps) {
   const params = useParams<{ id?: string | string[] }>();
   const classroomId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -107,18 +144,18 @@ export default function AttendanceCheckingList({
 
          <div className="flex justify-start text-sm items-center gap-4 text-gray-600 border px-4 py-2 rounded-lg">
               <div>
-                <p>Date: <span className="text-black dark:text-white">11-Nov-2026</span></p>
-                <p className="text-right">Student(Total/ False): <span className="text-black dark:text-white"> 11/03</span></p>
+                <p>Date: <span className="text-black dark:text-white">{fmtDate(sessionDate)}</span></p>
+                <p className="text-right">Student(Total/ Female): <span className="text-black dark:text-white"> {totalStudents ?? students.length}/{femaleStudents ?? 0}</span></p>
               </div>
               <div>
                 <p className="text-black dark:text-white">|</p>
                 <p className="text-black dark:text-white">|</p>
               </div>
               <div>
-                <p >Time: <span className="text-black dark:text-white"> 8:00 - 12:00PM</span></p>
-                <p >Class Code: <span className="text-black dark:text-white">A001</span> </p>
+                <p>Time: <span className="text-black dark:text-white"> {fmt12(startTime)} - {fmt12(endTime)}</span></p>
+                <p>Class Code: <span className="text-black dark:text-white">{classCode ?? "—"}</span> </p>
               </div>
-            </div>        
+            </div>
       </div>
       <div className="overflow-hidden rounded-md border" >
         <Table >

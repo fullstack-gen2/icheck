@@ -137,7 +137,7 @@ export function ClassCard({
          <div className="flex justify-between items-center w-full">
             <div className="flex items-center gap-2">
               <ClockIcon className="size-3.5 text-muted-foreground/70 shrink-0" />
-              <p className="text-base font-medium text-foreground">Time: </p>
+              <p className="text-base font-medium text-foreground">Period: </p>
             </div>
             <span className="text-sm text-muted-foreground">{time}</span>
         </div>
