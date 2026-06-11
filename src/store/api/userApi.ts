@@ -23,6 +23,13 @@ export interface StudentInput {
   phone?: string | null;
   classId?: number | null;
   status?: string;
+  /** Optional Keycloak username — defaults to email if omitted. */
+  username?: string;
+  /** Optional initial Keycloak password — required for the student to log in.
+   *  If omitted the Keycloak account is created with no credentials. */
+  password?: string;
+  /** When true Keycloak forces the user to change the password on first login. */
+  temporaryPassword?: boolean;
 }
 
 export interface TeacherDto {
@@ -40,6 +47,12 @@ export interface TeacherInput {
   email: string;
   phone?: string | null;
   specialization?: string | null;
+  /** Optional Keycloak username — defaults to email if omitted. */
+  username?: string;
+  /** Optional initial Keycloak password — required for the teacher to log in. */
+  password?: string;
+  /** When true Keycloak forces the user to change the password on first login. */
+  temporaryPassword?: boolean;
 }
 
 export interface CurrentUserDto {

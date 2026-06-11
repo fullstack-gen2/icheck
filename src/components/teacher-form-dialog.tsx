@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoaderCircleIcon, PlusIcon } from "lucide-react";
@@ -23,6 +24,19 @@ export interface TeacherFormValue {
   email: string;
   phone: string;
   specialization: string;
+  /** Only used when creating — ignored on edit. */
+  password?: string;
+  /** Only used when creating — ignored on edit. */
+  temporaryPassword?: boolean;
+}
+
+/** Generates a short, easy-to-share temporary password
+ *  (8 chars, mix of letters + digits). */
+function generateTempPassword(): string {
+  const alphabet = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const buf = new Uint32Array(8);
+  crypto.getRandomValues(buf);
+  return Array.from(buf, (n) => alphabet[n % alphabet.length]).join("");
 }
 
 const empty: TeacherFormValue = {
@@ -30,6 +44,8 @@ const empty: TeacherFormValue = {
   email: "",
   phone: "",
   specialization: "",
+  password: "",
+  temporaryPassword: true,
 };
 
 interface Props {
@@ -49,7 +65,9 @@ export function TeacherFormDialog({ open, initial, onOpenChange }: Props) {
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
-    if (open) setForm(initial ? { ...empty, ...initial } : empty);
+    if (open) {
+      setForm(initial ? { ...empty, ...initial } : { ...empty, password: generateTempPassword() });
+    }
   }
 
   function patch<K extends keyof TeacherFormValue>(k: K, v: TeacherFormValue[K]) {
@@ -59,6 +77,10 @@ export function TeacherFormDialog({ open, initial, onOpenChange }: Props) {
   async function handleSave() {
     if (!form.name.trim() || !form.email.trim()) {
       toast.error("Name and email are required.");
+      return;
+    }
+    if (!editing && (form.password ?? "").length < 6) {
+      toast.error("Initial password must be at least 6 characters so the teacher can log in.");
       return;
     }
     try {
@@ -79,8 +101,21 @@ export function TeacherFormDialog({ open, initial, onOpenChange }: Props) {
           email: form.email.trim(),
           phone: form.phone.trim() || null,
           specialization: form.specialization.trim() || null,
+          username: form.email.trim(),
+          password: (form.password ?? ""),
+          temporaryPassword: (form.temporaryPassword ?? true),
         }).unwrap();
-        toast.success("Teacher registered.");
+        const credentials = `Email: ${form.email.trim()}\nPassword: ${(form.password ?? "")}`;
+        toast.success("Teacher registered. Share these credentials:", {
+          description: credentials,
+          duration: 15000,
+          action: {
+            label: "Copy",
+            onClick: () => {
+              void navigator.clipboard?.writeText(credentials);
+            },
+          },
+        });
       }
       onOpenChange(false);
     } catch (e) {
@@ -131,6 +166,40 @@ export function TeacherFormDialog({ open, initial, onOpenChange }: Props) {
               />
             </Field>
           </div>
+
+          {!editing && (
+            <>
+              <Field label="Initial password" required>
+                <div className="flex gap-2">
+                  <Input
+                    value={(form.password ?? "")}
+                    onChange={(e) => patch("password", e.target.value)}
+                    placeholder="At least 6 characters"
+                    type="text"
+                    autoComplete="new-password"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => patch("password", generateTempPassword())}
+                  >
+                    Generate
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground/70">
+                  Share with the teacher — they log in at <span className="font-mono">/login</span> using their email + this password.
+                </p>
+              </Field>
+              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                <Checkbox
+                  checked={(form.temporaryPassword ?? true)}
+                  onCheckedChange={(v) => patch("temporaryPassword", v === true)}
+                />
+                <span>Force teacher to change this password on first login</span>
+              </label>
+            </>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

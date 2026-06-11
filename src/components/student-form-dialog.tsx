@@ -39,6 +39,19 @@ export interface StudentFormValue {
   phone: string;
   classId?: number | null;
   status?: string;
+  /** Only used when creating — ignored on edit. Filled from `empty` if omitted. */
+  password?: string;
+  /** Only used when creating — ignored on edit. */
+  temporaryPassword?: boolean;
+}
+
+/** Generates a short, easy-to-share temporary password
+ *  (8 chars, mix of letters + digits). */
+function generateTempPassword(): string {
+  const alphabet = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const buf = new Uint32Array(8);
+  crypto.getRandomValues(buf);
+  return Array.from(buf, (n) => alphabet[n % alphabet.length]).join("");
 }
 
 const empty: StudentFormValue = {
@@ -49,6 +62,8 @@ const empty: StudentFormValue = {
   phone: "",
   classId: null,
   status: "ACTIVE",
+  password: "",
+  temporaryPassword: true,
 };
 
 interface Props {
@@ -73,7 +88,10 @@ export function StudentFormDialog({ open, initial, classrooms, onOpenChange }: P
   if (open !== prevOpen) {
     setPrevOpen(open);
     if (open) {
-      setForm(initial ? { ...empty, ...initial } : empty);
+      // For brand-new students auto-suggest a temporary password so admin can
+      // share it with the student — admin can edit it before saving.
+      const seed = initial ? { ...empty, ...initial } : { ...empty, password: generateTempPassword() };
+      setForm(seed);
       setSelectedClassIds(initial?.classId ? [initial.classId] : []);
     }
   }
@@ -91,6 +109,11 @@ export function StudentFormDialog({ open, initial, classrooms, onOpenChange }: P
   async function handleSave() {
     if (!form.name.trim() || !form.email.trim() || !form.studentNo.trim()) {
       toast.error("Name, email and student number are required.");
+      return;
+    }
+
+    if (!editing && (form.password ?? "").length < 6) {
+      toast.error("Initial password must be at least 6 characters so the student can log in.");
       return;
     }
 
@@ -118,6 +141,11 @@ export function StudentFormDialog({ open, initial, classrooms, onOpenChange }: P
           phone: form.phone.trim() || null,
           status: "ACTIVE",
           classId: selectedClassIds[0] ?? null,
+          // Login credentials — backend forwards these to Keycloak so the
+          // student can sign in with email + this password.
+          username: form.email.trim(),
+          password: (form.password ?? ""),
+          temporaryPassword: (form.temporaryPassword ?? true),
         }).unwrap();
 
         // A student can be registered into more than one class — enroll into
@@ -134,7 +162,19 @@ export function StudentFormDialog({ open, initial, classrooms, onOpenChange }: P
             toast.error(`Student created, but failed to register ${failed} class${failed === 1 ? "" : "es"}.`);
           }
         }
-        toast.success("Student registered.");
+        // Show the admin the credentials they need to share with the student
+        // — clicking copies them to the clipboard so it's hard to lose them.
+        const credentials = `Email: ${form.email.trim()}\nPassword: ${(form.password ?? "")}`;
+        toast.success("Student registered. Share these credentials:", {
+          description: credentials,
+          duration: 15000,
+          action: {
+            label: "Copy",
+            onClick: () => {
+              void navigator.clipboard?.writeText(credentials);
+            },
+          },
+        });
       }
       onOpenChange(false);
     } catch (e) {
@@ -207,6 +247,43 @@ export function StudentFormDialog({ open, initial, classrooms, onOpenChange }: P
                 </SelectContent>
               </Select>
             </Field>
+          )}
+
+          {/* Login credentials — only shown when creating, since Keycloak password
+              changes for existing accounts should go through "Reset password" instead. */}
+          {!editing && (
+            <>
+              <Field label="Initial password" required>
+                <div className="flex gap-2">
+                  <Input
+                    value={(form.password ?? "")}
+                    onChange={(e) => patch("password", e.target.value)}
+                    placeholder="At least 6 characters"
+                    type="text"
+                    autoComplete="new-password"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => patch("password", generateTempPassword())}
+                  >
+                    Generate
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground/70">
+                  Share this with the student so they can sign in. They&apos;ll log in
+                  at <span className="font-mono">/login</span> with their email + this password.
+                </p>
+              </Field>
+              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                <Checkbox
+                  checked={(form.temporaryPassword ?? true)}
+                  onCheckedChange={(v) => patch("temporaryPassword", v === true)}
+                />
+                <span>Force student to change this password on first login</span>
+              </label>
+            </>
           )}
 
           {/* A student can be registered into more than one class. */}
