@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
-import type { NextRequest, NextResponse } from "next/server";
-
+import type { NextResponse } from "next/server";
 
 export const DEVICE_COOKIE = "i-check-device-id";
 
@@ -12,8 +11,29 @@ export async function getDeviceId(): Promise<string | null> {
   return store.get(DEVICE_COOKIE)?.value ?? null;
 }
 
-export function ensureDeviceCookie(req: NextRequest, res: NextResponse): string {
-  const existing = req.cookies.get(DEVICE_COOKIE)?.value;
+/** Reads a cookie value straight from the `Cookie` request header. Works for
+ *  both `Request` and `NextRequest` (the latter extends the former). */
+function readCookie(req: Request, name: string): string | null {
+  const header = req.headers.get("cookie");
+  if (!header) return null;
+
+  for (const part of header.split(";")) {
+    const [rawKey, ...rawValue] = part.trim().split("=");
+    if (rawKey === name) return decodeURIComponent(rawValue.join("="));
+  }
+  return null;
+}
+
+/**
+ * Ensures the long-lived per-browser device id cookie exists, creating it if
+ * necessary. Returns the (existing or newly-generated) device id.
+ *
+ * Call this once on first login (OAuth callback) so every subsequent request
+ * from this browser carries a stable `deviceId` — used to bind a student's
+ * account to a single device.
+ */
+export function ensureDeviceCookie(req: Request, res: NextResponse): string {
+  const existing = readCookie(req, DEVICE_COOKIE);
   if (existing) return existing;
 
   const id = crypto.randomUUID();

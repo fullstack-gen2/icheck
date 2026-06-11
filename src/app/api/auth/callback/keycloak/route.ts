@@ -1,5 +1,6 @@
 import {
   ACCESS_TOKEN_COOKIE,
+  AUTH_API_URL,
   ID_TOKEN_COOKIE,
   KEYCLOAK_CLIENT_ID,
   KEYCLOAK_CLIENT_SECRET,
@@ -9,6 +10,7 @@ import {
   OAUTH_STATE_COOKIE,
   REFRESH_TOKEN_COOKIE,
 } from "@/auth";
+import { ensureDeviceCookie } from "@/lib/device-cookie";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
@@ -181,6 +183,43 @@ export async function GET(req: Request) {
       path: "/",
       maxAge: token.expires_in ?? 300,
     });
+  }
+
+  // Bind/verify this browser's device for the logged-in account. Students get
+  // locked to the first device they ever sign in from; if this device doesn't
+  // match a previously-bound one, the backend rejects the binding and we abort
+  // the login (clearing the auth cookies we just set).
+  const deviceId = ensureDeviceCookie(req, response);
+  try {
+    const deviceRes = await fetch(`${AUTH_API_URL}/me/device`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token.access_token}`,
+      },
+      body: JSON.stringify({ deviceId }),
+      cache: "no-store",
+    });
+
+    if (deviceRes.status === 401) {
+      const blocked = NextResponse.redirect(new URL("/login?error=device_mismatch", requestUrl.origin));
+      blocked.cookies.delete(ACCESS_TOKEN_COOKIE);
+      blocked.cookies.delete(REFRESH_TOKEN_COOKIE);
+      blocked.cookies.delete(ID_TOKEN_COOKIE);
+      return blocked;
+    }
+
+    if (!deviceRes.ok) {
+      const body = await deviceRes.text().catch(() => "");
+      console.error("[oauth/callback] device binding check failed", {
+        status: deviceRes.status,
+        body,
+      });
+    }
+  } catch (e) {
+    // Fail open — don't block login if the device-binding call itself errors
+    // (e.g. backend briefly unreachable).
+    console.error("[oauth/callback] device binding request error", e);
   }
 
   return response;

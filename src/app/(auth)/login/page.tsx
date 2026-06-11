@@ -9,6 +9,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   oauth_state:    "Login session expired or was tampered with. Please try signing in again.",
   token_exchange: "Keycloak rejected the token exchange. Most likely the server is missing KEYCLOAK_CLIENT_SECRET, or the redirect_uri isn't registered on the Keycloak client. Check the deploy logs.",
   user_fetch:     "Login succeeded with Keycloak but the attendance service didn't return a profile (/api/v1/users/me).",
+  device_mismatch: "This account is already registered to a different device. Ask an administrator to reset your device, then try again from your registered device.",
 };
 
 export default async function LoginPage({
