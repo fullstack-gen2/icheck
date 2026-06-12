@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ResetDeviceButton } from "@/components/reset-device-button";
 import { useUser } from "@/components/user-provider";
@@ -24,6 +25,7 @@ import {
   type StudentDto,
 } from "@/store/api/userApi";
 import { StudentFormDialog, type StudentFormValue } from "@/components/student-form-dialog";
+import { useEnrollStudentMutation } from "@/store/api/enrollmentApi";
 import { getErrorMessage } from "@/lib/error-utils";
 import {
   DropdownMenu,
@@ -70,10 +72,14 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
   const { data: students = [], isLoading: loadingStudents } = useGetStudentsQuery();
   const { data: classrooms = [], isLoading: loadingClassrooms } = useGetClassroomsQuery({ size: 1000 });
   const [deleteStudent] = useDeleteStudentMutation();
+  const [enrollStudent] = useEnrollStudentMutation();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<StudentFormValue | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [targetClassId, setTargetClassId] = useState("");
+  const [bulkEnrolling, setBulkEnrolling] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -177,10 +183,80 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
     }
   }
 
+  function toggleStudent(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleVisibleStudents(checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const student of filtered) {
+        if (checked) next.add(student.id); else next.delete(student.id);
+      }
+      return next;
+    });
+  }
+
+  async function addSelectedToClass() {
+    const classroomId = Number(targetClassId);
+    const userIds = [...selectedIds];
+    if (!classroomId || userIds.length === 0) return;
+
+    setBulkEnrolling(true);
+    try {
+      const results = await Promise.allSettled(
+        userIds.map((userId) => enrollStudent({ classroomId, userId }).unwrap())
+      );
+      const failed = results.filter((result) => result.status === "rejected").length;
+      const added = userIds.length - failed;
+
+      if (added > 0) toast.success(`Added ${added} student${added === 1 ? "" : "s"} to class.`);
+      if (failed > 0) toast.error(`${failed} student${failed === 1 ? "" : "s"} could not be added.`);
+
+      setSelectedIds(new Set());
+    } finally {
+      setBulkEnrolling(false);
+    }
+  }
+
+  const selectedVisibleCount = filtered.filter((student) => selectedIds.has(student.id)).length;
+  const allVisibleSelected = filtered.length > 0 && selectedVisibleCount === filtered.length;
+
   return (
     <>
       <div className="flex items-center justify-end mb-4 flex-wrap gap-3">
-        <span className="text-sm text-muted-foreground">{filtered.length} of {students.length}</span>
+        <span className="text-sm text-muted-foreground">
+          {filtered.length} of {students.length}
+          {selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ""}
+        </span>
+        {isAdmin && selectedIds.size > 0 && (
+          <div className="flex items-center gap-2">
+            <select
+              value={targetClassId}
+              onChange={(event) => setTargetClassId(event.target.value)}
+              className="h-9 min-w-48 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="">Select class</option>
+              {classrooms.map((classroom) => (
+                <option key={classroom.id} value={classroom.id}>
+                  {classroom.className}
+                </option>
+              ))}
+            </select>
+            <Button
+              className="gap-1.5"
+              onClick={addSelectedToClass}
+              disabled={!targetClassId || bulkEnrolling}
+            >
+              <PlusIcon className="size-4" />
+              {bulkEnrolling ? "Adding..." : "Add to class"}
+            </Button>
+          </div>
+        )}
         {isAdmin && (
           <Button className="gap-1.5" onClick={openNew}>
             <PlusIcon className="size-4" />
@@ -290,6 +366,15 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
           <table className="w-full text-base">
             <thead>
               <tr className="bg-muted/50 border-b border-border">
+                {isAdmin && (
+                  <th className="w-10 px-4 py-3">
+                    <Checkbox
+                      checked={allVisibleSelected}
+                      onCheckedChange={(checked) => toggleVisibleStudents(Boolean(checked))}
+                      aria-label="Select visible students"
+                    />
+                  </th>
+                )}
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Student</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">Class</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">Student No.</th>
@@ -307,6 +392,15 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
                     index === filtered.length - 1 ? "border-b-0" : ""
                   }`}
                 >
+                  {isAdmin && (
+                    <td className="px-4 py-3">
+                      <Checkbox
+                        checked={selectedIds.has(student.id)}
+                        onCheckedChange={() => toggleStudent(student.id)}
+                        aria-label={`Select ${student.name}`}
+                      />
+                    </td>
+                  )}
                   <td className="px-4 py-3">
                     <div className="font-medium text-foreground">{student.name}</div>
                     <div className="text-sm text-muted-foreground/70">{student.email ?? "—"}</div>
