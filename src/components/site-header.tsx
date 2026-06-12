@@ -4,15 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ChevronRightIcon, BellIcon } from "lucide-react";
+import { ChevronRightIcon } from "lucide-react";
 import { DarkModeToggle, ThemeSelector } from "@/components/theme-toggle";
 import { LogoWordmark } from "@/components/logo";
+import { NotificationBell } from "@/components/notification-bell";
 
 const ROUTE_LABELS: Record<string, string> = {
   "/dashboard":            "Dashboard",
@@ -104,33 +99,8 @@ export function SiteHeader() {
           {/* 2. Named theme selector */}
           <ThemeSelector />
 
-          {/* 3. Notification bell */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="hidden size-8 text-muted-foreground hover:text-foreground sm:inline-flex"
-              >
-                <BellIcon className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72 p-0">
-              <div className="flex items-center justify-between px-4 py-3 border-b">
-                <span className="text-sm font-semibold">Notifications</span>
-                <span className="text-sm text-muted-foreground">0 new</span>
-              </div>
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <BellIcon className="size-8 text-muted-foreground/20 mb-2" />
-                <p className="text-base text-muted-foreground">
-                  No notifications yet
-                </p>
-                <p className="mt-0.5 text-sm text-muted-foreground/60">
-                  You&apos;re all caught up!
-                </p>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* 3. Notification bell — real data, unread badge, mark-as-read */}
+          <NotificationBell />
 
         </div>
       </div>
