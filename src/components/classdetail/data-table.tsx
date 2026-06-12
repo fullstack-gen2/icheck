@@ -31,6 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useAttendanceStream, type AttendanceUpdateEvent } from "@/lib/attendance-stream";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -94,6 +95,36 @@ export function DataTableList<TData, TValue>({
     [],
   );
   const [expandedRowId, setExpandedRowId] = React.useState<string | null>(null);
+
+  // Mirror the data prop into local state so realtime check-in events can
+  // patch individual rows without a full page refresh. Reseeded whenever the
+  // server re-renders the page (e.g. after a route navigation) so stale
+  // statuses can't linger.
+  const [liveData, setLiveData] = React.useState<TData[]>(data);
+  React.useEffect(() => {
+    setLiveData(data);
+  }, [data]);
+
+  // Subscribe to backend STOMP broadcasts for this classroom. Every CHECK_IN /
+  // UPDATE / AMENDMENT_APPROVED event lands here; we match the student row
+  // by id (string-compared because the table prop's id is already a string).
+  const numericClassroomId = classroomId ? Number(classroomId) : null;
+  useAttendanceStream(numericClassroomId, (event: AttendanceUpdateEvent) => {
+    if (!event.studentId || !event.status) return;
+    const incomingId = String(event.studentId);
+    setLiveData((prev) => {
+      let changed = false;
+      const next = prev.map((row) => {
+        const r = row as TData & { id?: string | number; status?: string | null };
+        if (r.id != null && String(r.id) === incomingId && r.status !== event.status) {
+          changed = true;
+          return { ...r, status: event.status } as TData;
+        }
+        return row;
+      });
+      return changed ? next : prev;
+    });
+  });
   const tableColumns = React.useMemo<ColumnDef<TData, unknown>[]>(
     () => [
       ...(columns as ColumnDef<TData, unknown>[]),
@@ -134,7 +165,7 @@ export function DataTableList<TData, TValue>({
   }
 
   const table = useReactTable({
-    data,
+    data: liveData,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
 

@@ -158,10 +158,62 @@ export const userApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Teacher", "User"],
     }),
+
+    /**
+     * Classrooms the given user is enrolled in. Used on the student profile
+     * page to render the "Current Programs" badges from real API data instead
+     * of an empty list pulled out of /me (which only returns the bare User row).
+     */
+    getUserEnrollments: builder.query<Array<{
+      id?: number;
+      classroomId?: number;
+      classroomName?: string;
+      className?: string;
+      classCode?: string;
+      programTypeName?: string;
+      programName?: string;
+    }>, number | string>({
+      query: (userId) => `/users/${userId}/enrollments`,
+      transformResponse: (response: ApiEnvelope<unknown>) => {
+        const payload = unwrapPayload<unknown>(response);
+        if (Array.isArray(payload)) return payload as Array<Record<string, never>>;
+        if (payload && typeof payload === "object" && Array.isArray((payload as { content?: unknown }).content)) {
+          return (payload as { content: Array<Record<string, never>> }).content;
+        }
+        return [];
+      },
+      providesTags: ["User"],
+    }),
+
+    /**
+     * Per-student attendance history (paginated by the backend, default size 1k
+     * is fine for a single student). Used on the student profile to compute
+     * the Present / Late / Absent / Total summary cards.
+     */
+    getStudentAttendance: builder.query<Array<{
+      id?: number;
+      sessionId?: number;
+      status?: string;
+      method?: string;
+      checkInTime?: string;
+    }>, number | string>({
+      query: (studentId) => `/attendances/students/${studentId}?size=1000`,
+      transformResponse: (response: ApiEnvelope<unknown>) => {
+        const payload = unwrapPayload<unknown>(response);
+        if (Array.isArray(payload)) return payload as Array<Record<string, never>>;
+        if (payload && typeof payload === "object" && Array.isArray((payload as { content?: unknown }).content)) {
+          return (payload as { content: Array<Record<string, never>> }).content;
+        }
+        return [];
+      },
+      providesTags: ["User"],
+    }),
   }),
 });
 
 export const {
+  useGetUserEnrollmentsQuery,
+  useGetStudentAttendanceQuery,
   useCreateStudentMutation,
   useUpdateStudentMutation,
   useDeleteStudentMutation,

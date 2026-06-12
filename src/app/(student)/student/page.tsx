@@ -3,7 +3,11 @@
 import { useMemo, useState } from "react";
 import { useUser } from "@/components/user-provider";
 import { QrScanner } from "@/components/qr-scanner";
-import { useGetCurrentUserQuery } from "@/store/api/userApi";
+import {
+  useGetCurrentUserQuery,
+  useGetStudentAttendanceQuery,
+  useGetUserEnrollmentsQuery,
+} from "@/store/api/userApi";
 import {
   BadgeCheckIcon,
   BookOpenIcon,
@@ -64,17 +68,44 @@ export default function StudentHomePage() {
   const { data: profile = null } = useGetCurrentUserQuery();
   const [showScanner, setShowScanner] = useState(false);
 
+  // `/me` returns just the User row. Programs (enrollments) and attendance
+  // history live on dedicated endpoints — without these the profile page
+  // showed "—" everywhere even for real students.
+  const studentId = profile?.id ?? user?.id ?? "";
+  const { data: enrollments = [] } = useGetUserEnrollmentsQuery(studentId, {
+    skip: !studentId,
+  });
+  const { data: attendanceRows = [] } = useGetStudentAttendanceQuery(studentId, {
+    skip: !studentId,
+  });
+
   const displayName = asText(profile?.name ?? profile?.username ?? user?.name);
   const email = asText(profile?.email ?? user?.email);
   const studentNo = asText(profile?.studentNo ?? profile?.studentId ?? profile?.code);
   const status = asText(profile?.status ?? profile?.accountStatus ?? "ACTIVE");
   const imageUrl = asText(profile?.profileImage ?? user?.profileImage);
-  const programs = pickArray(profile, ["programs", "classrooms", "classes", "enrollments"]);
-  const summary = useMemo(() => pickSummary(profile), [profile]);
-  const totalAttendance = asText(summary.total ?? summary.totalAttendance ?? summary.totalRecords);
-  const present = asText(summary.present ?? summary.presentCount);
-  const late = asText(summary.late ?? summary.lateCount);
-  const absent = asText(summary.absent ?? summary.absentCount);
+  const programs = enrollments.length > 0
+    ? enrollments
+    : pickArray(profile, ["programs", "classrooms", "classes", "enrollments"]);
+
+  // Derive the summary client-side from the raw attendance list so the page
+  // never shows "—" — the backend doesn't (yet) expose a single summary
+  // endpoint, and even a slow list query is cheap for one student.
+  const summary = useMemo(() => {
+    const counts = { total: 0, present: 0, late: 0, absent: 0 };
+    for (const row of attendanceRows) {
+      counts.total++;
+      const s = (row.status ?? "").toUpperCase();
+      if (s === "PRESENT") counts.present++;
+      else if (s === "LATE" || s === "LATE_OUT") counts.late++;
+      else if (s === "ABSENT") counts.absent++;
+    }
+    return counts;
+  }, [attendanceRows]);
+  const totalAttendance = asText(summary.total);
+  const present = asText(summary.present);
+  const late = asText(summary.late);
+  const absent = asText(summary.absent);
 
   return (
     <div className="space-y-6 px-5 py-6 sm:px-7 sm:py-7">
