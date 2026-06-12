@@ -18,6 +18,9 @@ interface SessionLite {
   startTime?: string | null;
   endTime?: string | null;
   status?: string | null;
+  /** Set when the teacher opens the session — used to clamp the QR window
+   *  to 5 minutes from actual start (matches the backend). */
+  actualStartTime?: string | null;
 }
 
 async function fetchClassroom(id: string): Promise<Classroom | null> {
@@ -139,21 +142,31 @@ export default async function TakeAttendance({
                 </div>
         </div>
         {(() => {
-          // Once we are past `scheduledStart + 10 min` AND the session is
-          // either still UPCOMING (teacher missed the start window) or already
-          // COMPLETED (QR closed), the backend refuses any new dynamic QR.
-          // Hide the QR shortcut to match — amendments are the only path.
+          // Two cumulative gates decide whether the QR shortcut is shown:
+          //   1. Teacher start grace — past `scheduledStart + 10 min`, the
+          //      session can no longer be opened (backend refuses). UPCOMING
+          //      sessions past this point should hide QR.
+          //   2. Dynamic QR window — once the teacher HAS opened the session,
+          //      the backend caps the QR window to 5 min from actualStartTime.
+          //      So even an ACTIVE session past that point should hide QR.
+          // Either gate failing → amendment is the only path.
           const TEACHER_START_GRACE_MINUTES = 10;
+          const QR_WINDOW_MINUTES = 5;
           const now = new Date();
           const startIso = session?.sessionDate && session?.startTime
             ? `${session.sessionDate}T${session.startTime}`
             : null;
           const scheduledStart = startIso ? new Date(startIso) : null;
-          const cutoffPassed = scheduledStart
+          const actualStart = session?.actualStartTime ? new Date(session.actualStartTime) : null;
+          const startCutoffPassed = scheduledStart
             ? now.getTime() > scheduledStart.getTime() + TEACHER_START_GRACE_MINUTES * 60_000
             : false;
-          const qrAvailable = session?.status === "ACTIVE"
-            || (session?.status === "UPCOMING" && !cutoffPassed);
+          const qrCutoffPassed = actualStart
+            ? now.getTime() > actualStart.getTime() + QR_WINDOW_MINUTES * 60_000
+            : false;
+          const qrAvailable =
+            (session?.status === "ACTIVE" && !qrCutoffPassed)
+            || (session?.status === "UPCOMING" && !startCutoffPassed);
           return (
             <div className="flex items-center gap-2">
               {qrAvailable && (

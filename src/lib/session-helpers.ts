@@ -16,6 +16,8 @@ export interface SessionSummary {
   substituteTeacherName?: string | null;
   substituteReason?: string | null;
   earlyCheckinMinutes?: number | null;
+  actualStartTime?: string | null;
+  actualEndTime?: string | null;
 }
 
 interface ScheduleSummary {

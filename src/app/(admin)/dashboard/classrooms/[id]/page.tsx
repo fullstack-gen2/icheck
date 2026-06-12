@@ -89,30 +89,26 @@ export default async function ClassroomDetailPage({
         </div>
         <div className="flex-col">
           <div className="flex items-center justify-end gap-2">
-            {/* Button is status-aware so the teacher can't "Start" a session
-                twice. Backend would reject anyway (status != UPCOMING) but the
-                UI should match the state — once the session is ACTIVE or
-                COMPLETED the teacher sees the live/finished attendance list
-                instead of a misleading Start button. */}
             {(() => {
-              // Mirror the backend's 10-minute teacher-late grace on the UI.
-              // Once `scheduledStart + 10 min` has passed and the session is
-              // still UPCOMING, the backend will refuse `/sessions/{id}/open`
-              // and `/qr-codes/.../dynamic` — so we hide both the Start button
-              // and any QR affordance and surface the Amendment dialog as the
-              // only path forward. Same rule applies once the QR window has
-              // already closed (status==COMPLETED).
+              
               const TEACHER_START_GRACE_MINUTES = 10;
+              const QR_WINDOW_MINUTES = 5;
               const now = new Date();
               const startIso = session?.sessionDate && session?.startTime
                 ? `${session.sessionDate}T${session.startTime}`
                 : null;
               const scheduledStart = startIso ? new Date(startIso) : null;
+              const actualStart = session?.actualStartTime ? new Date(session.actualStartTime) : null;
               const cutoffPassed = scheduledStart
                 ? now.getTime() > scheduledStart.getTime() + TEACHER_START_GRACE_MINUTES * 60_000
                 : false;
+              const qrWindowPassed = actualStart
+                ? now.getTime() > actualStart.getTime() + QR_WINDOW_MINUTES * 60_000
+                : false;
               const lateUpcoming = session?.status === "UPCOMING" && cutoffPassed;
-              const amendmentOnly = lateUpcoming || session?.status === "COMPLETED";
+              const activeAfterQrWindow = session?.status === "ACTIVE" && qrWindowPassed;
+              const amendmentOnly =
+                lateUpcoming || activeAfterQrWindow || session?.status === "COMPLETED";
 
               if (session?.status === "UPCOMING" && !cutoffPassed) {
                 return (
@@ -124,7 +120,7 @@ export default async function ClassroomDetailPage({
                       id={id}/>
                 );
               }
-              if (session?.status === "ACTIVE") {
+              if (session?.status === "ACTIVE" && !qrWindowPassed) {
                 return (
                   <Button asChild className="bg-primary p-5">
                     <Link href={`/dashboard/classrooms/${id}/take-attendance`}>
