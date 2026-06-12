@@ -1,5 +1,5 @@
 import ReportToday from "@/components/table/report_today";
-import { Button } from "@/components/ui/button";
+import { AmendmentButton } from "@/components/amendment-button";
 import { backendFetch } from "@/lib/api-fetch";
 import { fetchTodaySessionForClassroom, type SessionSummary } from "@/lib/session-helpers";
 import { AttendanceStatus, type Student } from "@/types/student";
@@ -69,9 +69,14 @@ export default async function CheckedAttendance({
                 </div>
                 </div>
                 <div className="flex-col">
-                  <Button className="bg-primary p-5" type="button">
-                    Amendment
-                  </Button>
+                  <AmendmentButton
+                    sessionId={session?.id ?? null}
+                    students={students.map((s) => ({
+                      id: s.id,
+                      name: s.name,
+                      currentStatus: s.status,
+                    }))}
+                  />
                 </div>
             </section>
             <section>

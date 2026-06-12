@@ -1,4 +1,5 @@
 import AttendanceCheckingList from "@/components/table/check_attendance";
+import { AmendmentButton } from "@/components/amendment-button";
 import { backendFetch } from "@/lib/api-fetch";
 import { todayIso } from "@/lib/school-time";
 import { AttendanceStatus, type Student } from "@/types/student";
@@ -102,10 +103,21 @@ export default async function TakeAttendance({
                   </p>
                 </div>
         </div>
-        <div className="flex justify-between">
+        <div className="flex items-center gap-2">
           <Link href={`/dashboard/classrooms/${id}/take-attendance/qr-code`} className="flex items-center gap-2 rounded-md border border-gray-300 bg-white dark:bg-black px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
             <AiOutlineQrcode className="size-18" />
           </Link>
+          {/* Amendment lets the teacher manually correct a student's status
+              once the QR window has closed (or any time, really) — no admin
+              approval required, audit-logged on the backend. */}
+          <AmendmentButton
+            sessionId={session?.id ?? null}
+            students={students.map((s) => ({
+              id: s.id,
+              name: s.name,
+              currentStatus: s.status,
+            }))}
+          />
         </div>
             </section>
             <section>
