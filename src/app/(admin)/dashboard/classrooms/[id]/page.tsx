@@ -94,30 +94,60 @@ export default async function ClassroomDetailPage({
                 UI should match the state — once the session is ACTIVE or
                 COMPLETED the teacher sees the live/finished attendance list
                 instead of a misleading Start button. */}
-            {session?.status === "UPCOMING" ? (
-              <AlertDialogDemo
-                  btnName="Start Session"
-                  title="Start Session Now"
-                  firstTime={formatTime12(session?.startTime)}
-                  secondTime={formatTime12(session?.endTime)}
-                  id={id}/>
-            ) : session?.status === "ACTIVE" ? (
-              <Button asChild className="bg-primary p-5">
-                <Link href={`/dashboard/classrooms/${id}/take-attendance`}>
-                  View Live Attendance
-                </Link>
-              </Button>
-            ) : session?.status === "COMPLETED" ? (
-              <Button asChild variant="outline" className="p-5">
-                <Link href={`/dashboard/classrooms/${id}/take-attendance`}>
-                  View Results
-                </Link>
-              </Button>
-            ) : (
-              <Button disabled variant="outline" className="p-5">
-                No session today
-              </Button>
-            )}
+            {(() => {
+              // Mirror the backend's 10-minute teacher-late grace on the UI.
+              // Once `scheduledStart + 10 min` has passed and the session is
+              // still UPCOMING, the backend will refuse `/sessions/{id}/open`
+              // and `/qr-codes/.../dynamic` — so we hide both the Start button
+              // and any QR affordance and surface the Amendment dialog as the
+              // only path forward. Same rule applies once the QR window has
+              // already closed (status==COMPLETED).
+              const TEACHER_START_GRACE_MINUTES = 10;
+              const now = new Date();
+              const startIso = session?.sessionDate && session?.startTime
+                ? `${session.sessionDate}T${session.startTime}`
+                : null;
+              const scheduledStart = startIso ? new Date(startIso) : null;
+              const cutoffPassed = scheduledStart
+                ? now.getTime() > scheduledStart.getTime() + TEACHER_START_GRACE_MINUTES * 60_000
+                : false;
+              const lateUpcoming = session?.status === "UPCOMING" && cutoffPassed;
+              const amendmentOnly = lateUpcoming || session?.status === "COMPLETED";
+
+              if (session?.status === "UPCOMING" && !cutoffPassed) {
+                return (
+                  <AlertDialogDemo
+                      btnName="Start Session"
+                      title="Start Session Now"
+                      firstTime={formatTime12(session?.startTime)}
+                      secondTime={formatTime12(session?.endTime)}
+                      id={id}/>
+                );
+              }
+              if (session?.status === "ACTIVE") {
+                return (
+                  <Button asChild className="bg-primary p-5">
+                    <Link href={`/dashboard/classrooms/${id}/take-attendance`}>
+                      View Live Attendance
+                    </Link>
+                  </Button>
+                );
+              }
+              if (amendmentOnly) {
+                return (
+                  <Button asChild variant="outline" className="p-5">
+                    <Link href={`/dashboard/classrooms/${id}/take-attendance/checked_attendance`}>
+                      Submit Amendment
+                    </Link>
+                  </Button>
+                );
+              }
+              return (
+                <Button disabled variant="outline" className="p-5">
+                  No session today
+                </Button>
+              );
+            })()}
             {isAdmin && (
               <AssignSubstituteDialog
                 sessionId={(session as SessionSummary | null)?.id ?? null}

@@ -18,7 +18,27 @@ async function fetchClassroom(id: string): Promise<Classroom | null> {
   } catch { return null; }
 }
 
-async function fetchStudents(id: string): Promise<Student[]> {
+async function fetchSessionStatusMap(sessionId: number | null): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!sessionId) return map;
+  try {
+    const res = await backendFetch(`/attendances/sessions/${sessionId}?size=500`);
+    if (!res.ok) return map;
+    const json = await res.json();
+    const rows = json?.payload?.content ?? json?.payload ?? [];
+    if (!Array.isArray(rows)) return map;
+    for (const row of rows) {
+      const studentId = row?.student?.id ?? row?.studentId;
+      const status = row?.status;
+      if (studentId != null && typeof status === "string") {
+        map.set(String(studentId), status);
+      }
+    }
+  } catch { /* empty map → PENDING */ }
+  return map;
+}
+
+async function fetchStudents(id: string, statusMap: Map<string, string>): Promise<Student[]> {
   try {
     const res = await backendFetch(`/classrooms/${id}/students?size=500`);
     if (!res.ok) return [];
@@ -26,15 +46,21 @@ async function fetchStudents(id: string): Promise<Student[]> {
     const rows = json?.payload?.content ?? json?.payload ?? [];
     if (!Array.isArray(rows)) return [];
 
-    return rows.map((student) => ({
-      id: String(student.id ?? student.studentNo ?? ""),
-      name: String(student.name ?? student.fullName ?? student.username ?? "—"),
-      gender: String(student.gender ?? "—"),
-      phone: String(student.phone ?? student.phoneNumber ?? "—"),
-      dateOfBirth: String(student.dateOfBirth ?? student.dob ?? "—"),
-      profile: String(student.profileImage ?? student.profile ?? "/file.svg"),
-      status: student.status ? String(student.status).toLowerCase() as AttendanceStatus : AttendanceStatus.PENDING,
-    }));
+    return rows.map((student) => {
+      const idKey = String(student.id ?? student.studentNo ?? "");
+      const recordedStatus = statusMap.get(idKey) ?? student.status;
+      return {
+        id: idKey,
+        name: String(student.name ?? student.fullName ?? student.username ?? "—"),
+        gender: String(student.gender ?? "—"),
+        phone: String(student.phone ?? student.phoneNumber ?? "—"),
+        dateOfBirth: String(student.dateOfBirth ?? student.dob ?? "—"),
+        profile: String(student.profileImage ?? student.profile ?? "/file.svg"),
+        status: recordedStatus
+          ? (String(recordedStatus).toLowerCase() as AttendanceStatus)
+          : AttendanceStatus.PENDING,
+      };
+    });
   } catch {
     return [];
   }
@@ -46,11 +72,12 @@ export default async function CheckedAttendance({
   params: Promise<{ id: string }>;
 }) {
     const { id } = await params;
-    const [classroom, students, session] = await Promise.all([
+    const [classroom, session] = await Promise.all([
       fetchClassroom(id),
-      fetchStudents(id),
       fetchTodaySessionForClassroom(id) as Promise<SessionSummary | null>,
     ]);
+    const statusMap = await fetchSessionStatusMap(session?.id ?? null);
+    const students = await fetchStudents(id, statusMap);
     const femaleStudents = students.filter((student) => {
       const gender = student.gender?.toLowerCase?.() ?? "";
       return gender === "female" || gender === "f";

@@ -50,7 +50,31 @@ async function fetchTodaySession(classroomId: string): Promise<SessionLite | nul
   } catch { return null; }
 }
 
-async function fetchStudents(id: string): Promise<Student[]> {
+/** Pulls today's recorded attendance for the session and returns a map
+ *  studentId → status. Used to overlay real statuses onto the roster below. */
+async function fetchSessionStatusMap(sessionId: number | null): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!sessionId) return map;
+  try {
+    const res = await backendFetch(`/attendances/sessions/${sessionId}?size=500`);
+    if (!res.ok) return map;
+    const json = await res.json();
+    const rows = json?.payload?.content ?? json?.payload ?? [];
+    if (!Array.isArray(rows)) return map;
+    for (const row of rows) {
+      const studentId = row?.student?.id ?? row?.studentId;
+      const status = row?.status;
+      if (studentId != null && typeof status === "string") {
+        map.set(String(studentId), status);
+      }
+    }
+  } catch {
+    /* swallow — defaults to empty map → everyone shows PENDING */
+  }
+  return map;
+}
+
+async function fetchStudents(id: string, statusMap: Map<string, string>): Promise<Student[]> {
   try {
     const res = await backendFetch(`/classrooms/${id}/students?size=500`);
     if (!res.ok) return [];
@@ -58,15 +82,24 @@ async function fetchStudents(id: string): Promise<Student[]> {
     const rows = json?.payload?.content ?? json?.payload ?? [];
     if (!Array.isArray(rows)) return [];
 
-    return rows.map((student) => ({
-      id: String(student.id ?? student.studentNo ?? ""),
-      name: String(student.name ?? student.fullName ?? student.username ?? "—"),
-      gender: String(student.gender ?? "—"),
-      phone: String(student.phone ?? student.phoneNumber ?? "—"),
-      dateOfBirth: String(student.dateOfBirth ?? student.dob ?? "—"),
-      profile: String(student.profileImage ?? student.profile ?? "/file.svg"),
-      status: AttendanceStatus.PENDING,
-    }));
+    return rows.map((student) => {
+      const idKey = String(student.id ?? student.studentNo ?? "");
+      // Overlay the attendance status if one was recorded today; otherwise the
+      // roster row stays PENDING. This is what was previously hardcoded — and
+      // why amendment saves never appeared after a refresh.
+      const recordedStatus = statusMap.get(idKey);
+      return {
+        id: idKey,
+        name: String(student.name ?? student.fullName ?? student.username ?? "—"),
+        gender: String(student.gender ?? "—"),
+        phone: String(student.phone ?? student.phoneNumber ?? "—"),
+        dateOfBirth: String(student.dateOfBirth ?? student.dob ?? "—"),
+        profile: String(student.profileImage ?? student.profile ?? "/file.svg"),
+        status: recordedStatus
+          ? (recordedStatus.toLowerCase() as AttendanceStatus)
+          : AttendanceStatus.PENDING,
+      };
+    });
   } catch {
     return [];
   }
@@ -78,11 +111,13 @@ export default async function TakeAttendance({
   params: Promise<{ id: string }>;
 }) {
     const { id } = await params;
-    const [classroom, session, students] = await Promise.all([
+    // Sequenced because fetchStudents needs the session id to merge statuses.
+    const [classroom, session] = await Promise.all([
       fetchClassroom(id),
       fetchTodaySession(id),
-      fetchStudents(id),
     ]);
+    const statusMap = await fetchSessionStatusMap(session?.id ?? null);
+    const students = await fetchStudents(id, statusMap);
     const female = students.filter(
       (s) => (s.gender ?? "").toUpperCase().startsWith("F")
     ).length;
@@ -103,22 +138,43 @@ export default async function TakeAttendance({
                   </p>
                 </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Link href={`/dashboard/classrooms/${id}/take-attendance/qr-code`} className="flex items-center gap-2 rounded-md border border-gray-300 bg-white dark:bg-black px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-            <AiOutlineQrcode className="size-18" />
-          </Link>
-          {/* Amendment lets the teacher manually correct a student's status
-              once the QR window has closed (or any time, really) — no admin
-              approval required, audit-logged on the backend. */}
-          <AmendmentButton
-            sessionId={session?.id ?? null}
-            students={students.map((s) => ({
-              id: s.id,
-              name: s.name,
-              currentStatus: s.status,
-            }))}
-          />
-        </div>
+        {(() => {
+          // Once we are past `scheduledStart + 10 min` AND the session is
+          // either still UPCOMING (teacher missed the start window) or already
+          // COMPLETED (QR closed), the backend refuses any new dynamic QR.
+          // Hide the QR shortcut to match — amendments are the only path.
+          const TEACHER_START_GRACE_MINUTES = 10;
+          const now = new Date();
+          const startIso = session?.sessionDate && session?.startTime
+            ? `${session.sessionDate}T${session.startTime}`
+            : null;
+          const scheduledStart = startIso ? new Date(startIso) : null;
+          const cutoffPassed = scheduledStart
+            ? now.getTime() > scheduledStart.getTime() + TEACHER_START_GRACE_MINUTES * 60_000
+            : false;
+          const qrAvailable = session?.status === "ACTIVE"
+            || (session?.status === "UPCOMING" && !cutoffPassed);
+          return (
+            <div className="flex items-center gap-2">
+              {qrAvailable && (
+                <Link href={`/dashboard/classrooms/${id}/take-attendance/qr-code`} className="flex items-center gap-2 rounded-md border border-gray-300 bg-white dark:bg-black px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                  <AiOutlineQrcode className="size-18" />
+                </Link>
+              )}
+              {/* Amendment lets the teacher manually correct a student's status
+                  once the QR window has closed (or any time, really) — no admin
+                  approval required, audit-logged on the backend. */}
+              <AmendmentButton
+                sessionId={session?.id ?? null}
+                students={students.map((s) => ({
+                  id: s.id,
+                  name: s.name,
+                  currentStatus: s.status,
+                }))}
+              />
+            </div>
+          );
+        })()}
             </section>
             <section>
                 <AttendanceCheckingList
