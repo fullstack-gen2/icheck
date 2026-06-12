@@ -4,7 +4,7 @@ import { ClassCard } from "@/components/ui/class-card";
 import { ClassroomAddButton } from "@/components/classroom-add-button";
 import { getServerUser } from "@/auth-server";
 import { MyDropdownMenuCheckboxes } from "@/components/drop-donw";
-import { fetchAllClassrooms, fetchTeacherClassrooms, fetchClassCounts, type ClassroomSummary } from "@/lib/classroom-helpers";
+import { fetchAllClassrooms, fetchClassCounts, type ClassroomSummary } from "@/lib/classroom-helpers";
 import { fetchTeacherActiveClassrooms, type TeacherClassroomView } from "@/lib/session-helpers";
 import { formatTime12 } from "@/lib/school-time";
 
@@ -22,26 +22,27 @@ function teacherClassPeriod(c: TeacherClassroomView) {
     : `${c.startDate ?? "?"} - ${c.endDate ?? "?"}`;
 }
 
-export default async function ClassroomsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ view?: string }>;
-}) {
+export default async function ClassroomsPage() {
   const user = await getServerUser();
   const role = user?.role ?? "ADMIN";
   const userId = user?.id ?? "";
   const isTeacher = role === "TEACHER";
-  const { view } = await searchParams;
-  const teacherView = view === "active" ? "active" : "all";
 
-  const [allClassrooms, readyClassrooms, classCounts] = await Promise.all([
-    isTeacher ? fetchTeacherClassrooms(userId, 200) : fetchAllClassrooms(200),
-    isTeacher ? fetchTeacherActiveClassrooms(userId) : Promise.resolve([]),
+  // Sidebar split: "Dashboard" shows every class (see /dashboard/page.tsx).
+  // "Classes" → for a teacher, only the classes that are ready to teach right
+  // now (today's session is UPCOMING within the early-checkin window or
+  // already ACTIVE). For admins it stays the full catalogue.
+  const [classrooms, classCounts] = await Promise.all([
+    isTeacher
+      ? fetchTeacherActiveClassrooms(userId)
+      : fetchAllClassrooms(200),
     fetchClassCounts(),
   ]);
-  const classrooms = isTeacher && teacherView === "active" ? readyClassrooms : allClassrooms;
 
-  const activeClassrooms = classrooms.filter((c) => c.status);
+  // For teacher view the helper already filters to ready-now classes (so they
+  // are intrinsically "active" today); keep the same filter for admins so the
+  // archive doesn't leak into the cards.
+  const activeClassrooms = isTeacher ? classrooms : classrooms.filter((c) => c.status);
 
   // Group by program type so admins/students see Bachelor vs Scholarship at a glance
   const grouped = activeClassrooms.reduce<Record<string, Classroom[]>>((acc, c) => {
@@ -56,32 +57,14 @@ export default async function ClassroomsPage({
     <div className="px-7 py-7">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Classes</h1>
+          <h1 className="text-3xl font-bold text-foreground">
+            {isTeacher ? "My Classes" : "Classes"}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {isTeacher
-              ? "Classes you are scheduled to teach."
+              ? "Classes ready to teach right now."
               : "All classrooms across programs."}
           </p>
-          {isTeacher && (
-            <div className="mt-4 inline-flex rounded-xl bg-muted p-1">
-              <Link
-                href="/dashboard/classrooms?view=all"
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
-                  teacherView === "all" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-                }`}
-              >
-                All My Classes
-              </Link>
-              <Link
-                href="/dashboard/classrooms?view=active"
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
-                  teacherView === "active" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
-                }`}
-              >
-                Active Class
-              </Link>
-            </div>
-          )}
         </div>
         <div className="flex flex-col items-end sm:items-end gap-2">
           <div className="flex items-center gap-2">
@@ -99,7 +82,7 @@ export default async function ClassroomsPage({
         <div className="text-center py-20 text-muted-foreground bg-card rounded-2xl border">
           <BookOpenIcon className="size-10 mx-auto mb-3 opacity-40" />
           <p className="font-medium">
-            {isTeacher ? "You have no classes assigned." : "No classes found."}
+            {isTeacher ? "No class is ready to start right now." : "No classes found."}
           </p>
         </div>
       ) : (
@@ -123,7 +106,7 @@ export default async function ClassroomsPage({
                   >
                     <ClassCard
                       title={c.programTypeName ?? "Class"}
-                      status={isTeacher && teacherView === "active" ? "Active" : c.status ? "Active" : "Inactive"}
+                      status={isTeacher ? "Active" : c.status ? "Active" : "Inactive"}
                       classNameValue={c.className}
                       shift={shiftLabel[c.shift] ?? c.shift ?? "—"}
                       time={isTeacher ? teacherClassPeriod(c as TeacherClassroomView) : `${c.startDate ?? "?"} - ${c.endDate ?? "?"}`}

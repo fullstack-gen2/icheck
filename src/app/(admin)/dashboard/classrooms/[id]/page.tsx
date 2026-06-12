@@ -2,11 +2,13 @@ import { backendFetch } from "@/lib/api-fetch";
 import { getServerUser } from "@/auth-server";
 import AlertDialogDemo from "@/components/popup/start_session";
 import { AssignSubstituteDialog } from "@/components/assign-substitute-dialog";
+import { Button } from "@/components/ui/button";
 import { columns } from "@/components/classdetail/column";
 import { DataTableList } from "@/components/classdetail/data-table";
 import type { AttendanceList } from "@/types/attendance";
 import { formatTime12 } from "@/lib/school-time";
 import { fetchTodaySessionForClassroom, type SessionSummary } from "@/lib/session-helpers";
+import Link from "next/link";
 
 interface Classroom {
   id: number;
@@ -87,12 +89,35 @@ export default async function ClassroomDetailPage({
         </div>
         <div className="flex-col">
           <div className="flex items-center justify-end gap-2">
-            <AlertDialogDemo
-                btnName="Start Session"
-                title="Start Session Now"
-                firstTime={formatTime12(session?.startTime)}
-                secondTime={formatTime12(session?.endTime)}
-                id={id}/>
+            {/* Button is status-aware so the teacher can't "Start" a session
+                twice. Backend would reject anyway (status != UPCOMING) but the
+                UI should match the state — once the session is ACTIVE or
+                COMPLETED the teacher sees the live/finished attendance list
+                instead of a misleading Start button. */}
+            {session?.status === "UPCOMING" ? (
+              <AlertDialogDemo
+                  btnName="Start Session"
+                  title="Start Session Now"
+                  firstTime={formatTime12(session?.startTime)}
+                  secondTime={formatTime12(session?.endTime)}
+                  id={id}/>
+            ) : session?.status === "ACTIVE" ? (
+              <Button asChild className="bg-primary p-5">
+                <Link href={`/dashboard/classrooms/${id}/take-attendance`}>
+                  View Live Attendance
+                </Link>
+              </Button>
+            ) : session?.status === "COMPLETED" ? (
+              <Button asChild variant="outline" className="p-5">
+                <Link href={`/dashboard/classrooms/${id}/take-attendance`}>
+                  View Results
+                </Link>
+              </Button>
+            ) : (
+              <Button disabled variant="outline" className="p-5">
+                No session today
+              </Button>
+            )}
             {isAdmin && (
               <AssignSubstituteDialog
                 sessionId={(session as SessionSummary | null)?.id ?? null}
