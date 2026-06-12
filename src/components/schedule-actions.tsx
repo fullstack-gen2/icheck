@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -75,7 +76,10 @@ export function ScheduleRowActions({
       setDelOpen(false);
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Delete failed.");
+      // Backend returns 409 with a clear "set inactive instead" hint when the
+      // schedule has historical attendance — pass that through rather than a
+      // generic "Delete failed." which would leave the admin guessing.
+      toast.error(getErrorMessage(e, "Delete failed."));
     }
   }
 
