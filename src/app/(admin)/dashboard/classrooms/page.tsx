@@ -46,7 +46,7 @@ export default async function ClassroomsPage() {
   const groupNames = Object.keys(grouped).sort();
 
   return (
-    <div className="px-7 py-7 md:px-10 md:py-10">
+    <div className="px-7 py-7 w-md">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">
