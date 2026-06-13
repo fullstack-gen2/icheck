@@ -387,10 +387,10 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button className="py-2" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
+          <Button className="py-2" onClick={handleSave} disabled={saving}>
             {saving && <LoaderCircleIcon className="size-4 animate-spin mr-2" />}
             {generatingQr ? "Generating QR…" : editing ? "Save Changes" : "Create"}
           </Button>
@@ -411,7 +411,7 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-sm">
+      <Label className="text-[12px]">
         {label}
         {required && <span className="text-red-500 ml-0.5">*</span>}
       </Label>
