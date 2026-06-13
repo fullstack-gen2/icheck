@@ -32,6 +32,7 @@ import {
   ScheduleFormDialog,
   type ScheduleFormValue,
 } from "@/components/schedule-form-dialog";
+import { ItePresetInner } from "@/components/ite-preset-dialog";
 import { api } from "@/lib/api-client";
 
 interface ClassroomOpt { id: number; className: string; }
@@ -53,6 +54,12 @@ export function ScheduleAddButton({ classrooms, subjects }: { classrooms?: Class
       />
     </>
   );
+}
+
+/** ITE 2-slot preset — creates both daily slots (13:30–17:30, 18:00–20:30)
+ *  in a single call so the admin doesn't hand-enter two rows. */
+export function ItePresetButton({ classrooms, subjects }: { classrooms?: ClassroomOpt[]; subjects?: SubjectOpt[] }) {
+  return <ItePresetInner classrooms={classrooms} subjects={subjects} />;
 }
 
 /** Per-row dropdown — edit + delete. */

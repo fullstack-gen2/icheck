@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { QrCodeIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import { ScheduleAddButton, ScheduleRowActions } from "@/components/schedule-actions";
+import { ScheduleAddButton, ScheduleRowActions, ItePresetButton } from "@/components/schedule-actions";
 import { schoolToday, todayIso } from "@/lib/school-time";
 
 interface ClassroomLite { id: number; className: string; }
@@ -158,6 +158,7 @@ export default async function SchedulePage({
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Schedule</h1>
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">{totalSchedules} schedule{totalSchedules !== 1 ? "s" : ""}</span>
+          {isAdmin && <ItePresetButton classrooms={classroomOptions} subjects={subjectOptions} />}
           {isAdmin && <ScheduleAddButton classrooms={classroomOptions} subjects={subjectOptions} />}
         </div>
       </div>

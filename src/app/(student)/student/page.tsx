@@ -8,6 +8,7 @@ import {
   useGetStudentAttendanceQuery,
   useGetUserEnrollmentsQuery,
 } from "@/store/api/userApi";
+import { StudentTodayClasses } from "@/components/student-today-classes";
 import {
   BadgeCheckIcon,
   BookOpenIcon,
@@ -50,17 +51,6 @@ function programLabel(value: unknown) {
     item.programTypeName ??
     item.classCode
   );
-}
-
-function pickSummary(profile: StudentProfile | null) {
-  const summary =
-    profile?.attendanceSummary ??
-    profile?.summary ??
-    profile?.attendance ??
-    {};
-  return summary && typeof summary === "object"
-    ? summary as Record<string, unknown>
-    : {};
 }
 
 export default function StudentHomePage() {
@@ -169,6 +159,10 @@ export default function StudentHomePage() {
           </div>
         </section>
       </div>
+
+      {/* Today's sessions — shows concurrent classes, each with status + a
+          Leave (check-out) action that drives the LATE_OUT rule. */}
+      <StudentTodayClasses />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <button
