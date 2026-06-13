@@ -37,6 +37,7 @@ export default async function ClassroomsPage() {
 
   const activeClassrooms = isTeacher ? classrooms : classrooms.filter((c) => c.status);
 
+
   const grouped = activeClassrooms.reduce<Record<string, Classroom[]>>((acc, c) => {
     const key = c.programTypeName ?? "Other";
     (acc[key] ??= []).push(c);
@@ -44,9 +45,8 @@ export default async function ClassroomsPage() {
   }, {});
 
   const groupNames = Object.keys(grouped).sort();
-
   return (
-    <div className="px-7 py-7 w-md">
+    <div className="px-7 py-7">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">
