@@ -230,7 +230,7 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg w-[min(90vw,600px)]">
+      <DialogContent className="sm:max-w-150">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">{editing ? "Edit Class" : "Create Class"}</DialogTitle>
           <DialogDescription>
