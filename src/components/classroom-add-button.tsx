@@ -17,14 +17,12 @@ export function ClassroomAddButton() {
       <Button size="sm" onClick={() => setOpen(true)} className="gap-1.5">
         <PlusIcon className="size-4" /> New Class
       </Button>
-        <section className="w-100">
         <ClassroomFormDialog
           open={open}
           initial={null}
           onOpenChange={setOpen}
           onSaved={() => startTransition(() => router.refresh())}
           />
-      </section>
     </>
   );
 }
