@@ -50,7 +50,6 @@ export interface ClassroomFormValue {
 }
 
 const SHIFTS  = ["MORNING", "AFTERNOON", "EVENING"];
-const PROGRAMS = ["Bachelor", "Scholarship"]; // tweak to match your real list
 
 // Common school lab/room names — admin can also type a custom one.
 const LABS = [
@@ -72,7 +71,10 @@ interface Props {
 const empty: ClassroomFormValue = {
   className: "",
   classCode: "",
-  programTypeName: "Bachelor",
+  // Empty by default — the Select shows a placeholder and the user must pick
+  // one of the live program types (the old "Bachelor" literal no longer
+  // matches the seeded name "Bachelor's Degree").
+  programTypeName: "",
   generation: 1,
   year: 1,
   semester: 1,
@@ -106,7 +108,15 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
     onOpenChange(nextOpen);
   }
 
-  const isScholarship = /scholarship/i.test(form.programTypeName);
+  // Year/Semester only apply to SEMESTER-structured programs (Associate,
+  // Bachelor, Higher Degree). CUSTOM programs (Scholarship, Pre-Uni,
+  // Foundation, Fullstack, IT Professional, IT Expert) hide those fields and
+  // send null. Derive from the SELECTED program's structureType, not a name
+  // regex — so all 9 program types behave correctly.
+  const selectedProgram = programTypes.find(
+    (p) => p.name.toLowerCase() === form.programTypeName.toLowerCase()
+  );
+  const isScholarship = (selectedProgram?.structureType ?? "").toUpperCase() !== "SEMESTER";
 
   function patch<K extends keyof ClassroomFormValue>(k: K, v: ClassroomFormValue[K]) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -118,6 +128,10 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
       return;
     }
 
+    if (!form.programTypeName) {
+      toast.error("Please pick a program.");
+      return;
+    }
     // Backend `ClassroomRequest` requires a numeric `programTypeId` (not the
     // display name) — look it up from the live /program-types list.
     const programType = programTypes.find(
@@ -246,10 +260,14 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
               value={form.programTypeName}
               onValueChange={(v) => patch("programTypeName", v)}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder={programTypes.length === 0 ? "Loading…" : "Select program"} />
+              </SelectTrigger>
               <SelectContent>
-                {PROGRAMS.map((p) => (
-                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                {/* Live list — all program types from the backend, not a
+                    hardcoded subset. */}
+                {programTypes.map((p) => (
+                  <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
