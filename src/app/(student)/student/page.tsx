@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useUser } from "@/components/user-provider";
+import { useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { useUser, useUpdateUser } from "@/components/user-provider";
 import { QrScanner } from "@/components/qr-scanner";
 import {
   useGetCurrentUserQuery,
@@ -12,9 +13,11 @@ import { StudentTodayClasses } from "@/components/student-today-classes";
 import {
   BadgeCheckIcon,
   BookOpenIcon,
+  CameraIcon,
   ClipboardListIcon,
   Clock3Icon,
   GraduationCapIcon,
+  LoaderCircleIcon,
   QrCodeIcon,
   UserRoundIcon,
 } from "lucide-react";
@@ -57,6 +60,36 @@ export default function StudentHomePage() {
   const user = useUser();
   const { data: profile = null } = useGetCurrentUserQuery();
   const [showScanner, setShowScanner] = useState(false);
+  const updateUser = useUpdateUser();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  // Upload a new profile photo. Reuses the same multipart endpoint the sidebar
+  // avatar uses (`PUT /api/auth/profile-image` → Cloudflare R2 → backend).
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file.");
+      return;
+    }
+    const formData = new FormData();
+    formData.append("file", file);
+    setUploading(true);
+    try {
+      const res = await fetch("/api/auth/profile-image", { method: "PUT", body: formData });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.message ?? json?.error ?? `Upload failed (${res.status}).`);
+      const next = json?.payload?.profileImage ?? json?.profileImage ?? null;
+      if (next) updateUser?.({ profileImage: String(next) });
+      toast.success("Profile photo updated.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not upload photo.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
 
   // `/me` returns just the User row. Programs (enrollments) and attendance
   // history live on dedicated endpoints — without these the profile page
@@ -71,7 +104,6 @@ export default function StudentHomePage() {
 
   const displayName = asText(profile?.name ?? profile?.username ?? user?.name);
   const email = asText(profile?.email ?? user?.email);
-  const studentNo = asText(profile?.studentNo ?? profile?.studentId ?? profile?.code);
   const status = asText(profile?.status ?? profile?.accountStatus ?? "ACTIVE");
   const imageUrl = asText(profile?.profileImage ?? user?.profileImage);
   const programs = enrollments.length > 0
@@ -101,12 +133,33 @@ export default function StudentHomePage() {
     <div className="space-y-6 px-5 py-6 sm:px-7 sm:py-7">
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <Avatar className="size-16 rounded-2xl">
-            {imageUrl !== "—" ? <AvatarImage src={imageUrl} alt={displayName} className="rounded-2xl" /> : null}
-            <AvatarFallback className="rounded-2xl bg-primary text-lg font-semibold text-primary-foreground">
-              {initials(displayName)}
-            </AvatarFallback>
-          </Avatar>
+          {/* Clickable avatar → upload a new profile photo. */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="group relative size-16 shrink-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary"
+            aria-label="Change profile photo"
+          >
+            <Avatar className="size-16 rounded-2xl">
+              {imageUrl !== "—" ? <AvatarImage src={imageUrl} alt={displayName} className="rounded-2xl" /> : null}
+              <AvatarFallback className="rounded-2xl bg-primary text-lg font-semibold text-primary-foreground">
+                {initials(displayName)}
+              </AvatarFallback>
+            </Avatar>
+            <span className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+              {uploading
+                ? <LoaderCircleIcon className="size-5 animate-spin text-white" />
+                : <CameraIcon className="size-5 text-white" />}
+            </span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoChange}
+          />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-bold tracking-tight text-foreground">
@@ -120,10 +173,6 @@ export default function StudentHomePage() {
             <p className="mt-1 truncate text-base font-medium text-foreground">{displayName}</p>
             <p className="truncate text-sm text-muted-foreground">{email}</p>
           </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3 text-sm sm:min-w-56">
-          <InfoMini label="Student No." value={studentNo} />
-          <InfoMini label="Role" value={user?.displayRole ?? "Student"} />
         </div>
       </div>
 
