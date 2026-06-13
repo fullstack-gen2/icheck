@@ -16,6 +16,10 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+/** Single-shot guard so a transient state mismatch auto-restarts the login
+ *  exactly once instead of dead-ending (and never loops on a real misconfig). */
+const OAUTH_RETRY_COOKIE = "icheck_oauth_retry";
+
 interface TokenResponse {
   access_token: string;
   refresh_token?: string;
@@ -84,9 +88,35 @@ export async function GET(req: Request) {
       stateMatch: state === savedState,
       isLocalhost,
     });
+
+    // Most state mismatches are transient: a stale/abandoned login cookie, a
+    // prefetched login route overwriting the state, or the state cookie not
+    // surviving the cross-site bounce. The old behaviour dead-ended at the
+    // error page, so the user had to manually refresh (which simply restarts
+    // the login and succeeds). Do that automatically — restart the login flow
+    // ONCE. A guard cookie prevents an infinite loop if the failure is a real
+    // misconfiguration (then we show the error page).
+    const alreadyRetried = getCookie(req, OAUTH_RETRY_COOKIE) === "1";
+    if (!alreadyRetried) {
+      const retry = NextResponse.redirect(new URL("/api/auth/login", requestUrl.origin));
+      // Clear the stale state/verifier so the fresh login starts clean.
+      retry.cookies.delete(OAUTH_STATE_COOKIE);
+      retry.cookies.delete(OAUTH_CODE_VERIFIER_COOKIE);
+      retry.cookies.set(OAUTH_RETRY_COOKIE, "1", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: requestUrl.protocol === "https:",
+        path: "/",
+        maxAge: 120,
+      });
+      return retry;
+    }
+
+    // Second failure in a row → genuine problem; show the error page.
     const response = NextResponse.redirect(new URL("/login?error=oauth_state", requestUrl.origin));
     response.cookies.delete(OAUTH_STATE_COOKIE);
     response.cookies.delete(OAUTH_CODE_VERIFIER_COOKIE);
+    response.cookies.delete(OAUTH_RETRY_COOKIE);
     return response;
   }
 
@@ -157,6 +187,7 @@ export async function GET(req: Request) {
 
   response.cookies.delete(OAUTH_STATE_COOKIE);
   response.cookies.delete(OAUTH_CODE_VERIFIER_COOKIE);
+  response.cookies.delete(OAUTH_RETRY_COOKIE); // login succeeded — reset the guard
   response.cookies.set(ACCESS_TOKEN_COOKIE, token.access_token, {
     httpOnly: true,
     sameSite: "lax",

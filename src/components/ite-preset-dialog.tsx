@@ -27,9 +27,8 @@ import { getErrorMessage } from "@/lib/error-utils";
 import { useGetTeachersQuery } from "@/store/api/userApi";
 
 interface ClassroomOpt { id: number; className: string; }
-interface SubjectOpt { id: number; name: string; }
 
-const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 
 /**
  * Admin one-click ITE schedule preset. Backend `/schedules/ite-preset` creates
@@ -38,10 +37,8 @@ const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"
  */
 export function ItePresetInner({
   classrooms = [],
-  subjects = [],
 }: {
   classrooms?: ClassroomOpt[];
-  subjects?: SubjectOpt[];
 }) {
   const router = useRouter();
   const { data: teachers = [] } = useGetTeachersQuery();
@@ -49,7 +46,6 @@ export function ItePresetInner({
   const [open, setOpen] = useState(false);
   const [classId, setClassId] = useState("");
   const [teacherId, setTeacherId] = useState("");
-  const [subjectId, setSubjectId] = useState("");
   const [day, setDay] = useState("MONDAY");
   const [saving, setSaving] = useState(false);
 
@@ -63,7 +59,6 @@ export function ItePresetInner({
       await api.post("/schedules/ite-preset", {
         classId: Number(classId),
         teacherId: Number(teacherId),
-        subjectId: subjectId ? Number(subjectId) : null,
         dayOfWeek: day,
       });
       toast.success("ITE slots created (13:30–17:30 and 18:00–20:30).");
@@ -115,30 +110,18 @@ export function ItePresetInner({
             </Select>
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Subject">
-              <Select value={subjectId} onValueChange={setSubjectId}>
-                <SelectTrigger><SelectValue placeholder="Optional" /></SelectTrigger>
-                <SelectContent>
-                  {subjects.map((s) => (
-                    <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Day" required>
-              <Select value={day} onValueChange={setDay}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {DAYS.map((d) => (
-                    <SelectItem key={d} value={d}>
-                      {d.charAt(0) + d.slice(1).toLowerCase()}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
+          <Field label="Day" required>
+            <Select value={day} onValueChange={setDay}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {DAYS.map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {d.charAt(0) + d.slice(1).toLowerCase()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
         </div>
 
         <DialogFooter>

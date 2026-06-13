@@ -26,14 +26,11 @@ import { api } from "@/lib/api-client";
 import { useGetTeachersQuery } from "@/store/api/userApi";
 
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"] as const;
-const NO_SUBJECT_VALUE = "__none";
 
 export interface ScheduleFormValue {
   id?: number;
   classId?: number;
   className: string;
-  subjectId?: number;
-  subjectName: string | null;
   teacherId?: number;
   teacherName: string;
   dayOfWeek: string;
@@ -47,8 +44,6 @@ export interface ScheduleFormValue {
 const empty: ScheduleFormValue = {
   classId:     undefined,
   className:   "",
-  subjectId:   undefined,
-  subjectName: "",
   teacherId:   undefined,
   teacherName: "",
   dayOfWeek:   "MONDAY",
@@ -60,17 +55,15 @@ const empty: ScheduleFormValue = {
 };
 
 interface ClassroomOpt { id: number; className: string; }
-interface SubjectOpt { id: number; name: string; }
 
 interface Props {
   open: boolean;
   initial?: ScheduleFormValue | null;
   classrooms?: ClassroomOpt[];
-  subjects?: SubjectOpt[];
   onOpenChange: (o: boolean) => void;
 }
 
-export function ScheduleFormDialog({ open, initial, classrooms = [], subjects = [], onOpenChange }: Props) {
+export function ScheduleFormDialog({ open, initial, classrooms = [], onOpenChange }: Props) {
   const router = useRouter();
   const editing = !!initial?.id;
   const { data: teachers = [], isLoading: loadingTeachers } = useGetTeachersQuery();
@@ -118,7 +111,6 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], subjects = 
     try {
       const body = {
         classId:   form.classId,
-        subjectId: form.subjectId ?? null,
         teacherId: form.teacherId,
         dayOfWeek: form.dayOfWeek,
         startTime: form.startTime.length === 5 ? form.startTime + ":00" : form.startTime,
@@ -179,30 +171,6 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], subjects = 
               <SelectContent>
                 {classrooms.map((c) => (
                   <SelectItem key={c.id} value={String(c.id)}>{c.className}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-
-          <Field label="Subject">
-            <Select
-              value={form.subjectId ? String(form.subjectId) : NO_SUBJECT_VALUE}
-              onValueChange={(v) => {
-                if (v === NO_SUBJECT_VALUE) {
-                  patch("subjectId", undefined);
-                  patch("subjectName", "");
-                  return;
-                }
-                const s = subjects.find((sub) => sub.id === Number(v));
-                patch("subjectId", Number(v));
-                patch("subjectName", s?.name ?? "");
-              }}
-            >
-              <SelectTrigger><SelectValue placeholder="Optional" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_SUBJECT_VALUE}>No subject</SelectItem>
-                {subjects.map((s) => (
-                  <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

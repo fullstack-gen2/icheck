@@ -36,10 +36,9 @@ import { ItePresetInner } from "@/components/ite-preset-dialog";
 import { api } from "@/lib/api-client";
 
 interface ClassroomOpt { id: number; className: string; }
-interface SubjectOpt { id: number; name: string; }
 
 /** "Add Schedule" header button — opens an empty form. */
-export function ScheduleAddButton({ classrooms, subjects }: { classrooms?: ClassroomOpt[]; subjects?: SubjectOpt[] }) {
+export function ScheduleAddButton({ classrooms }: { classrooms?: ClassroomOpt[] }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -50,7 +49,6 @@ export function ScheduleAddButton({ classrooms, subjects }: { classrooms?: Class
         open={open}
         onOpenChange={setOpen}
         classrooms={classrooms}
-        subjects={subjects}
       />
     </>
   );
@@ -58,19 +56,17 @@ export function ScheduleAddButton({ classrooms, subjects }: { classrooms?: Class
 
 /** ITE 2-slot preset — creates both daily slots (13:30–17:30, 18:00–20:30)
  *  in a single call so the admin doesn't hand-enter two rows. */
-export function ItePresetButton({ classrooms, subjects }: { classrooms?: ClassroomOpt[]; subjects?: SubjectOpt[] }) {
-  return <ItePresetInner classrooms={classrooms} subjects={subjects} />;
+export function ItePresetButton({ classrooms }: { classrooms?: ClassroomOpt[] }) {
+  return <ItePresetInner classrooms={classrooms} />;
 }
 
 /** Per-row dropdown — edit + delete. */
 export function ScheduleRowActions({
   schedule,
   classrooms,
-  subjects,
 }: {
   schedule: ScheduleFormValue;
   classrooms?: ClassroomOpt[];
-  subjects?: SubjectOpt[];
 }) {
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
@@ -117,7 +113,6 @@ export function ScheduleRowActions({
         onOpenChange={setEditOpen}
         initial={schedule}
         classrooms={classrooms}
-        subjects={subjects}
       />
 
       <AlertDialog open={delOpen} onOpenChange={setDelOpen}>
@@ -125,8 +120,7 @@ export function ScheduleRowActions({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this schedule?</AlertDialogTitle>
             <AlertDialogDescription>
-              {schedule.subjectName || "Attendance Session"} · {schedule.className} ·{" "}
-              {schedule.startTime?.slice(0, 5)}–{schedule.endTime?.slice(0, 5)}
+              {schedule.className} · {schedule.startTime?.slice(0, 5)}–{schedule.endTime?.slice(0, 5)}
               <br />
               This permanently removes the slot from the timetable.
             </AlertDialogDescription>
