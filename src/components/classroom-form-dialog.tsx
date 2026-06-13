@@ -229,16 +229,17 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
   }
 
   return (
+  <section className="w-100">
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit Class" : "Create Class"}</DialogTitle>
+          <DialogTitle className="text-xl font-bold">{editing ? "Edit Class" : "Create Class"}</DialogTitle>
           <DialogDescription>
             {editing ? "Update this classroom's information." : "Add a new classroom to the system."}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 text-lg">
           <Field label="Class Name" required>
             <Input
               value={form.className}
@@ -397,6 +398,7 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  </section>
   );
 }
 

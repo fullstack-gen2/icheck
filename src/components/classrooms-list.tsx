@@ -143,7 +143,7 @@ export function ClassroomsList({ classrooms, emptyMessage, canManage = false }: 
           <Button onClick={openNew} className="gap-1.5">
             <PlusIcon className="size-4" /> New Class
           </Button>
-        )}
+        )}  
       </div>
 
       {filtered.length === 0 ? (
