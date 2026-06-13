@@ -28,10 +28,6 @@ export default async function ClassroomsPage() {
   const userId = user?.id ?? "";
   const isTeacher = role === "TEACHER";
 
-  // Sidebar split: "Dashboard" shows every class (see /dashboard/page.tsx).
-  // "Classes" → for a teacher, only the classes that are ready to teach right
-  // now (today's session is UPCOMING within the early-checkin window or
-  // already ACTIVE). For admins it stays the full catalogue.
   const [classrooms, classCounts] = await Promise.all([
     isTeacher
       ? fetchTeacherActiveClassrooms(userId)
@@ -39,12 +35,8 @@ export default async function ClassroomsPage() {
     fetchClassCounts(),
   ]);
 
-  // For teacher view the helper already filters to ready-now classes (so they
-  // are intrinsically "active" today); keep the same filter for admins so the
-  // archive doesn't leak into the cards.
   const activeClassrooms = isTeacher ? classrooms : classrooms.filter((c) => c.status);
 
-  // Group by program type so admins/students see Bachelor vs Scholarship at a glance
   const grouped = activeClassrooms.reduce<Record<string, Classroom[]>>((acc, c) => {
     const key = c.programTypeName ?? "Other";
     (acc[key] ??= []).push(c);
@@ -54,7 +46,7 @@ export default async function ClassroomsPage() {
   const groupNames = Object.keys(grouped).sort();
 
   return (
-    <div className="px-7 py-7">
+    <div className="px-7 py-7 md:px-10 md:py-10">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">
