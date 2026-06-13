@@ -255,7 +255,7 @@ export default async function SchedulePage({
                       <p className="text-base font-bold text-foreground">{item.endTime?.slice(0, 5)}</p>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-base font-semibold text-foreground">{scheduleTitle(item.subjectName)}</p>
+                      <p className="text-base font-semibold text-foreground">{scheduleTitle()}</p>
                       <p className="mt-0.5 text-sm text-muted-foreground">{item.className}</p>
                       {role === "ADMIN" && (
                         <p className="mt-0.5 text-sm text-muted-foreground/70">{item.teacherName}</p>
@@ -284,7 +284,7 @@ export default async function SchedulePage({
                         </Link>
                       )}
                       {isAdmin && (
-                        <ScheduleRowActions schedule={item} classrooms={classroomOptions} subjects={subjectOptions} />
+                        <ScheduleRowActions schedule={item} classrooms={classroomOptions} />
                       )}
                     </div>
                   </div>
@@ -332,7 +332,7 @@ export default async function SchedulePage({
                           key={item.id}
                           className={`rounded-xl border border-border/50 border-l-4 p-3 flex flex-col gap-1.5 ${cardBg} ${!item.status ? "opacity-50" : ""}`}
                         >
-                          <p className="line-clamp-2 text-sm font-bold leading-tight text-foreground">{scheduleTitle(item.subjectName)}</p>
+                          <p className="line-clamp-2 text-sm font-bold leading-tight text-foreground">{scheduleTitle()}</p>
                           <p className="truncate text-xs text-muted-foreground">{item.className}</p>
                           {role === "ADMIN" && (
                             <p className="truncate text-xs text-muted-foreground/70">{item.teacherName}</p>
