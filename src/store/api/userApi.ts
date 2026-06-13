@@ -193,6 +193,8 @@ export const userApi = baseApi.injectEndpoints({
     getStudentAttendance: builder.query<Array<{
       id?: number;
       sessionId?: number;
+      classId?: number;
+      className?: string;
       status?: string;
       method?: string;
       checkInTime?: string;

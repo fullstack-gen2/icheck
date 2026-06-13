@@ -106,16 +106,34 @@ export default function StudentHomePage() {
   const email = asText(profile?.email ?? user?.email);
   const status = asText(profile?.status ?? profile?.accountStatus ?? "ACTIVE");
   const imageUrl = asText(profile?.profileImage ?? user?.profileImage);
-  const programs = enrollments.length > 0
-    ? enrollments
-    : pickArray(profile, ["programs", "classrooms", "classes", "enrollments"]);
 
-  // Derive the summary client-side from the raw attendance list so the page
-  // never shows "—" — the backend doesn't (yet) expose a single summary
-  // endpoint, and even a slow list query is cheap for one student.
+  // Normalise enrolments into {id, name} so each program is clickable. Falls
+  // back to the loose profile shapes if /enrollments returned nothing.
+  const enrolledClasses = useMemo(() => {
+    if (enrollments.length > 0) {
+      return enrollments
+        .map((e) => ({
+          id: Number(e.classroomId ?? e.id),
+          name: e.className ?? e.classroomName ?? e.classCode ?? `Class ${e.classroomId ?? e.id}`,
+        }))
+        .filter((c) => !Number.isNaN(c.id));
+    }
+    return pickArray(profile, ["programs", "classrooms", "classes", "enrollments"]).map((p, i) => ({
+      id: -i - 1, // synthetic; can't filter attendance, but still displayed
+      name: programLabel(p),
+    }));
+  }, [enrollments, profile]);
+
+  // Which class's attendance to show. null = all classes combined. Lets a
+  // student enrolled in 2 programs click one to see just that program's tally.
+  const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+
+  // Summary filtered to the selected class (or all). Derived from the raw
+  // attendance list, which now carries classId from the backend.
   const summary = useMemo(() => {
     const counts = { total: 0, present: 0, late: 0, absent: 0 };
     for (const row of attendanceRows) {
+      if (selectedClassId != null && Number(row.classId) !== selectedClassId) continue;
       counts.total++;
       const s = (row.status ?? "").toUpperCase();
       if (s === "PRESENT") counts.present++;
@@ -123,7 +141,11 @@ export default function StudentHomePage() {
       else if (s === "ABSENT") counts.absent++;
     }
     return counts;
-  }, [attendanceRows]);
+  }, [attendanceRows, selectedClassId]);
+
+  const selectedClassName = selectedClassId != null
+    ? (enrolledClasses.find((c) => c.id === selectedClassId)?.name ?? "Selected class")
+    : null;
   const totalAttendance = asText(summary.total);
   const present = asText(summary.present);
   const late = asText(summary.late);
@@ -181,24 +203,61 @@ export default function StudentHomePage() {
           <div className="mb-4 flex items-center gap-2">
             <GraduationCapIcon className="size-5 text-primary" />
             <h2 className="font-semibold text-foreground">Current Programs</h2>
+            {enrolledClasses.length > 1 && (
+              <span className="text-xs text-muted-foreground/70">· tap one for its attendance</span>
+            )}
           </div>
-          {programs.length > 0 ? (
+          {enrolledClasses.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {programs.map((program, index) => (
-                <Badge key={index} variant="outline" className="rounded-lg px-3 py-1.5 text-sm">
-                  {programLabel(program)}
-                </Badge>
-              ))}
+              {/* "All" chip + one chip per enrolled class. Selecting a class
+                  filters the attendance summary on the right to that program. */}
+              {enrolledClasses.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedClassId(null)}
+                  className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                    selectedClassId == null
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card text-foreground hover:border-primary/40"
+                  }`}
+                >
+                  All
+                </button>
+              )}
+              {enrolledClasses.map((c) => {
+                const active = selectedClassId === c.id;
+                const clickable = c.id > 0; // synthetic ids (no enrolment) aren't filterable
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    disabled={!clickable}
+                    onClick={() => clickable && setSelectedClassId(active ? null : c.id)}
+                    className={`rounded-lg border px-3 py-1.5 text-sm transition-colors disabled:cursor-default ${
+                      active
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card text-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    {c.name}
+                  </button>
+                );
+              })}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No active program information was returned by the API.</p>
+            <p className="text-sm text-muted-foreground">You are not enrolled in any class yet.</p>
           )}
         </section>
 
         <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="mb-4 flex items-center gap-2">
             <ClipboardListIcon className="size-5 text-primary" />
-            <h2 className="font-semibold text-foreground">Attendance Status</h2>
+            <h2 className="font-semibold text-foreground">
+              Attendance Status
+            </h2>
+            <span className="text-xs text-muted-foreground/70">
+              · {selectedClassName ?? "all classes"}
+            </span>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <InfoMini label="Total" value={totalAttendance} />
