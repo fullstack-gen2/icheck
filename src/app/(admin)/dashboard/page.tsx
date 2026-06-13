@@ -103,7 +103,7 @@ export default async function DashboardPage() {
                 lab={c.lab ?? undefined}
                 students={counts ? `${counts.total}/${counts.female}` : "0/0"}
                 code={c.classCode ?? String(c.id)}
-                year={c.year}
+          year={c.year}
                 semester={c.semester}
                 generation={c.generation}
                 course={/scholarship/i.test(c.programTypeName ?? "")

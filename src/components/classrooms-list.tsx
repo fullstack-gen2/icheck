@@ -121,7 +121,7 @@ export function ClassroomsList({ classrooms, emptyMessage, canManage = false }: 
     <div className="flex flex-col gap-6">
       {/* Search + actions */}
       <div className="flex flex-wrap items-center gap-3 justify-between">
-        <div className="relative max-w-md flex-1 min-w-[200px]">
+        <div className="relative max-w-md flex-1 min-w-50">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
           <Input
             value={query}

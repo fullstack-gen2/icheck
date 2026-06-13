@@ -229,7 +229,6 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
   }
 
   return (
-  <section className="w-100">
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -398,7 +397,6 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  </section>
   );
 }
 
