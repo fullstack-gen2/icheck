@@ -230,7 +230,7 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-150">
+      <DialogContent className="w-150 py-5">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">{editing ? "Edit Class" : "Create Class"}</DialogTitle>
           <DialogDescription>
