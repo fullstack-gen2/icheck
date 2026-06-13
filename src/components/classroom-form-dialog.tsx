@@ -230,7 +230,7 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-150">
+      <DialogContent className="w-150">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">{editing ? "Edit Class" : "Create Class"}</DialogTitle>
           <DialogDescription>
@@ -411,7 +411,7 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-md">
+      <Label className="text-sm">
         {label}
         {required && <span className="text-red-500 ml-0.5">*</span>}
       </Label>
