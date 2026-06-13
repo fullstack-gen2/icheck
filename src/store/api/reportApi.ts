@@ -34,12 +34,33 @@ export interface GenerateSemesterReportRequest {
   year: number;
 }
 
+/** Live, computed-on-the-fly eligibility row (no report generation needed). */
+export interface EligibilityDto {
+  studentId: number;
+  studentNo: string;
+  studentName: string;
+  totalSessions: number;
+  attendedSessions: number;
+  attendancePct: number;
+  requiredPct: number;
+  eligible: boolean;
+  warnings: string[];
+}
+
 export const reportApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getClassroomReports: builder.query<ReportDto[], { classroomId: number; size?: number }>({
       query: ({ classroomId, size = 200 }) => `/reports/classrooms/${classroomId}?size=${size}`,
       transformResponse: (response: ApiEnvelope<PagePayload<ReportDto> | ReportDto[]>) =>
         unwrapContent<ReportDto>(response),
+      providesTags: ["Report"],
+    }),
+    /** Live eligibility — actual attendance computed now, shown when no
+     *  formal report has been generated for the class yet. */
+    getClassroomEligibility: builder.query<EligibilityDto[], number>({
+      query: (classroomId) => `/reports/classrooms/${classroomId}/eligibility`,
+      transformResponse: (response: ApiEnvelope<EligibilityDto[]> | EligibilityDto[]) =>
+        unwrapContent<EligibilityDto>(response),
       providesTags: ["Report"],
     }),
     /** Rule: MONTHLY report is only valid for classrooms whose program type is MONTHLY. */
@@ -75,5 +96,6 @@ export const {
   useGenerateMonthlyReportMutation,
   useGenerateSemesterReportMutation,
   useGetClassroomReportsQuery,
+  useGetClassroomEligibilityQuery,
   useLockReportMutation,
 } = reportApi;

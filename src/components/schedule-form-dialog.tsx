@@ -25,7 +25,7 @@ import { LoaderCircleIcon } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { useGetTeachersQuery } from "@/store/api/userApi";
 
-const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] as const;
+const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"] as const;
 const NO_SUBJECT_VALUE = "__none";
 
 export interface ScheduleFormValue {

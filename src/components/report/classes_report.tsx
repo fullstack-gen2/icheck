@@ -42,7 +42,9 @@ import {
   useGenerateMonthlyReportMutation,
   useGenerateSemesterReportMutation,
   useGetClassroomReportsQuery,
+  useGetClassroomEligibilityQuery,
   useLockReportMutation,
+  type ReportDto,
 } from "@/store/api/reportApi";
 
 type Classroom = ClassroomDto;
@@ -100,6 +102,13 @@ export default function ClassesReport() {
     { classroomId: selectedCls?.id ?? 0, size: 500 },
     { skip: !selectedCls },
   );
+  // Live eligibility — actual attendance computed by the backend now. Shown as
+  // a fallback so the report is never empty: even before a formal report is
+  // generated, the admin sees real attendance figures per student.
+  const { data: eligibility = [] } = useGetClassroomEligibilityQuery(
+    selectedCls?.id ?? 0,
+    { skip: !selectedCls },
+  );
 
   function resetFilters() {
     setSearch("");
@@ -123,11 +132,39 @@ export default function ClassesReport() {
   }, [classrooms, progType, search]);
 
   /* ── Derived: visible reports per tab ────────────────────────────────── */
-  const warnings = useMemo(
-    () => reports.filter((r) => r.warningStatus),
-    [reports],
+  // Map live eligibility rows into the ReportDto shape so the table renders
+  // them identically. Late/absent/score aren't part of the eligibility
+  // payload, so they show as derived/zero — the rate, present count, exam
+  // eligibility and warnings are all real.
+  const liveRows: ReportDto[] = useMemo(
+    () => eligibility.map((e) => ({
+      id: -e.studentId, // negative synthetic id (live, not a persisted report)
+      student: { id: e.studentId, name: e.studentName, studentNo: e.studentNo },
+      reportType: "LIVE",
+      reportMonth: null,
+      reportYear: new Date().getFullYear(),
+      semester: null,
+      totalSessions: e.totalSessions,
+      presentCount: e.attendedSessions,
+      lateCount: 0,
+      absentCount: Math.max(0, e.totalSessions - e.attendedSessions),
+      attendancePercentage: e.attendancePct,
+      attendanceScore: e.attendancePct,
+      warningStatus: !e.eligible,
+      examEligible: e.eligible,
+      locked: false,
+    })),
+    [eligibility],
   );
-  const visibleReports = tab === "warnings" ? warnings : reports;
+
+  // Prefer generated reports; fall back to live eligibility so the panel is
+  // never empty when attendance exists.
+  const effectiveReports = reports.length > 0 ? reports : liveRows;
+  const warnings = useMemo(
+    () => effectiveReports.filter((r) => r.warningStatus),
+    [effectiveReports],
+  );
+  const visibleReports = tab === "warnings" ? warnings : effectiveReports;
 
   /* ── Click a classroom → load its existing reports ───────────────────── */
   function loadReports(c: Classroom) {
@@ -312,41 +349,44 @@ export default function ClassesReport() {
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
         {/* ─────── Left: classroom picker ─────────────────────────────── */}
         <div className="flex flex-col gap-3">
-          {/* Program-type tabs */}
-          <div className="flex gap-1.5 flex-wrap">
-            {(["ALL", "BACHELOR", "SCHOLARSHIP"] as const).map((pt) => (
-              <button
-                key={pt}
-                onClick={() => { setProgType(pt); resetFilters(); }}
-                className={`px-3 py-1 rounded-full text-sm font-semibold border transition-all ${
-                  progType === pt
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-card text-muted-foreground border-border hover:border-primary/40"
-                }`}
-              >
-                {pt === "ALL" ? "All" : pt === "BACHELOR" ? "Bachelor" : "Scholarship"}
-              </button>
-            ))}
-          </div>
+          {/* Tabs on the left, search aligned to the right on the same row. */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            {/* Program-type tabs */}
+            <div className="flex gap-1.5 flex-wrap">
+              {(["ALL", "BACHELOR", "SCHOLARSHIP"] as const).map((pt) => (
+                <button
+                  key={pt}
+                  onClick={() => { setProgType(pt); resetFilters(); }}
+                  className={`px-3 py-1 rounded-full text-sm font-semibold border transition-all ${
+                    progType === pt
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-card text-muted-foreground border-border hover:border-primary/40"
+                  }`}
+                >
+                  {pt === "ALL" ? "All" : pt === "BACHELOR" ? "Bachelor" : "Scholarship"}
+                </button>
+              ))}
+            </div>
 
-          {/* Search */}
-          <div className="relative">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by class name, code…"
-              className="pl-9 pr-9"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted"
-                aria-label="Clear search"
-              >
-                <XIcon className="size-4" />
-              </button>
-            )}
+            {/* Search — right-aligned, fixed max width */}
+            <div className="relative ml-auto w-full sm:w-72">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by class name, code…"
+                className="pl-9 pr-9"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted"
+                  aria-label="Clear search"
+                >
+                  <XIcon className="size-4" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Class list */}
@@ -543,7 +583,9 @@ export default function ClassesReport() {
                               </p>
                             </TableCell>
                             <TableCell className="hidden px-4 py-3 text-sm text-muted-foreground sm:table-cell">
-                              {r.reportType === "MONTHLY"
+                              {r.reportType === "LIVE"
+                                ? "Live (to date)"
+                                : r.reportType === "MONTHLY"
                                 ? `${MONTHS[(r.reportMonth ?? 1) - 1]} ${r.reportYear}`
                                 : `Sem ${r.semester} / ${r.reportYear}`}
                             </TableCell>
@@ -603,7 +645,10 @@ export default function ClassesReport() {
                             </TableCell>
                             {isAdmin && (
                               <TableCell className="px-4 py-3 text-right">
-                                {!r.locked ? (
+                                {r.reportType === "LIVE" ? (
+                                  // Live rows aren't persisted reports — can't lock.
+                                  <span className="text-xs text-muted-foreground/40">live</span>
+                                ) : !r.locked ? (
                                   <Button
                                     size="sm"
                                     variant="ghost"

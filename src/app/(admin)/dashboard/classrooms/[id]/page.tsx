@@ -2,6 +2,7 @@ import { backendFetch } from "@/lib/api-fetch";
 import { getServerUser } from "@/auth-server";
 import AlertDialogDemo from "@/components/popup/start_session";
 import { AssignSubstituteDialog } from "@/components/assign-substitute-dialog";
+import { ClassroomEditButton } from "@/components/classroom-edit-button";
 import { Button } from "@/components/ui/button";
 import { columns } from "@/components/classdetail/column";
 import { DataTableList } from "@/components/classdetail/data-table";
@@ -16,6 +17,14 @@ interface Classroom {
   classCode: string;
   programTypeName: string;
   lab?: string | null;
+  generation?: number;
+  year?: number | null;
+  semester?: number | null;
+  shift?: string | null;
+  academicYear?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  status?: boolean;
 }
 
 async function fetchClassroom(id: string): Promise<Classroom | null> {
@@ -144,6 +153,25 @@ export default async function ClassroomDetailPage({
                 </Button>
               );
             })()}
+            {isAdmin && classroom && (
+              <ClassroomEditButton
+                classroom={{
+                  id: classroom.id,
+                  className: classroom.className,
+                  classCode: classroom.classCode,
+                  programTypeName: classroom.programTypeName,
+                  generation: classroom.generation ?? 1,
+                  year: classroom.year ?? null,
+                  semester: classroom.semester ?? null,
+                  shift: classroom.shift ?? "MORNING",
+                  academicYear: classroom.academicYear ?? new Date().getFullYear(),
+                  startDate: classroom.startDate ?? "",
+                  endDate: classroom.endDate ?? "",
+                  lab: classroom.lab ?? null,
+                  status: classroom.status ?? true,
+                }}
+              />
+            )}
             {isAdmin && (
               <AssignSubstituteDialog
                 sessionId={(session as SessionSummary | null)?.id ?? null}
