@@ -46,8 +46,10 @@ export async function POST(req: Request) {
     ipAddress: body.ipAddress ?? getClientIp(req),
   };
   if (kind === "static") {
-    // Static QR scan always requires a reason — backend rejects with 400
-    // "A reason is required when checking in via static QR" if missing.
+    // Static QR: on-time scans need no reason (fast scan). Only a LATE scan
+    // requires one — the backend rejects those with 400 "A reason is required
+    // when checking in late via static QR", which the client turns into the
+    // reason prompt. Forward whatever reason we have (empty on the first try).
     payload.reason = body.reason ?? "";
   }
 
