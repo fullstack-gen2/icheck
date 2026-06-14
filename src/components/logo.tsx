@@ -11,9 +11,10 @@ export const LOGO_URL =
 export const LOGO_WORDMARK_URL =
   "https://res.cloudinary.com/dsmqsivcj/image/upload/v1779733974/lwg6puq41ne1bpp9jywj.png";
 
-/** ISTAD institutional logo — used on official exports (report PDFs). */
-export const ISTAD_LOGO_URL =
-  "https://pub-148b9516d1374f5ebb13f94593832ffd.r2.dev/icheckr2/ISTAD-LOGO-PNG.png";
+/** ISTAD institutional logo — used on official exports (report PDFs).
+ *  Served locally from /public/assets so the PDF embed never depends on a
+ *  remote host (no CORS, always available offline). */
+export const ISTAD_LOGO_URL = "/assets/istad-logo.png";
 
 interface LogoProps {
   /** Pixel size of the square logo. */
