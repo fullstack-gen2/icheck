@@ -196,7 +196,7 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
   if (createdQr) {
     return (
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-md ">
+        <DialogContent className="max-w-4xl ">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2Icon className="size-5 text-green-600" />
