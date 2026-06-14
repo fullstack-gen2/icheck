@@ -51,6 +51,12 @@ export interface ClassroomFormValue {
 
 const SHIFTS  = ["MORNING", "AFTERNOON", "EVENING"];
 
+/** IT Expert (ITE) runs on fixed time slots, not morning/afternoon shifts —
+ *  so the Shift field is blanked/disabled and sent as null for ITE classes. */
+function isNoShiftProgram(name?: string | null) {
+  return /it\s*expert/i.test(name ?? "") || /\bite\b/i.test(name ?? "");
+}
+
 // Common school lab/room names — admin can also type a custom one.
 const LABS = [
   "Lab DevOps",
@@ -117,6 +123,7 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
     (p) => p.name.toLowerCase() === form.programTypeName.toLowerCase()
   );
   const isScholarship = (selectedProgram?.structureType ?? "").toUpperCase() !== "SEMESTER";
+  const noShift = isNoShiftProgram(form.programTypeName);
 
   function patch<K extends keyof ClassroomFormValue>(k: K, v: ClassroomFormValue[K]) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -150,7 +157,7 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
         generation:       Number(form.generation),
         year:             isScholarship ? null : Number(form.year),
         semester:         isScholarship ? null : Number(form.semester),
-        shift:            form.shift,
+        shift:            noShift ? null : form.shift,
         academicYear:     Number(form.academicYear),
         startDate:        form.startDate,
         endDate:          form.endDate,
@@ -274,7 +281,13 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
           <Field label="Program">
             <Select
               value={form.programTypeName}
-              onValueChange={(v) => patch("programTypeName", v)}
+              onValueChange={(v) => {
+                patch("programTypeName", v);
+                // ITE has no shift → blank it; switching to a shift program
+                // restores a sensible default if it was cleared.
+                if (isNoShiftProgram(v)) patch("shift", "");
+                else if (!form.shift) patch("shift", "MORNING");
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder={programTypes.length === 0 ? "Loading…" : "Select program"} />
@@ -290,10 +303,13 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
           </Field>
           <Field label="Shift">
             <Select
-              value={form.shift}
+              value={noShift ? "" : form.shift}
               onValueChange={(v) => patch("shift", v)}
+              disabled={noShift}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder={noShift ? "No shift (IT Expert)" : "Select shift"} />
+              </SelectTrigger>
               <SelectContent>
                 {SHIFTS.map((s) => (
                   <SelectItem key={s} value={s}>{s.charAt(0) + s.slice(1).toLowerCase()}</SelectItem>
