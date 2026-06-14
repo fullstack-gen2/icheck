@@ -11,6 +11,8 @@ import { useUser } from "@/components/user-provider";
 import {
   UsersIcon,
   ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   SearchIcon,
   XIcon,
   PlusIcon,
@@ -57,15 +59,13 @@ export default function StudentsPage() {
   // Teachers now live on the dedicated /teachers sidebar route — this page is
   // exclusively the Students list (no in-page Students/Teachers switcher).
   return (
-    <div className="px-4 sm:px-5 py-6 sm:py-8">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Students</h1>
-      </div>
-
+    <div className="px-4 sm:px-6 lg:px-8 pt-10 pb-8 max-w-[1400px] mx-auto w-full">
       <StudentsView isAdmin={isAdmin} />
     </div>
   );
 }
+
+const PAGE_SIZE = 10;
 
 // ── Students view ───────────────────────────────────────────────────────────
 function StudentsView({ isAdmin }: { isAdmin: boolean }) {
@@ -155,6 +155,22 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
 
   const loading = loadingStudents || loadingClassrooms;
 
+  // ── Pagination ────────────────────────────────────────────────────────────
+  // Reset to page 1 whenever the result set changes (filters/search) using the
+  // adjust-during-render pattern (no set-state-in-effect).
+  const [page, setPage] = useState(1);
+  const filterKey = `${search}|${programType}|${filterYear}|${filterSemester}|${filterShift}|${filterGeneration}|${filterCourse}`;
+  const [prevKey, setPrevKey] = useState(filterKey);
+  if (prevKey !== filterKey) {
+    setPrevKey(filterKey);
+    setPage(1);
+  }
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const firstRow = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const lastRow = Math.min(safePage * PAGE_SIZE, filtered.length);
+
   function openNew() {
     setEditing(null);
     setFormOpen(true);
@@ -194,7 +210,7 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
   function toggleVisibleStudents(checked: boolean) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      for (const student of filtered) {
+      for (const student of paged) {
         if (checked) next.add(student.id); else next.delete(student.id);
       }
       return next;
@@ -223,46 +239,55 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
     }
   }
 
-  const selectedVisibleCount = filtered.filter((student) => selectedIds.has(student.id)).length;
-  const allVisibleSelected = filtered.length > 0 && selectedVisibleCount === filtered.length;
+  const selectedVisibleCount = paged.filter((student) => selectedIds.has(student.id)).length;
+  const allVisibleSelected = paged.length > 0 && selectedVisibleCount === paged.length;
 
   return (
     <>
-      <div className="flex items-center justify-end mb-4 flex-wrap gap-3">
-        <span className="text-sm text-muted-foreground">
-          {filtered.length} of {students.length}
-          {selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ""}
-        </span>
-        {isAdmin && selectedIds.size > 0 && (
-          <div className="flex items-center gap-2">
-            <select
-              value={targetClassId}
-              onChange={(event) => setTargetClassId(event.target.value)}
-              className="h-9 min-w-48 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-            >
-              <option value="">Select class</option>
-              {classrooms.map((classroom) => (
-                <option key={classroom.id} value={classroom.id}>
-                  {classroom.className}
-                </option>
-              ))}
-            </select>
-            <Button
-              className="gap-1.5"
-              onClick={addSelectedToClass}
-              disabled={!targetClassId || bulkEnrolling}
-            >
+      {/* ── Header: title + count + actions on one clean row ──────────────── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-8">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Students</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage and enroll students across all programs.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-sm text-muted-foreground">
+            {filtered.length} of {students.length}
+            {selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ""}
+          </span>
+          {isAdmin && selectedIds.size > 0 && (
+            <div className="flex items-center gap-2">
+              <select
+                value={targetClassId}
+                onChange={(event) => setTargetClassId(event.target.value)}
+                className="h-9 min-w-48 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="">Select class</option>
+                {classrooms.map((classroom) => (
+                  <option key={classroom.id} value={classroom.id}>
+                    {classroom.className}
+                  </option>
+                ))}
+              </select>
+              <Button
+                className="gap-1.5"
+                onClick={addSelectedToClass}
+                disabled={!targetClassId || bulkEnrolling}
+              >
+                <PlusIcon className="size-4" />
+                {bulkEnrolling ? "Adding..." : "Add to class"}
+              </Button>
+            </div>
+          )}
+          {isAdmin && (
+            <Button className="gap-1.5" onClick={openNew}>
               <PlusIcon className="size-4" />
-              {bulkEnrolling ? "Adding..." : "Add to class"}
+              Register Student
             </Button>
-          </div>
-        )}
-        {isAdmin && (
-          <Button className="gap-1.5" onClick={openNew}>
-            <PlusIcon className="size-4" />
-            Register Student
-          </Button>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Search */}
@@ -385,11 +410,11 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((student, index) => (
+              {paged.map((student, index) => (
                 <tr
                   key={student.id}
                   className={`border-b border-border/50 hover:bg-muted/50 transition-colors ${
-                    index === filtered.length - 1 ? "border-b-0" : ""
+                    index === paged.length - 1 ? "border-b-0" : ""
                   }`}
                 >
                   {isAdmin && (
@@ -454,6 +479,18 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
         </div>
       )}
 
+      {/* ── Pagination ───────────────────────────────────────────────────── */}
+      {!loading && filtered.length > 0 && (
+        <div className="mt-4 flex items-center justify-between flex-wrap gap-3">
+          <p className="text-sm text-muted-foreground">
+            Showing <span className="font-medium text-foreground">{firstRow}</span>–
+            <span className="font-medium text-foreground">{lastRow}</span> of{" "}
+            <span className="font-medium text-foreground">{filtered.length}</span> students
+          </p>
+          <Pagination page={safePage} totalPages={totalPages} onChange={setPage} />
+        </div>
+      )}
+
       <StudentFormDialog
         open={formOpen}
         initial={editing}
@@ -485,6 +522,74 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
+
+// ── Pagination control ──────────────────────────────────────────────────────
+function Pagination({
+  page,
+  totalPages,
+  onChange,
+}: {
+  page: number;
+  totalPages: number;
+  onChange: (p: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+
+  // Compact window of page numbers around the current page.
+  const pages: (number | "…")[] = [];
+  const push = (p: number | "…") => pages.push(p);
+  const window = 1;
+  for (let p = 1; p <= totalPages; p++) {
+    if (p === 1 || p === totalPages || (p >= page - window && p <= page + window)) {
+      push(p);
+    } else if (pages[pages.length - 1] !== "…") {
+      push("…");
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <Button
+        variant="outline"
+        size="icon"
+        className="size-8"
+        onClick={() => onChange(page - 1)}
+        disabled={page <= 1}
+        aria-label="Previous page"
+      >
+        <ChevronLeftIcon className="size-4" />
+      </Button>
+      {pages.map((p, i) =>
+        p === "…" ? (
+          <span key={`gap-${i}`} className="px-1.5 text-sm text-muted-foreground/60">
+            …
+          </span>
+        ) : (
+          <Button
+            key={p}
+            variant={p === page ? "default" : "outline"}
+            size="icon"
+            className="size-8 text-sm"
+            onClick={() => onChange(p)}
+            aria-current={p === page ? "page" : undefined}
+          >
+            {p}
+          </Button>
+        )
+      )}
+      <Button
+        variant="outline"
+        size="icon"
+        className="size-8"
+        onClick={() => onChange(page + 1)}
+        disabled={page >= totalPages}
+        aria-label="Next page"
+      >
+        <ChevronRightIcon className="size-4" />
+      </Button>
+    </div>
+  );
+}
 
 // ── Reusable filter select ──────────────────────────────────────────────────
 function FilterSelect({

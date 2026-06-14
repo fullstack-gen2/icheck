@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { BellIcon } from "lucide-react";
 import {
   DropdownMenu,
@@ -45,7 +46,9 @@ function ago(iso?: string): string {
  */
 export function NotificationBell() {
   const user = useUser();
+  const router = useRouter();
   const userId = user?.id ?? "";
+  const isAdmin = user?.role === "ADMIN";
   const [open, setOpen] = useState(false);
 
   const { data: notifications = [], refetch } = useGetNotificationsQuery(userId, {
@@ -58,9 +61,16 @@ export function NotificationBell() {
   const unread = notifications.filter((n) => isUnread(n.status));
   const unreadCount = unread.length;
 
-  async function handleClick(id: number, alreadyRead: boolean) {
-    if (alreadyRead) return;
-    try { await markRead(id).unwrap(); } catch { /* swallow — UI still updates via cache */ }
+  async function handleClick(n: { id: number; type?: string }, alreadyRead: boolean) {
+    if (!alreadyRead) {
+      try { await markRead(n.id).unwrap(); } catch { /* swallow — UI still updates via cache */ }
+    }
+    // An admin clicking an amendment notification jumps straight to the review
+    // inbox so they can approve/reject it.
+    if (isAdmin && n.type?.toUpperCase() === "AMENDMENT") {
+      setOpen(false);
+      router.push("/amendments");
+    }
   }
 
   async function handleMarkAll() {
@@ -107,8 +117,10 @@ export function NotificationBell() {
               return (
                 <DropdownMenuItem
                   key={n.id}
-                  className={`flex flex-col items-start gap-0.5 ${unreadRow ? "bg-primary/5" : ""}`}
-                  onClick={() => handleClick(n.id, !unreadRow)}
+                  className={`flex flex-col items-start gap-0.5 ${unreadRow ? "bg-primary/5" : ""} ${
+                    isAdmin && n.type?.toUpperCase() === "AMENDMENT" ? "cursor-pointer" : ""
+                  }`}
+                  onClick={() => handleClick(n, !unreadRow)}
                 >
                   <div className="flex w-full items-start gap-2">
                     {unreadRow && (

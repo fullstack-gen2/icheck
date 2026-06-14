@@ -22,6 +22,7 @@ import {
   FileChartColumnIcon,
   BookOpenIcon,
   GraduationCapIcon,
+  InboxIcon,
 } from "lucide-react"
 import { LogoWordmark } from "@/components/logo"
 import { GrSchedules } from "react-icons/gr";
@@ -40,6 +41,7 @@ const ALL_MAIN = [
   { title: "Students",   url: "/students",              icon: <UsersIcon />,           roles: ["ADMIN", "TEACHER"] },
   { title: "Teachers",   url: "/teachers",              icon: <GraduationCapIcon />,   roles: ["ADMIN"] },
   { title: "Schedule",   url: "/schedule",              icon: <GrSchedules />,            roles: ["ADMIN", "TEACHER"] },
+  { title: "Requests",   url: "/amendments",            icon: <InboxIcon />,           roles: ["ADMIN"] },
   { title: "Reports",    url: "/reports",               icon: <FileChartColumnIcon />, roles: ["ADMIN", "TEACHER"] },
 ];
 

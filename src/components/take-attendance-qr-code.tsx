@@ -14,6 +14,7 @@ import {
   type SessionDto,
 } from "@/store/api/qrApi";
 import { useUser } from "@/components/user-provider";
+import { isTeacherStartableSession } from "@/lib/session-helpers";
 
 const QR_LOGO_URL =
   "https://res.cloudinary.com/dsmqsivcj/image/upload/v1780286128/c4lgj7uipplt47mergga.png";
@@ -147,6 +148,14 @@ export function TakeAttendanceQrCode({
       setSession(target);
 
       if (isOpenable(target.status)) {
+        // Enforce the start window even on direct navigation: past the late
+        // threshold the QR can no longer be opened — use the Amendment form.
+        if (!isTeacherStartableSession(target)) {
+          setError(
+            "The start window has closed for this session. Use the Amendment form to record attendance."
+          );
+          return;
+        }
         try {
           if (user?.role === "ADMIN") {
             await openSession(target.id).unwrap();

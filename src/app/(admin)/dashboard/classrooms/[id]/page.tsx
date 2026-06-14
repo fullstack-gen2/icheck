@@ -102,9 +102,12 @@ export default async function ClassroomDetailPage({
         <div className="flex-col">
           <div className="flex flex-wrap items-center justify-end gap-2">
             {(() => {
-              const TEACHER_START_GRACE_MINUTES = 10;
+              // Both bounds come from the session (system settings), not
+              // hardcoded: openable from earlyCheckin before start until
+              // lateThreshold after it; QR stays live qr_window_minutes.
+              const TEACHER_START_GRACE_MINUTES = session?.lateThresholdMinutes ?? 10;
               const QR_WINDOW_MINUTES = 5;
-              const earlyCheckin = session?.earlyCheckinMinutes ?? 15;
+              const earlyCheckin = session?.earlyCheckinMinutes ?? 10;
               const now = new Date();
               const startIso = session?.sessionDate && session?.startTime
                 ? `${session.sessionDate}T${session.startTime}`
