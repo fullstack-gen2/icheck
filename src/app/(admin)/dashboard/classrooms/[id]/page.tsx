@@ -182,7 +182,6 @@ export default async function ClassroomDetailPage({
               <FreezeClassDialog
                 classroomId={classroom.id}
                 className={classroom.className}
-                frozen={classroom.frozen ?? false}
               />
             )}
             {isAdmin && (

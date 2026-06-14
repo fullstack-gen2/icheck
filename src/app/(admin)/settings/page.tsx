@@ -25,7 +25,9 @@ import {
   SaveIcon,
   Settings2Icon,
   ShieldCheckIcon,
+  SnowflakeIcon,
 } from "lucide-react";
+import { FreezeClassDialog } from "@/components/freeze-class-dialog";
 import {
   useGetSettingsQuery,
   useUpdateSettingMutation,
@@ -304,6 +306,26 @@ export default function SettingsPage() {
             <IpAllowlistCard settings={settings} />
             <SchoolLocationCard settings={settings} />
           </div>
+
+          {/* Freeze attendance for a date range — whole school. Per-class
+              freeze lives on each class detail page. */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <SnowflakeIcon className="size-5 text-sky-600" />
+                Freeze Attendance (whole school)
+              </CardTitle>
+              <CardDescription>
+                Pause attendance for one or more days across every class — e.g.
+                a public holiday or exam week. No sessions are generated and
+                check-ins are rejected on those days. To freeze just one class,
+                use the Freeze button on that class&apos;s page.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FreezeClassDialog />
+            </CardContent>
+          </Card>
         </section>
       )}
 
