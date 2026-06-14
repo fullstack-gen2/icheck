@@ -230,6 +230,7 @@ export default async function ClassroomDetailPage({
         <DataTableList
           columns={columns}
           data={students}
+          canUnassign={isAdmin}
           showStudentActions
           studentProfileBasePath={`/dashboard/classrooms/${id}/student-profile`}
           sessionDate={session?.sessionDate ?? null}

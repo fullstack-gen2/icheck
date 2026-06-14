@@ -32,10 +32,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAttendanceStream, type AttendanceUpdateEvent } from "@/lib/attendance-stream";
+import { UnassignStudentButton } from "@/components/classdetail/unassign-student-button";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  /** Admin-only: show a per-row "Unassign" action that removes the enrollment. */
+  canUnassign?: boolean;
   showStudentActions?: boolean;
   showAddStudentButton?: boolean;
   studentSummaryText?: string;
@@ -60,6 +63,7 @@ declare module "@tanstack/react-table" {
 export function DataTableList<TData, TValue>({
   columns,
   data,
+  canUnassign = false,
   showStudentActions = false,
   showAddStudentButton = true,
   studentSummaryText,
@@ -126,24 +130,48 @@ export function DataTableList<TData, TValue>({
     });
   });
   const tableColumns = React.useMemo<ColumnDef<TData, unknown>[]>(
-    () => [
-      ...(columns as ColumnDef<TData, unknown>[]),
-      {
-        id: "status",
-        header: "Status",
-        enableSorting: false,
-        enableColumnFilter: false,
-        cell: ({ row }) => {
-          const rowData = row.original as TData & { status?: string | null };
-          return (
-            <span className="font-medium text-gray-500">
-              {rowData.status || "pending"}
-            </span>
-          );
+    () => {
+      const cols: ColumnDef<TData, unknown>[] = [
+        ...(columns as ColumnDef<TData, unknown>[]),
+        {
+          id: "status",
+          header: "Status",
+          enableSorting: false,
+          enableColumnFilter: false,
+          cell: ({ row }) => {
+            const rowData = row.original as TData & { status?: string | null };
+            return (
+              <span className="font-medium text-gray-500">
+                {rowData.status || "pending"}
+              </span>
+            );
+          },
         },
-      },
-    ],
-    [columns],
+      ];
+      if (canUnassign && numericClassroomId) {
+        cols.push({
+          id: "actions",
+          header: () => <span className="sr-only">Actions</span>,
+          enableSorting: false,
+          enableColumnFilter: false,
+          cell: ({ row }) => {
+            const r = row.original as TData & { id?: string | number; name?: string };
+            if (r.id == null) return null;
+            return (
+              <div className="text-right">
+                <UnassignStudentButton
+                  classroomId={numericClassroomId}
+                  userId={Number(r.id)}
+                  studentName={String(r.name ?? "this student")}
+                />
+              </div>
+            );
+          },
+        });
+      }
+      return cols;
+    },
+    [columns, canUnassign, numericClassroomId],
   );
 
   function formatDate(raw?: string | null) {
