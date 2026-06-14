@@ -1,25 +1,21 @@
 const nextConfig = {
   images: {
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "i.pinimg.com",
-      },
-      {
-        protocol: "https",
-        hostname: "i1-c.pinimg.com",
-      },
+      { protocol: "https", hostname: "i.pinimg.com" },
+      { protocol: "https", hostname: "i1-c.pinimg.com" },
+      // Profile photos are uploaded to Cloudflare R2 and served from its
+      // public bucket host — without this next/image refuses the URL and the
+      // avatar renders as a broken image.
+      { protocol: "https", hostname: "**.r2.dev" },
+      { protocol: "https", hostname: "**.r2.cloudflarestorage.com" },
+      // Cloudinary-hosted assets (logo, etc.).
+      { protocol: "https", hostname: "res.cloudinary.com" },
     ],
   },
   turbopack: {
     root: __dirname,
   },
-  // NOTE: `/api/v1/*` is handled by `src/app/api/v1/[...path]/route.ts`, which
-  // proxies to the attendance-service backend AND attaches the
-  // `Authorization: Bearer <token>` header from the httpOnly access-token
-  // cookie (the backend ignores cookies — it's an OAuth2 resource server that
-  // only reads the bearer token). A plain `rewrites()` proxy can't add that
-  // header, which previously caused every RTK Query call to fail with 401.
+
 };
 
 export default nextConfig;

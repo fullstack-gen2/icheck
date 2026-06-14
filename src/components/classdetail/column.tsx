@@ -44,8 +44,11 @@ export const columns: ColumnDef<AttendanceList>[] = [
             : `/students/${row.original.id}`
           : "#";
 
-      if (!profileUrl) {
-        return <span>No image</span>;
+      // Only render an <Image> for a real http(s) URL — anything else (empty,
+      // a bare filename, a relative path) would render as a broken image.
+      const isValidUrl = /^https?:\/\//i.test(profileUrl ?? "");
+      if (!isValidUrl) {
+        return <span className="text-muted-foreground/70">No image</span>;
       }
 
       return (
@@ -56,6 +59,7 @@ export const columns: ColumnDef<AttendanceList>[] = [
             src={profileUrl}
             alt={`${row.original.name} profile`}
             className="h-10 w-10 rounded-xl object-cover"
+            unoptimized
           />
         </Link>
       );
