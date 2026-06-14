@@ -3,150 +3,87 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { SnowflakeIcon, LoaderCircleIcon } from "lucide-react";
+import { SnowflakeIcon, FlameIcon, LoaderCircleIcon } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-utils";
+import {
+  useGetSettingsQuery,
+  useUpdateSettingMutation,
+} from "@/store/api/attendanceApi";
+
+const GLOBAL_FREEZE_KEY = "attendance_frozen";
 
 interface Props {
-  /** When set → freeze this one class (CLASSROOM scope). When omitted → the
-   *  dialog offers a GLOBAL freeze (all classes). */
+  /** Per-class freeze when set. Omit for the global (whole-school) toggle. */
   classroomId?: number;
   className?: string;
+  /** Current frozen state of this class (for the per-class toggle label). */
+  frozen?: boolean;
 }
 
 /**
- * Admin "Freeze" — declares a holiday so attendance stops counting that day.
- * Posts a HOLIDAY calendar event; the backend also cancels any session already
- * generated for the date/scope, so live QR + check-in are blocked. Sessions are
- * skipped by the daily generator on holidays, so future days are covered too.
+ * Freeze toggle.
+ * - Per-class (classroomId set): PATCH /classrooms/{id}/freeze?frozen=… — pauses
+ *   one class. Frozen classes generate no sessions and reject check-ins.
+ * - Global (no classroomId): toggles the `attendance_frozen` system setting —
+ *   pauses every class school-wide.
+ *
+ * Replaces the old date-based dialog with a persistent on/off switch, matching
+ * "global setting for freeze-all, per-class flag for each class".
  */
-export function FreezeClassDialog({ classroomId, className }: Props) {
+export function FreezeClassDialog({ classroomId, className, frozen }: Props) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [scope, setScope] = useState<"CLASSROOM" | "GLOBAL">(classroomId ? "CLASSROOM" : "GLOBAL");
-  const [label, setLabel] = useState("");
-  const [saving, setSaving] = useState(false);
+  const isGlobal = classroomId == null;
 
-  async function handleFreeze() {
-    if (!date) {
-      toast.error("Pick a date to freeze.");
-      return;
-    }
-    setSaving(true);
+  // Global mode reads the live setting so the button reflects current state.
+  const { data: settings = [] } = useGetSettingsQuery(undefined, { skip: !isGlobal });
+  const [updateSetting] = useUpdateSettingMutation();
+  const globalFrozen =
+    settings.find((s) => s.settingKey === GLOBAL_FREEZE_KEY)?.settingValue === "true";
+
+  const currentlyFrozen = isGlobal ? globalFrozen : !!frozen;
+  const [busy, setBusy] = useState(false);
+
+  async function toggle() {
+    setBusy(true);
     try {
-      await api.post("/calendar", {
-        date,
-        type: "HOLIDAY",
-        scope,
-        classroomId: scope === "CLASSROOM" ? classroomId ?? null : null,
-        label: label.trim() || (scope === "GLOBAL" ? "School holiday" : `Frozen: ${className ?? "class"}`),
-      });
-      toast.success(
-        scope === "GLOBAL"
-          ? "All classes frozen for that day."
-          : `${className ?? "Class"} frozen for that day.`,
-      );
-      setOpen(false);
+      const next = !currentlyFrozen;
+      if (isGlobal) {
+        await updateSetting({ key: GLOBAL_FREEZE_KEY, value: String(next) }).unwrap();
+        toast.success(next ? "Whole school frozen." : "School unfrozen.");
+      } else {
+        await api.patch(`/classrooms/${classroomId}/freeze?frozen=${next}`, undefined);
+        toast.success(next ? `${className ?? "Class"} frozen.` : `${className ?? "Class"} unfrozen.`);
+      }
       router.refresh();
     } catch (e) {
-      toast.error(getErrorMessage(e, "Could not freeze."));
+      toast.error(getErrorMessage(e, "Could not change freeze state."));
     } finally {
-      setSaving(false);
+      setBusy(false);
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="p-5 gap-1.5">
-          <SnowflakeIcon className="size-4" /> Freeze
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Freeze Attendance</DialogTitle>
-          <DialogDescription>
-            Mark a day as a holiday / special case. No attendance is counted —
-            sessions for that day are cancelled and none are generated.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="grid gap-3">
-          <Field label="Date" required>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          </Field>
-
-          <Field label="Scope" required>
-            <Select value={scope} onValueChange={(v) => setScope(v as "CLASSROOM" | "GLOBAL")}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {classroomId && (
-                  <SelectItem value="CLASSROOM">This class only{className ? ` (${className})` : ""}</SelectItem>
-                )}
-                <SelectItem value="GLOBAL">All classes (whole school)</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-
-          <Field label="Reason / label">
-            <Input
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g. Public holiday, exam day…"
-            />
-          </Field>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
-            Cancel
-          </Button>
-          <Button onClick={handleFreeze} disabled={saving} className="gap-1.5">
-            {saving ? <LoaderCircleIcon className="size-4 animate-spin" /> : <SnowflakeIcon className="size-4" />}
-            Freeze Day
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function Field({
-  label,
-  required,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs">
-        {label}
-        {required && <span className="text-red-500 ml-0.5">*</span>}
-      </Label>
-      {children}
-    </div>
+    <Button
+      variant={currentlyFrozen ? "default" : "outline"}
+      className={`p-5 gap-1.5 ${currentlyFrozen ? "bg-sky-600 hover:bg-sky-700 text-white" : ""}`}
+      onClick={toggle}
+      disabled={busy}
+      title={
+        isGlobal
+          ? "Freeze / unfreeze attendance for the whole school"
+          : "Freeze / unfreeze this class"
+      }
+    >
+      {busy
+        ? <LoaderCircleIcon className="size-4 animate-spin" />
+        : currentlyFrozen
+          ? <FlameIcon className="size-4" />
+          : <SnowflakeIcon className="size-4" />}
+      {currentlyFrozen
+        ? (isGlobal ? "Unfreeze All" : "Unfreeze")
+        : (isGlobal ? "Freeze All" : "Freeze")}
+    </Button>
   );
 }

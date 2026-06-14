@@ -27,6 +27,7 @@ interface Classroom {
   startDate?: string | null;
   endDate?: string | null;
   status?: boolean;
+  frozen?: boolean;
 }
 
 async function fetchClassroom(id: string): Promise<Classroom | null> {
@@ -178,7 +179,11 @@ export default async function ClassroomDetailPage({
               <StaticQrDialog classroomId={classroom.id} className={classroom.className} />
             )}
             {isAdmin && classroom && (
-              <FreezeClassDialog classroomId={classroom.id} className={classroom.className} />
+              <FreezeClassDialog
+                classroomId={classroom.id}
+                className={classroom.className}
+                frozen={classroom.frozen ?? false}
+              />
             )}
             {isAdmin && (
               <AssignSubstituteDialog
