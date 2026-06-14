@@ -31,8 +31,31 @@ import {
   SearchIcon,
   XIcon,
   ChevronDownIcon,
-  SlidersHorizontalIcon,
 } from "lucide-react";
+import { LOGO_WORDMARK_URL } from "@/components/logo";
+
+/** Load a remote image as a data URL so jsPDF can embed it. */
+async function loadImageDataUrl(url: string): Promise<{ data: string; w: number; h: number } | null> {
+  try {
+    const res = await fetch(url, { mode: "cors" });
+    const blob = await res.blob();
+    const data: string = await new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(fr.result as string);
+      fr.onerror = reject;
+      fr.readAsDataURL(blob);
+    });
+    const dims = await new Promise<{ w: number; h: number }>((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => resolve({ w: 1, h: 1 });
+      img.src = data;
+    });
+    return { data, ...dims };
+  } catch {
+    return null;
+  }
+}
 import {
   useGetClassroomsQuery,
   useGetStudentsByClassroomQuery,
@@ -284,30 +307,72 @@ export default function ClassesReport() {
 
   async function exportPdf() {
     if (visibleReports.length === 0) { toast.error("Nothing to export."); return; }
-    const [{ jsPDF }, autoTableMod] = await Promise.all([
+    const [{ jsPDF }, autoTableMod, logo] = await Promise.all([
       import("jspdf"),
       import("jspdf-autotable"),
+      loadImageDataUrl(LOGO_WORDMARK_URL),
     ]);
     const autoTable =
       (autoTableMod as { default?: unknown }).default ?? autoTableMod;
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-    doc.setFontSize(16);
-    doc.text("Attendance Report", 40, 40);
+    const pageW = doc.internal.pageSize.getWidth();
+    const NAVY: [number, number, number] = [39, 60, 151];
+
+    // ── Letterhead ────────────────────────────────────────────────────────
+    if (logo) {
+      const h = 30;
+      const w = Math.min(120, (logo.w / logo.h) * h);
+      try { doc.addImage(logo.data, "PNG", 40, 30, w, h); } catch { /* ignore */ }
+    }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.setTextColor(...NAVY);
+    doc.text("ISTAD", pageW / 2, 42, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(90);
+    doc.text("Student Attendance Report", pageW / 2, 60, { align: "center" });
+
+    // Class identity line (name · code · generation · program · period)
+    const gen = selectedCls?.generation != null ? `Gen ${selectedCls.generation}` : "";
+    const idParts = [
+      selectedCls?.className,
+      selectedCls?.classCode ? `(${selectedCls.classCode})` : "",
+      gen,
+      selectedCls?.programTypeName,
+      periodLabel(),
+    ].filter(Boolean);
     doc.setFontSize(10);
-    doc.setTextColor(120);
-    doc.text(
-      `${selectedCls?.className ?? ""} · ${periodLabel()}`,
-      40, 58,
-    );
+    doc.setTextColor(40);
+    doc.text(idParts.join("  ·  "), pageW / 2, 78, { align: "center" });
+    doc.setTextColor(140);
+    doc.setFontSize(8);
+    doc.text(`Generated ${new Date().toLocaleString()}`, pageW - 40, 42, { align: "right" });
+
+    // Divider
+    doc.setDrawColor(...NAVY);
+    doc.setLineWidth(1);
+    doc.line(40, 88, pageW - 40, 88);
+
+    // ── Bordered data table (full data from the API) ──────────────────────
     const { head, body } = buildTableData();
     (autoTable as unknown as (d: unknown, opts: unknown) => void)(doc, {
       head: [head],
       body,
-      startY: 76,
-      styles: { fontSize: 9, cellPadding: 5 },
-      headStyles: { fillColor: [39, 60, 151], textColor: 255 },
+      startY: 100,
+      theme: "grid", // ruled rows + columns
+      styles: { fontSize: 9, cellPadding: 5, lineColor: [210, 214, 224], lineWidth: 0.5 },
+      headStyles: { fillColor: NAVY, textColor: 255, halign: "center", fontStyle: "bold" },
       alternateRowStyles: { fillColor: [248, 249, 252] },
+      didDrawPage: (d: { pageNumber: number }) => {
+        const ph = doc.internal.pageSize.getHeight();
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`Page ${d.pageNumber}`, pageW - 40, ph - 18, { align: "right" });
+        doc.text("i-Check · Smart Attendance", 40, ph - 18);
+      },
     });
+
     const fname =
       `attendance-${selectedCls?.classCode ?? "report"}-${periodLabel().replace(/\s+/g, "-") || "all"}.pdf`;
     doc.save(fname);
@@ -315,80 +380,55 @@ export default function ClassesReport() {
   }
 
   return (
-    <div className="px-4 sm:px-5 py-6 sm:py-8">
-      <div className="mb-6 flex items-start justify-between gap-4">
+    <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-[1600px] mx-auto w-full">
+      {/* ── Top row: title + clean filter bar (tabs + search) ─────────── */}
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Reports</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Pick a class, choose a period, then Generate to create and export report papers.
           </p>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" className="shrink-0" title="Filters">
-              <SlidersHorizontalIcon className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel>Filter Classes</DropdownMenuLabel>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex gap-1.5">
             {(["ALL", "BACHELOR", "SCHOLARSHIP"] as const).map((pt) => (
-              <DropdownMenuItem
+              <button
                 key={pt}
-                onClick={() => {
-                  setProgType(pt);
-                  resetFilters();
-                }}
+                onClick={() => { setProgType(pt); resetFilters(); }}
+                className={`px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-all ${
+                  progType === pt
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-card text-muted-foreground border-border hover:border-primary/40"
+                }`}
               >
                 {pt === "ALL" ? "All" : pt === "BACHELOR" ? "Bachelor" : "Scholarship"}
-              </DropdownMenuItem>
+              </button>
             ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </div>
+          <div className="relative w-full sm:w-72">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by class name, code…"
+              className="pl-9 pr-9"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted"
+                aria-label="Clear search"
+              >
+                <XIcon className="size-4" />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6">
         {/* ─────── Left: classroom picker ─────────────────────────────── */}
         <div className="flex flex-col gap-3">
-          {/* Tabs on the left, search aligned to the right on the same row. */}
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            {/* Program-type tabs */}
-            <div className="flex gap-1.5 flex-wrap">
-              {(["ALL", "BACHELOR", "SCHOLARSHIP"] as const).map((pt) => (
-                <button
-                  key={pt}
-                  onClick={() => { setProgType(pt); resetFilters(); }}
-                  className={`px-3 py-1 rounded-full text-sm font-semibold border transition-all ${
-                    progType === pt
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card text-muted-foreground border-border hover:border-primary/40"
-                  }`}
-                >
-                  {pt === "ALL" ? "All" : pt === "BACHELOR" ? "Bachelor" : "Scholarship"}
-                </button>
-              ))}
-            </div>
-
-            {/* Search — right-aligned, fixed max width */}
-            <div className="relative ml-auto w-full sm:w-72">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by class name, code…"
-                className="pl-9 pr-9"
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted"
-                  aria-label="Clear search"
-                >
-                  <XIcon className="size-4" />
-                </button>
-              )}
-            </div>
-          </div>
-
           {/* Class list */}
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             {loadingCls ? (
