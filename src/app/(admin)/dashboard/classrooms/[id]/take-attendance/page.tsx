@@ -167,24 +167,25 @@ export default async function TakeAttendance({
           const qrAvailable =
             (session?.status === "ACTIVE" && !qrCutoffPassed)
             || (session?.status === "UPCOMING" && !startCutoffPassed);
+          // QR XOR Amendment — never both. While the QR window is open the
+          // teacher shows the QR; once it closes, only Amendment remains (the
+          // way to change any status is to submit a reason).
           return (
             <div className="flex items-center gap-2">
-              {qrAvailable && (
+              {qrAvailable ? (
                 <Link href={`/dashboard/classrooms/${id}/take-attendance/qr-code`} className="flex items-center gap-2 rounded-md border border-gray-300 bg-white dark:bg-black px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                   <AiOutlineQrcode className="size-18" />
                 </Link>
+              ) : (
+                <AmendmentButton
+                  sessionId={session?.id ?? null}
+                  students={students.map((s) => ({
+                    id: s.id,
+                    name: s.name,
+                    currentStatus: s.status,
+                  }))}
+                />
               )}
-              {/* Amendment lets the teacher manually correct a student's status
-                  once the QR window has closed (or any time, really) — no admin
-                  approval required, audit-logged on the backend. */}
-              <AmendmentButton
-                sessionId={session?.id ?? null}
-                students={students.map((s) => ({
-                  id: s.id,
-                  name: s.name,
-                  currentStatus: s.status,
-                }))}
-              />
             </div>
           );
         })()}

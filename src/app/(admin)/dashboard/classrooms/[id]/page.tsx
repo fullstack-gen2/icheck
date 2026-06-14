@@ -102,36 +102,34 @@ export default async function ClassroomDetailPage({
         <div className="flex-col">
           <div className="flex flex-wrap items-center justify-end gap-2">
             {(() => {
-              
               const TEACHER_START_GRACE_MINUTES = 10;
               const QR_WINDOW_MINUTES = 5;
+              const earlyCheckin = session?.earlyCheckinMinutes ?? 15;
               const now = new Date();
               const startIso = session?.sessionDate && session?.startTime
                 ? `${session.sessionDate}T${session.startTime}`
                 : null;
               const scheduledStart = startIso ? new Date(startIso) : null;
               const actualStart = session?.actualStartTime ? new Date(session.actualStartTime) : null;
-              const cutoffPassed = scheduledStart
-                ? now.getTime() > scheduledStart.getTime() + TEACHER_START_GRACE_MINUTES * 60_000
-                : false;
+
+              // Start is only ALLOWED within [start − earlyCheckin, start + 10min].
+              const opensAt = scheduledStart
+                ? new Date(scheduledStart.getTime() - earlyCheckin * 60_000) : null;
+              const closesAt = scheduledStart
+                ? new Date(scheduledStart.getTime() + TEACHER_START_GRACE_MINUTES * 60_000) : null;
+              const beforeWindow = opensAt ? now.getTime() < opensAt.getTime() : false;
+              const cutoffPassed = closesAt ? now.getTime() > closesAt.getTime() : false;
+              const withinStartWindow = !beforeWindow && !cutoffPassed;
+
               const qrWindowPassed = actualStart
                 ? now.getTime() > actualStart.getTime() + QR_WINDOW_MINUTES * 60_000
                 : false;
-              const lateUpcoming = session?.status === "UPCOMING" && cutoffPassed;
-              const activeAfterQrWindow = session?.status === "ACTIVE" && qrWindowPassed;
               const amendmentOnly =
-                lateUpcoming || activeAfterQrWindow || session?.status === "COMPLETED";
+                (session?.status === "UPCOMING" && cutoffPassed)
+                || (session?.status === "ACTIVE" && qrWindowPassed)
+                || session?.status === "COMPLETED";
 
-              if (session?.status === "UPCOMING" && !cutoffPassed) {
-                return (
-                  <AlertDialogDemo
-                      btnName="Start Session"
-                      title="Start Session Now"
-                      firstTime={formatTime12(session?.startTime)}
-                      secondTime={formatTime12(session?.endTime)}
-                      id={id}/>
-                );
-              }
+              // ACTIVE and still in the QR window → go to the live board.
               if (session?.status === "ACTIVE" && !qrWindowPassed) {
                 return (
                   <Button asChild className="bg-primary p-5">
@@ -141,12 +139,32 @@ export default async function ClassroomDetailPage({
                   </Button>
                 );
               }
+              // UPCOMING & inside the window → Start enabled.
+              if (session?.status === "UPCOMING" && withinStartWindow) {
+                return (
+                  <AlertDialogDemo
+                      btnName="Start Session"
+                      title="Start Session Now"
+                      firstTime={formatTime12(session?.startTime)}
+                      secondTime={formatTime12(session?.endTime)}
+                      id={id}/>
+                );
+              }
+              // Window passed / completed → amendment only.
               if (amendmentOnly) {
                 return (
                   <Button asChild variant="outline" className="p-5">
                     <Link href={`/dashboard/classrooms/${id}/take-attendance/checked_attendance`}>
                       Submit Amendment
                     </Link>
+                  </Button>
+                );
+              }
+              // UPCOMING but the window hasn't opened yet → disabled, with the time.
+              if (session?.status === "UPCOMING" && beforeWindow) {
+                return (
+                  <Button disabled className="bg-primary/60 p-5 cursor-not-allowed">
+                    Start Session{opensAt ? ` (opens ${formatTime12(session?.startTime)})` : ""}
                   </Button>
                 );
               }

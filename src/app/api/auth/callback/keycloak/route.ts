@@ -175,10 +175,38 @@ export async function GET(req: Request) {
       hasSecret: !!KEYCLOAK_CLIENT_SECRET,
       redirectUri: redirectUri.toString(),
     });
+
+    // `invalid_grant` ("Code not valid" / "Code already used" / expired) is a
+    // transient code problem — the authorization code was reused (double
+    // callback hit, refreshed callback URL, or a stale code). A fresh login
+    // mints a new code that exchanges cleanly, so auto-restart the flow ONCE
+    // (guarded so a real config error like invalid_client still surfaces).
+    let parsedError = "";
+    try { parsedError = (JSON.parse(body) as { error?: string }).error ?? ""; } catch { /* ignore */ }
+    const isCodeProblem =
+      parsedError === "invalid_grant" || /code not valid|code.*expired|already/i.test(detail);
+    const alreadyRetried = getCookie(req, OAUTH_RETRY_COOKIE) === "1";
+
+    if (isCodeProblem && !alreadyRetried) {
+      const retry = NextResponse.redirect(new URL("/api/auth/login", requestUrl.origin));
+      retry.cookies.delete(OAUTH_STATE_COOKIE);
+      retry.cookies.delete(OAUTH_CODE_VERIFIER_COOKIE);
+      retry.cookies.set(OAUTH_RETRY_COOKIE, "1", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: requestUrl.protocol === "https:",
+        path: "/",
+        maxAge: 120,
+      });
+      return retry;
+    }
+
     const errorUrl = new URL("/login", requestUrl.origin);
     errorUrl.searchParams.set("error", "token_exchange");
     errorUrl.searchParams.set("detail", detail.slice(0, 160));
-    return NextResponse.redirect(errorUrl);
+    const errResp = NextResponse.redirect(errorUrl);
+    errResp.cookies.delete(OAUTH_RETRY_COOKIE);
+    return errResp;
   }
 
   const token = (await tokenRes.json()) as TokenResponse;

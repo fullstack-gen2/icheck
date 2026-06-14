@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { useUser, useUpdateUser } from "@/components/user-provider";
 import { QrScanner } from "@/components/qr-scanner";
@@ -12,7 +13,6 @@ import {
 import { StudentTodayClasses } from "@/components/student-today-classes";
 import {
   BadgeCheckIcon,
-  BookOpenIcon,
   CameraIcon,
   ClipboardListIcon,
   Clock3Icon,
@@ -284,19 +284,24 @@ export default function StudentHomePage() {
           </p>
         </button>
 
-        <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
-          <BookOpenIcon className="size-8 mb-3 text-primary opacity-80" />
+        {/* Missed the QR (expired / late) or leaving early? Submit a request. */}
+        <Link
+          href="/student/require-permission"
+          className="bg-card rounded-2xl border border-border p-6 shadow-sm hover:border-primary/40 active:scale-95 transition-all"
+        >
+          <ClipboardListIcon className="size-8 mb-3 text-primary opacity-80" />
           <h2 className="text-lg font-semibold text-foreground mb-1">
-            My Classes
+            Request Late / Permission
           </h2>
           <p className="text-sm text-muted-foreground">
-            Review your current program and classroom status.
+            Couldn&apos;t scan in time, or need to leave early? Send a request —
+            an admin reviews it and you&apos;ll be notified of the decision.
           </p>
           <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
             <Clock3Icon className="size-4" />
-            Updated from your login profile.
+            Reviewed by an admin.
           </div>
-        </div>
+        </Link>
       </div>
 
       {showScanner && (

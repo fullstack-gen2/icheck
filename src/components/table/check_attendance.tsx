@@ -8,13 +8,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AttendanceStatus, Student } from "@/types/student";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { type Student } from "@/types/student";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { Input } from "../ui/input";
+import { useAttendanceStream, type AttendanceUpdateEvent } from "@/lib/attendance-stream";
 
 type AttendanceCheckingListProps = {
   students?: Student[];
@@ -69,77 +69,46 @@ export default function AttendanceCheckingList({
     (classroomId
       ? `/dashboard/classrooms/${classroomId}/student-profile`
       : undefined);
-  const [attendanceByStudentId, setAttendanceByStudentId] = useState<
-    Record<string, AttendanceStatus | null>
-  >(() =>
-    students.reduce(
-      (acc, student) => {
-        acc[student.id] = null;
-        return acc;
-      },
-      {} as Record<string, AttendanceStatus | null>,
-    ),
-  );
-  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
-  const updateAttendance = (studentId: string, status: AttendanceStatus) => {
-    setAttendanceByStudentId((prev) => ({
-      ...prev,
-      [studentId]: status,
-    }));
-    if (status === AttendanceStatus.PRESENT) {
-      setExpandedRowId((prev) => (prev === studentId ? null : prev));
-    }
-  };
+  // Status is READ-ONLY here — it reflects the real attendance from the
+  // backend, updated live as students scan. The teacher cannot edit it inline;
+  // to change a status they use the Amendment button (which requires a reason).
+  const seed = () => Object.fromEntries(students.map((s) => [s.id, String(s.status ?? "pending")]));
+  const [statusById, setStatusById] = useState<Record<string, string>>(seed);
+  // Reseed when the server re-renders with new statuses (adjust-state-during-
+  // render with a prev-prop guard, avoiding the set-state-in-effect lint).
+  const studentsKey = students.map((s) => `${s.id}:${s.status}`).join("|");
+  const [prevKey, setPrevKey] = useState(studentsKey);
+  if (studentsKey !== prevKey) {
+    setPrevKey(studentsKey);
+    setStatusById(seed());
+  }
 
-  const clearAttendance = (studentId: string) => {
-    setAttendanceByStudentId((prev) => ({
-      ...prev,
-      [studentId]: null,
-    }));
-    setExpandedRowId((prev) => (prev === studentId ? null : prev));
-  };
-
-  const toggleExpanded = (studentId: string) => {
-    setExpandedRowId((prev) => (prev === studentId ? null : studentId));
-  };
-
-  const renderStatus = (studentId: string) => {
-    const rawStatus = attendanceByStudentId[studentId];
-    if (rawStatus === null) {
-      return <span className="text-gray-400">{AttendanceStatus.PENDING}</span>;
-    }
-
-    const status = rawStatus;
-    if (status === AttendanceStatus.PRESENT) {
-      return <span className="text-black dark:text-white">{AttendanceStatus.PRESENT}</span>;
-    }
-
-    const isExpanded = expandedRowId === studentId;
-    return (
-      <div className="flex justify-center">
-        <button
-          type="button"
-          onClick={() => toggleExpanded(studentId)}
-          aria-label={isExpanded ? "Collapse details" : "Expand details"}
-          className="inline-flex h-6 w-6 items-center justify-center rounded-sm text-black transition hover:bg-gray-100"
-        >
-          {isExpanded ? (
-            <ChevronUp className="h-4 w-4 text-black dark:text-white" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-black dark:text-white" />
-          )}
-        </button>
-      </div>
+  // Live updates — when a student scans (or a teacher amends), patch the row.
+  const numericClassroomId = classroomId ? Number(classroomId) : null;
+  useAttendanceStream(numericClassroomId, (event: AttendanceUpdateEvent) => {
+    if (!event.studentId || !event.status) return;
+    const key = String(event.studentId);
+    setStatusById((prev) =>
+      prev[key] === event.status?.toLowerCase()
+        ? prev
+        : { ...prev, [key]: String(event.status).toLowerCase() },
     );
-  };
+  });
+
+  const [search, setSearch] = useState("");
+  const visible = students.filter((s) =>
+    !search.trim() || s.name.toLowerCase().includes(search.trim().toLowerCase()),
+  );
 
   return (
     <main>
       <div className="flex items-center justify-between gap-3 pb-4">
         <Input
           placeholder="Search name..."
-            className="max-w-sm py-5"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-sm py-5"
         />
 
          <div className="flex justify-start text-sm items-center gap-4 text-gray-600 border px-4 py-2 rounded-lg">
@@ -166,132 +135,69 @@ export default function AttendanceCheckingList({
               <TableHead>Profile</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Gender</TableHead>
-              <TableHead className="flex justify-between items-center w-37.5">
-                <span>P</span>
-                <span>PM</span>
-                <span>L</span>
-              </TableHead>
               <TableHead className="text-center">Status</TableHead>
             </TableRow>
           </TableHeader>
 
           <TableBody>
-            {students.map((student, index) => {
-              const status = attendanceByStudentId[student.id];
-              const isExpanded = expandedRowId === student.id;
-              const hasDetails =
-                status === AttendanceStatus.PENDING || status === AttendanceStatus.LATE;
-
+            {visible.map((student, index) => {
+              const status = statusById[student.id] ?? "pending";
               return (
-                <Fragment key={student.id}>
-                  <TableRow
-                    className={
-                      status === null ? "text-gray-400 dark:text-gray-500" : ""
-                    }
-                  >
-                    <TableCell className="font-medium text-center">
-                      {String(index + 1).padStart(3, "0")}
-                    </TableCell>
+                <TableRow key={student.id}>
+                  <TableCell className="font-medium text-center">
+                    {String(index + 1).padStart(3, "0")}
+                  </TableCell>
 
-                    <TableCell>{student.id}</TableCell>
+                  <TableCell>{student.id}</TableCell>
 
-                    <TableCell>
-                      <Link
-                        href={
-                          resolvedStudentProfileBasePath
-                            ? `${resolvedStudentProfileBasePath}/${student.id}`
-                            : `/students/${student.id}`
-                        }
-                        aria-label={`View ${student.name} profile`}
-                      >
-                        <Image
-                          src={student.profile}
-                          alt={student.name}
-                          width={50}
-                          height={50}
-                          className="rounded-xl object-cover w-12 h-12"
-                        />
-                      </Link>
-                    </TableCell>
+                  <TableCell>
+                    <Link
+                      href={
+                        resolvedStudentProfileBasePath
+                          ? `${resolvedStudentProfileBasePath}/${student.id}`
+                          : `/students/${student.id}`
+                      }
+                      aria-label={`View ${student.name} profile`}
+                    >
+                      <Image
+                        src={student.profile}
+                        alt={student.name}
+                        width={50}
+                        height={50}
+                        className="rounded-xl object-cover w-12 h-12"
+                      />
+                    </Link>
+                  </TableCell>
 
-                    <TableCell>{student.name}</TableCell>
+                  <TableCell>{student.name}</TableCell>
+                  <TableCell>{student.gender}</TableCell>
 
-                    <TableCell>{student.gender}</TableCell>
-
-                    <TableCell className="w-37.5">
-                      <div className="flex justify-between items-center ">
-                        <input
-                          type="radio"
-                          className="size-5"
-                          name={student.id}
-                          checked={
-                            attendanceByStudentId[student.id] ===
-                            AttendanceStatus.PRESENT
-                          }
-                          onChange={() =>
-                            updateAttendance(student.id, AttendanceStatus.PRESENT)
-                          }
-                          onDoubleClick={() => clearAttendance(student.id)}
-                        />
-                        <input
-                          type="radio"
-                          className="size-5"
-                          name={student.id}
-                          checked={
-                            attendanceByStudentId[student.id] ===
-                            AttendanceStatus.PENDING
-                          }
-                          onChange={() =>
-                            updateAttendance(student.id, AttendanceStatus.PENDING)
-                          }
-                          onDoubleClick={() => clearAttendance(student.id)}
-                        />
-
-                        <input
-                          type="radio"
-                          className="size-5"
-                          name={student.id}
-                          checked={
-                            attendanceByStudentId[student.id] === AttendanceStatus.LATE
-                          }
-                          onChange={() =>
-                            updateAttendance(student.id, AttendanceStatus.LATE)
-                          }
-                          onDoubleClick={() => clearAttendance(student.id)}
-                        />
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="text-center">
-                      {renderStatus(student.id)}
-                    </TableCell>
-                  </TableRow>
-                  {isExpanded && hasDetails && (
-                    <TableRow>
-                      <TableCell colSpan={7} className="bg-white px-8 py-4">
-                        <div className="space-y-2 text-right text-sm">
-                          {status === AttendanceStatus.PENDING && (
-                            <p>
-                              <span className="text-red-500">Permission:</span>{" "}
-                              <span className="text-[#1f1f1f]">Feeling unwell</span>
-                            </p>
-                          )}
-                          {status === AttendanceStatus.LATE && (
-                            <p>
-                              <span className="text-amber-500">Late:</span>{" "}
-                              <span className="text-[#1f1f1f]">Traffic Jam</span>
-                            </p>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </Fragment>
+                  {/* Read-only — live status. To change it, use Amendment. */}
+                  <TableCell className="text-center">
+                    <StatusBadge status={status} />
+                  </TableCell>
+                </TableRow>
               );
             })}
           </TableBody>
         </Table>
       </div>
     </main>
+  );
+}
+
+/** Read-only status pill — color-coded, live-updated. */
+function StatusBadge({ status }: { status: string }) {
+  const s = status.toLowerCase();
+  const cls =
+    s === "present"  ? "bg-green-100 text-green-700" :
+    s === "late"     ? "bg-amber-100 text-amber-700" :
+    s === "late_out" ? "bg-orange-100 text-orange-700" :
+    s === "absent"   ? "bg-red-100 text-red-700" :
+                       "bg-muted text-muted-foreground";
+  return (
+    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}>
+      {s.replace("_", " ")}
+    </span>
   );
 }
