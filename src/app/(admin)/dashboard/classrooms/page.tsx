@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BookOpenIcon } from "lucide-react";
 import { ClassCard } from "@/components/ui/class-card";
 import { ClassroomAddButton } from "@/components/classroom-add-button";
+import { FreezeClassDialog } from "@/components/freeze-class-dialog";
 import { getServerUser } from "@/auth-server";
 import { MyDropdownMenuCheckboxes } from "@/components/drop-donw";
 import { fetchAllClassrooms, fetchClassCounts, type ClassroomSummary } from "@/lib/classroom-helpers";
@@ -60,6 +61,7 @@ export default async function ClassroomsPage() {
         </div>
         <div className="flex flex-col items-end sm:items-end gap-2">
           <div className="flex items-center gap-2">
+            {!isTeacher && <FreezeClassDialog />}
             {!isTeacher && <ClassroomAddButton />}
             <MyDropdownMenuCheckboxes />
           </div>

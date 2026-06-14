@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
-import { CheckCircle2Icon, LoaderCircleIcon, QrCodeIcon, UsersIcon } from "lucide-react";
+import { CheckCircle2Icon, DownloadIcon, LoaderCircleIcon, QrCodeIcon, UsersIcon } from "lucide-react";
 import { todayIso } from "@/lib/school-time";
 import {
   useCreateClassroomMutation,
@@ -208,20 +208,36 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col items-center gap-3 py-2">
+          <div id="static-qr-canvas-wrap" className="flex flex-col items-center gap-3 py-2">
             <div className="rounded-xl border bg-white p-4">
               <QRCodeCanvas value={checkInUrl} size={220} level="H" includeMargin />
             </div>
           </div>
 
-          <DialogFooter className="sm:justify-between">
+          <DialogFooter className="gap-2 sm:justify-between">
             <Button variant="outline" asChild className="gap-1.5">
               <Link href={`/dashboard/classrooms/${createdQr.id}/enroll`} onClick={() => handleOpenChange(false)}>
                 <UsersIcon className="size-4" />
                 Register students
               </Link>
             </Button>
-            <Button onClick={() => handleOpenChange(false)}>Done</Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => {
+                  const canvas = document.querySelector<HTMLCanvasElement>("#static-qr-canvas-wrap canvas");
+                  if (!canvas) { toast.error("QR not ready."); return; }
+                  const a = document.createElement("a");
+                  a.href = canvas.toDataURL("image/png");
+                  a.download = `${(createdQr.className || "class").trim().replace(/[^\w-]+/g, "_").replace(/_+/g, "_") || "class"}-static-qr.png`;
+                  document.body.appendChild(a); a.click(); a.remove();
+                }}
+              >
+                <DownloadIcon className="size-4" /> Download
+              </Button>
+              <Button onClick={() => handleOpenChange(false)}>Done</Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

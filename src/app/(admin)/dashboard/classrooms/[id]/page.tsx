@@ -4,6 +4,7 @@ import AlertDialogDemo from "@/components/popup/start_session";
 import { AssignSubstituteDialog } from "@/components/assign-substitute-dialog";
 import { ClassroomEditButton } from "@/components/classroom-edit-button";
 import { FreezeClassDialog } from "@/components/freeze-class-dialog";
+import { StaticQrDialog } from "@/components/static-qr-dialog";
 import { Button } from "@/components/ui/button";
 import { columns } from "@/components/classdetail/column";
 import { DataTableList } from "@/components/classdetail/data-table";
@@ -98,7 +99,7 @@ export default async function ClassroomDetailPage({
           </div>
         </div>
         <div className="flex-col">
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {(() => {
               
               const TEACHER_START_GRACE_MINUTES = 10;
@@ -172,6 +173,9 @@ export default async function ClassroomDetailPage({
                   status: classroom.status ?? true,
                 }}
               />
+            )}
+            {isAdmin && classroom && (
+              <StaticQrDialog classroomId={classroom.id} className={classroom.className} />
             )}
             {isAdmin && classroom && (
               <FreezeClassDialog classroomId={classroom.id} className={classroom.className} />
