@@ -90,10 +90,14 @@ function CheckInContent() {
             : `Attendance recorded for ${user?.name ?? "you"}.`
         );
       } else {
+        // Surface the REAL reason — read every field the backend / proxy might
+        // use (payload.message, message, error). Only fall back to the generic
+        // hint when the response truly carries nothing.
         const errMsg: string =
           json?.payload?.message ??
           json?.message ??
-          "Check-in failed. The QR may have expired — ask your teacher to refresh it.";
+          json?.error ??
+          "Check-in failed. Please try again, or ask your teacher to re-open the QR.";
 
         // Backend signal that a reason is required (static QR, missing reason).
         if (/reason is required/i.test(errMsg)) {

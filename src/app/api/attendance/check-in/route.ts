@@ -15,8 +15,20 @@ export async function POST(req: Request) {
     ?.slice(ACCESS_TOKEN_COOKIE.length + 1);
   const user = await getRequestUser(cookieHeader);
 
-  if (!accessToken || !user || user.role !== "STUDENT") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!accessToken || !user) {
+    return NextResponse.json(
+      { success: false, message: "Your session has expired. Please log in again, then re-scan." },
+      { status: 401 }
+    );
+  }
+  if (user.role !== "STUDENT") {
+    return NextResponse.json(
+      {
+        success: false,
+        message: `Only a student account can check in. You're signed in as ${user.role.toLowerCase()} — log in with the student account on this device.`,
+      },
+      { status: 403 }
+    );
   }
 
   const deviceId = await getDeviceId();
