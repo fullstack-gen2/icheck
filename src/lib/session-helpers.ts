@@ -61,14 +61,21 @@ export function isTeacherStartableSession(session: Pick<SessionSummary, "status"
   return now >= start - early && now <= start + 15;
 }
 
-function isTodayScheduleStartable(schedule: ScheduleSummary) {
+/**
+ * Show on "My Classes" if today's session is still upcoming or live — i.e.
+ * ACTIVE or UPCOMING/SCHEDULED. Unlike {@link isTeacherStartableSession} this
+ * is NOT gated by the start window, so an UPCOMING class scheduled later today
+ * also appears (the class-detail Start button still enforces the time window).
+ */
+function isTodaySession(session: Pick<SessionSummary, "status">) {
+  return session.status === "ACTIVE" || isOpenableStatus(session.status);
+}
+
+/** A teacher's schedule that runs TODAY (any time), not yet in the past view. */
+function isTodaySchedule(schedule: ScheduleSummary) {
   if (!schedule.status || schedule.attendanceRequired === false) return false;
   const today = schoolToday();
-  if (schedule.dayOfWeek?.toUpperCase() !== today.weekday) return false;
-  const start = timeToMinutes(schedule.startTime);
-  if (start == null) return false;
-  const now = schoolNowMinutes();
-  return now >= start - 15 && now <= start + 15;
+  return schedule.dayOfWeek?.toUpperCase() === today.weekday;
 }
 
 function scheduleToSession(schedule: ScheduleSummary): SessionSummary {
@@ -146,7 +153,10 @@ export async function fetchTeacherActiveClassrooms(
     );
     if (sessionRes.ok) {
       for (const session of pageContent<SessionSummary>(await sessionRes.json())) {
-        if (session.classroomName && isTeacherStartableSession(session)) {
+        // Include any of today's sessions that are still upcoming or live
+        // (not just the ones inside the start window) so UPCOMING classes
+        // appear on My Classes too.
+        if (session.classroomName && isTodaySession(session)) {
           const sessions = sessionsByClassName.get(session.classroomName) ?? [];
           sessions.push(session);
           sessionsByClassName.set(session.classroomName, sessions);
@@ -165,7 +175,7 @@ export async function fetchTeacherActiveClassrooms(
     const scheduleRes = await backendFetch(`/schedules/teachers/${teacherId}?size=200`);
     if (scheduleRes.ok) {
       for (const schedule of pageContent<ScheduleSummary>(await scheduleRes.json())) {
-        if (schedule.className && isTodayScheduleStartable(schedule) && !activeByName.has(schedule.className)) {
+        if (schedule.className && isTodaySchedule(schedule) && !activeByName.has(schedule.className)) {
           activeByName.set(schedule.className, scheduleToSession(schedule));
         }
       }

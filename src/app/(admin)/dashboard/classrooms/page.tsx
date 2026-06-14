@@ -54,7 +54,7 @@ export default async function ClassroomsPage() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {isTeacher
-              ? "Classes ready to teach right now."
+              ? "Your classes with a session today (upcoming or live)."
               : "All classrooms across programs."}
           </p>
         </div>
