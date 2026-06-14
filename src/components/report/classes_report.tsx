@@ -32,7 +32,7 @@ import {
   XIcon,
   ChevronDownIcon,
 } from "lucide-react";
-import { LOGO_WORDMARK_URL } from "@/components/logo";
+import { ISTAD_LOGO_URL } from "@/components/logo";
 
 /** Load a remote image as a data URL so jsPDF can embed it. */
 async function loadImageDataUrl(url: string): Promise<{ data: string; w: number; h: number } | null> {
@@ -310,7 +310,7 @@ export default function ClassesReport() {
     const [{ jsPDF }, autoTableMod, logo] = await Promise.all([
       import("jspdf"),
       import("jspdf-autotable"),
-      loadImageDataUrl(LOGO_WORDMARK_URL),
+      loadImageDataUrl(ISTAD_LOGO_URL),
     ]);
     const autoTable =
       (autoTableMod as { default?: unknown }).default ?? autoTableMod;
@@ -320,14 +320,14 @@ export default function ClassesReport() {
 
     // ── Letterhead ────────────────────────────────────────────────────────
     if (logo) {
-      const h = 30;
-      const w = Math.min(120, (logo.w / logo.h) * h);
-      try { doc.addImage(logo.data, "PNG", 40, 30, w, h); } catch { /* ignore */ }
+      const h = 44;
+      const w = Math.min(160, (logo.w / logo.h) * h);
+      try { doc.addImage(logo.data, "PNG", 40, 26, w, h); } catch { /* ignore */ }
     }
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
+    doc.setFontSize(16);
     doc.setTextColor(...NAVY);
-    doc.text("ISTAD", pageW / 2, 42, { align: "center" });
+    doc.text("Institute of Science and Technology Advanced Development", pageW / 2, 42, { align: "center" });
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
     doc.setTextColor(90);
