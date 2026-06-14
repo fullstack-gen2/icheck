@@ -13,7 +13,7 @@ export function ResetDeviceButton({ studentId }: { studentId: number }) {
     if (state === "loading") return;
     setState("loading");
 
-    const res = await fetch(`/api/students/${studentId}/device`, {
+    const res = await fetch(`/api/v1/users/students/${studentId}/device`, {
       method: "DELETE",
     });
 

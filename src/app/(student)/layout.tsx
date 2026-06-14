@@ -1,35 +1,48 @@
-import { auth } from "@/auth";
+import { getServerUser } from "@/auth-server";
 import { redirect } from "next/navigation";
+import { AppSidebar } from "@/components/app-sidebar";
+import { SiteHeader } from "@/components/site-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { OAUTH2_LOGIN_URL } from "@/lib/api-config";
 
 export default async function StudentLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  const user = await getServerUser();
 
-  if (!session || session.user.role !== "STUDENT") {
-    redirect("/login");
-  }
+  if (!user) redirect(OAUTH2_LOGIN_URL);
+  if (user && user.role !== "STUDENT") redirect("/dashboard");
+
+  const displayUser = {
+    name:        user?.name  ?? "",
+    email:       user?.email ?? "",
+    role:        user?.role  ?? "STUDENT",
+    displayRole: user?.displayRole ?? "Student",
+    profileImage: user?.profileImage ?? null,
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-[#273C97] text-white px-6 py-4 flex items-center gap-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-white text-[#273C97] font-bold text-sm">
-          iC
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 72)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar variant="inset" user={displayUser} />
+      <SidebarInset>
+        <SiteHeader />
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              {children}
+            </div>
+          </div>
         </div>
-        <span className="text-xl font-semibold">i-Check</span>
-        <div className="ml-auto flex items-center gap-4">
-          <span className="text-sm opacity-90">{session.user.name}</span>
-          <a
-            href="/api/auth/signout"
-            className="text-sm bg-white/20 hover:bg-white/30 px-3 py-1 rounded-md transition-colors"
-          >
-            Sign out
-          </a>
-        </div>
-      </header>
-      <main className="max-w-4xl mx-auto px-4 py-8">{children}</main>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

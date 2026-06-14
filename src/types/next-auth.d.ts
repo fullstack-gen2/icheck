@@ -1,31 +1,3 @@
-import "next-auth";
-
-declare module "next-auth" {
-  interface User {
-    role: string;
-    backendToken: string;
-    deviceBound: boolean;
-  }
-
-  interface Session {
-    user: {
-      id: string;
-      name: string;
-      email: string;
-      image?: string | null;
-      role: string;
-      backendToken: string;
-      userId: string;
-      deviceBound: boolean;
-    };
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    role: string;
-    backendToken: string;
-    userId: string;
-    deviceBound: boolean;
-  }
-}
+// NextAuth is no longer used — auth is handled by the Gateway BFF.
+// This file is kept as a placeholder so existing import paths don't break.
+export {};

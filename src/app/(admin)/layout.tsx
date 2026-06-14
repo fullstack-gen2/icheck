@@ -1,23 +1,27 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
+import { getServerUser } from "@/auth-server";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { OAUTH2_LOGIN_URL } from "@/lib/api-config";
+import { redirect } from "next/navigation";
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  const user = await getServerUser();
 
-  if (!session) redirect("/login");
-  if (session.user.role === "STUDENT") redirect("/student");
+  if (!user) redirect(OAUTH2_LOGIN_URL);
+  if (user.role === "STUDENT") redirect("/student");
 
-  const user = {
-    name: session.user.name ?? "Unknown",
-    email: session.user.email ?? "",
-    role: session.user.role,
+  const displayUser = {
+    name:        user?.name  ?? "",
+    email:       user?.email ?? "",
+    role:        user?.role  ?? "ADMIN",
+    // Show the elevated label (Super Admin / …) straight from /auth/me.
+    displayRole: user?.displayRole ?? "Admin",
+    profileImage: user?.profileImage ?? null,
   };
 
   return (
@@ -29,13 +33,14 @@ export default async function AdminLayout({
         } as React.CSSProperties
       }
     >
-      <AppSidebar variant="inset" user={user} />
+      <AppSidebar variant="inset" user={displayUser} />
       <SidebarInset>
         <SiteHeader />
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               {children}
+
             </div>
           </div>
         </div>

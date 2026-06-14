@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { QRCodeSVG } from "qrcode.react";
+import QRCode from "react-qr-code";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,8 @@ import {
   UsersIcon,
   ClockIcon,
 } from "lucide-react";
+import { API_URL } from "@/lib/api-config";
+import { useUser } from "@/components/user-provider";
 
 const QR_TTL_SECONDS = 30;
 
@@ -22,6 +24,7 @@ interface QrData {
 export default function SessionQrPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const user = useUser();
 
   const [qr, setQr] = useState<QrData | null>(null);
   const [countdown, setCountdown] = useState(QR_TTL_SECONDS);
@@ -29,7 +32,7 @@ export default function SessionQrPage() {
   const [error, setError] = useState("");
   const [sessionInfo, setSessionInfo] = useState<{
     classroomName: string;
-    subjectName: string;
+    subjectName: string | null;
     teacherName: string;
     startTime: string;
     endTime: string;
@@ -38,12 +41,13 @@ export default function SessionQrPage() {
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const refreshRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initRef = useRef(false);
 
   const generateQr = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/sessions/${id}/qr`, { method: "POST" });
+      const res = await fetch(`${API_URL}/qr-codes/sessions/${id}/dynamic`, { method: "POST" });
       const json = await res.json();
       if (!res.ok) {
         setError(json?.payload?.message ?? json?.message ?? "Failed to generate QR");
@@ -60,7 +64,7 @@ export default function SessionQrPage() {
 
   // Load session info once
   useEffect(() => {
-    fetch(`/api/sessions/${id}`)
+    fetch(`${API_URL}/sessions/${id}`)
       .then((r) => r.json())
       .then((json) => setSessionInfo(json.payload))
       .catch(() => {});
@@ -68,12 +72,25 @@ export default function SessionQrPage() {
 
   // Open session then generate first QR
   useEffect(() => {
+    if (initRef.current || !user) return;
+    initRef.current = true;
+
     const init = async () => {
-      await fetch(`/api/sessions/${id}/open`, { method: "POST" });
+      if (user?.role === "ADMIN") {
+        const res = await fetch(`${API_URL}/sessions/${id}/open`, { method: "POST" });
+        if (!res.ok) throw new Error("Could not start this session yet.");
+      } else if (user?.id) {
+        const res = await fetch(`${API_URL}/sessions/${id}/teacher-check-in`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ teacherId: Number(user.id), deviceId: null }),
+        });
+        if (!res.ok) throw new Error("Could not start this session yet.");
+      }
       await generateQr();
     };
-    init();
-  }, [id, generateQr]);
+    init().catch((e) => setError(e instanceof Error ? e.message : "Could not start this session yet."));
+  }, [id, generateQr, user?.id, user?.role]);
 
   // Countdown ticker
   useEffect(() => {
@@ -96,13 +113,13 @@ export default function SessionQrPage() {
   const urgent = countdown <= 8;
 
   return (
-    <div className="min-h-screen bg-[#273C97] flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-primary flex flex-col items-center justify-center p-6">
       {/* Header */}
       <div className="w-full max-w-lg mb-6 flex items-center justify-between text-white">
         <div>
           <p className="text-white/60 text-sm uppercase tracking-wider">Live Session</p>
           <h1 className="text-xl font-bold">
-            {sessionInfo?.subjectName ?? "Loading…"}
+            {sessionInfo ? (sessionInfo.subjectName || "Attendance Session") : "Loading…"}
           </h1>
           <p className="text-white/70 text-sm">
             {sessionInfo?.classroomName} &nbsp;·&nbsp;
@@ -120,7 +137,7 @@ export default function SessionQrPage() {
       </div>
 
       {/* QR Card */}
-      <div className="bg-white rounded-3xl p-8 w-full max-w-lg flex flex-col items-center gap-6 shadow-2xl">
+      <div className="bg-card rounded-3xl p-8 w-full max-w-lg flex flex-col items-center gap-6 shadow-2xl">
         {error ? (
           <div className="text-center py-8">
             <p className="text-red-500 font-medium mb-4">{error}</p>
@@ -135,19 +152,23 @@ export default function SessionQrPage() {
             <div className="relative">
               {qr ? (
                 <div
-                  className={`transition-opacity duration-300 ${
+                  className={`transition-opacity duration-300 bg-card p-3 rounded-xl ${
                     urgent ? "opacity-60" : "opacity-100"
                   }`}
                 >
-                  <QRCodeSVG
+                  <QRCode
+                    // QR is scanned by a student's phone camera, so the value
+                    // MUST be an absolute URL — relative paths can't be opened
+                    // from a camera scan.
                     value={`${window.location.origin}/check-in?token=${qr.codeValue}`}
                     size={260}
                     level="H"
-                    includeMargin
+                    style={{ height: "auto", maxWidth: "100%", width: "260px" }}
+                    viewBox="0 0 256 256"
                   />
                 </div>
               ) : (
-                <div className="w-[260px] h-[260px] bg-gray-100 rounded-xl animate-pulse" />
+                <div className="w-65 h-65 bg-muted rounded-xl animate-pulse" />
               )}
             </div>
 
@@ -190,7 +211,7 @@ export default function SessionQrPage() {
                   {countdown}s
                 </text>
               </svg>
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-muted-foreground/70">
                 {urgent ? "Refreshing soon…" : "QR refreshes automatically"}
               </p>
             </div>

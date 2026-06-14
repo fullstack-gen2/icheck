@@ -1,177 +1,58 @@
-"use client";
-
-import { Suspense, useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { OAUTH2_LOGIN_URL } from "@/lib/api-config";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { Logo } from "@/components/logo";
+import { AlertCircleIcon, RefreshCwIcon } from "lucide-react";
 
-type Role = "STUDENT" | "ADMIN";
+const ERROR_MESSAGES: Record<string, string> = {
+  oauth_state:    "Login session expired or was tampered with. Please try signing in again.",
+  token_exchange: "Keycloak rejected the token exchange. Most likely the server is missing KEYCLOAK_CLIENT_SECRET, or the redirect_uri isn't registered on the Keycloak client. Check the deploy logs.",
+  user_fetch:     "Login succeeded with Keycloak but the attendance service didn't return a profile (/api/v1/users/me).",
+  device_mismatch: "This account is already registered to a different device. Ask an administrator to reset your device, then try again from your registered device.",
+};
 
-function getOrCreateDeviceId(): string {
-  const key = "i-check-device-id";
-  let id = localStorage.getItem(key);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(key, id);
-  }
-  return id;
-}
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; detail?: string }>;
+}) {
+  const { error, detail } = await searchParams;
 
-export default function LoginPage() {
-  return (
-    <Suspense>
-      <LoginForm />
-    </Suspense>
-  );
-}
+  if (!error) redirect(OAUTH2_LOGIN_URL);
 
-function LoginForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl");
-  const [role, setRole] = useState<Role>("STUDENT");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    // Always pass deviceId — backend ignores it for non-STUDENT roles
-    const deviceId = getOrCreateDeviceId();
-
-    const result = await signIn("credentials", {
-      email,
-      password,
-      deviceId,
-      redirect: false,
-    });
-
-    setLoading(false);
-
-    if (result?.error) {
-      setError(
-        role === "STUDENT"
-          ? "Invalid email or password."
-          : "Invalid credentials. Check your email and password."
-      );
-      return;
-    }
-
-    // Fetch session to get role then redirect
-    const res = await fetch("/api/auth/session");
-    const session = await res.json();
-    const userRole = session?.user?.role;
-
-    if (callbackUrl) {
-      router.push(callbackUrl);
-    } else if (userRole === "STUDENT") {
-      router.push("/student");
-    } else {
-      router.push("/dashboard");
-    }
-  };
+  const description =
+    ERROR_MESSAGES[error] ?? `Authentication failed (code: ${error}).`;
 
   return (
-    <Card className="w-full max-w-md shadow-lg">
-      <CardHeader className="space-y-4 pb-2">
-        {/* Logo */}
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#273C97] text-white font-bold text-sm">
-            iC
-          </div>
-          <span className="text-xl font-bold tracking-tight">i-Check</span>
+    <div className="flex min-h-screen items-center justify-center bg-background p-6">
+      <div className="bg-card border border-border rounded-2xl p-8 max-w-md w-full shadow-sm text-center">
+        <div className="mx-auto mb-4 flex justify-center">
+          <Logo size={56} />
         </div>
-
-        {/* Role tabs */}
-        <div className="flex rounded-lg border border-gray-200 p-1 bg-gray-50">
-          {(["STUDENT", "ADMIN"] as Role[]).map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => { setRole(r); setError(""); }}
-              className={cn(
-                "flex-1 rounded-md py-1.5 text-sm font-medium transition-all",
-                role === r
-                  ? "bg-white text-[#273C97] shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              )}
-            >
-              {r === "STUDENT" ? "Student" : "Admin / Teacher"}
-            </button>
-          ))}
+        <div className="flex items-center justify-center gap-2 mb-1 text-red-600 dark:text-red-400">
+          <AlertCircleIcon className="size-5" />
+          <h1 className="font-semibold">Sign-in failed</h1>
         </div>
-
-        <CardTitle className="text-xl font-semibold">
-          {role === "STUDENT" ? "Student Sign in" : "Admin Sign in"}
-        </CardTitle>
-      </CardHeader>
-
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder={
-                role === "STUDENT"
-                  ? "student@example.com"
-                  : "admin@example.com"
-              }
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-            />
-          </div>
-
-          {role === "STUDENT" && (
-            <p className="text-xs text-gray-400 bg-gray-50 rounded-md px-3 py-2">
-              Your device is identified automatically for attendance tracking.
-            </p>
-          )}
-
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md border border-red-100">
-              {error}
-            </p>
-          )}
-
-          <Button
-            type="submit"
-            className="w-full bg-[#273C97] hover:bg-[#1e2e7a] text-white"
-            disabled={loading}
-          >
-            {loading ? "Signing in…" : "Sign in"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        <p className="text-sm text-muted-foreground mb-6">{description}</p>
+        <code className="block bg-muted text-xs text-muted-foreground rounded-lg px-3 py-2 mb-6 font-mono">
+          {error}
+        </code>
+        {detail ? (
+          <code className="block bg-muted text-xs text-muted-foreground rounded-lg px-3 py-2 mb-6 font-mono break-words">
+            {detail}
+          </code>
+        ) : null}
+        <Button asChild className="gap-1.5 w-full">
+          <Link href={OAUTH2_LOGIN_URL}>
+            <RefreshCwIcon className="size-4" />
+            Try again
+          </Link>
+        </Button>
+        <p className="text-xs text-muted-foreground/60 mt-6">
+          If this persists, check Vercel env vars and the Keycloak client config.
+        </p>
+      </div>
+    </div>
   );
 }

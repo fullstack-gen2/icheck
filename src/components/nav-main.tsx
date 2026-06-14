@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   SidebarGroup,
@@ -25,18 +26,23 @@ export function NavMain({
       <SidebarGroupContent className="flex flex-col gap-2">
         <SidebarMenu>
           {items.map((item) => {
-            const isActive = pathname === item.url || pathname.startsWith(item.url + "/")
+            const isActive =
+              item.url === "/dashboard"
+                ? pathname === item.url
+                : pathname === item.url || pathname.startsWith(item.url + "/")
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
                   asChild
+                  size="lg"
                   tooltip={item.title}
                   isActive={isActive}
+                  className="text-base"
                 >
-                  <a href={item.url}>
+                  <Link href={item.url}>
                     {item.icon}
                     <span>{item.title}</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             )
