@@ -165,12 +165,14 @@ export default async function TakeAttendance({
           const startCutoffPassed = startMin != null
             ? nowMin > startMin + TEACHER_START_GRACE_MINUTES
             : false;
+          // Teacher can't open the session before its scheduled start time.
+          const beforeStart = startMin != null ? nowMin < startMin : false;
           const qrCutoffPassed = actualStartMin != null
             ? nowMin > actualStartMin + QR_WINDOW_MINUTES
             : false;
           const qrAvailable =
             (session?.status === "ACTIVE" && !qrCutoffPassed)
-            || (session?.status === "UPCOMING" && !startCutoffPassed);
+            || (session?.status === "UPCOMING" && !startCutoffPassed && !beforeStart);
           // QR XOR Amendment — never both. While the QR window is open the
           // teacher shows the QR; once it closes, only Amendment remains (the
           // way to change any status is to submit a reason).

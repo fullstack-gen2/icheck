@@ -107,12 +107,12 @@ export default async function ClassroomDetailPage({
               // `new Date("…T…")` — a server component parses that in the host's
               // timezone (UTC), shifting the window by hours so the Start button
               // stays disabled even after the session has opened.
-              // Bounds come from the session (system settings): openable from
-              // earlyCheckin before start until lateThreshold after it; the QR
-              // then stays live qr_window_minutes from the actual start.
+              // Teacher can open the session ONLY from the scheduled start time
+              // until lateThreshold after it — never before. (Students may scan
+              // the static QR earlier; that's a separate, server-side rule.)
+              // The QR then stays live qr_window_minutes from the actual start.
               const TEACHER_START_GRACE_MINUTES = session?.lateThresholdMinutes ?? 10;
               const QR_WINDOW_MINUTES = 5;
-              const earlyCheckin = session?.earlyCheckinMinutes ?? 10;
 
               const nowMin = schoolNowMinutes();
               const startMin = timeToMinutes(session?.startTime ?? null);
@@ -120,7 +120,7 @@ export default async function ClassroomDetailPage({
                 ? timeToMinutes(session.actualStartTime.split("T")[1] ?? null)
                 : null;
 
-              const opensAtMin = startMin != null ? startMin - earlyCheckin : null;
+              const opensAtMin = startMin;
               const closesAtMin = startMin != null ? startMin + TEACHER_START_GRACE_MINUTES : null;
               const beforeWindow = opensAtMin != null ? nowMin < opensAtMin : false;
               const cutoffPassed = closesAtMin != null ? nowMin > closesAtMin : false;

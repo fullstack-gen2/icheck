@@ -174,22 +174,18 @@ export function TakeAttendanceQrCode({
     })();
   }, [sessions, ensuredSessions, ensureDone, ensuringToday, openSession, teacherCheckInSession, generate, user?.id, user?.role]);
 
-  // Countdown ticker — auto-rotates the QR when it expires.
+  // Countdown ticker — the QR is a SINGLE token valid for the whole window
+  // (no rotation). When it reaches 0 the window has closed; we stop at 0 and do
+  // NOT regenerate (the backend also refuses to reopen past the window).
   useEffect(() => {
     if (!session || !qr) return;
     timerRef.current = setInterval(() => {
-      setRemaining((prev) => {
-        if (prev <= 1) {
-          generate(session.id);
-          return 0;
-        }
-        return prev - 1;
-      });
+      setRemaining((prev) => (prev <= 1 ? 0 : prev - 1));
     }, 1000);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [session, qr, generate]);
+  }, [session, qr]);
 
   const checkInUrl =
     qr && typeof window !== "undefined"
@@ -235,7 +231,7 @@ export function TakeAttendanceQrCode({
             }`}
           >
             <p className="text-sm font-medium uppercase tracking-wide opacity-70">
-              QR refreshes in
+              {isExpired ? "QR expired" : "QR expires in"}
             </p>
             <p className="font-mono text-5xl font-semibold leading-tight tabular-nums">
               {formatRemaining(remaining)}
@@ -268,13 +264,15 @@ export function TakeAttendanceQrCode({
           </div>
 
           <p className="text-sm text-muted-foreground/70">
-            {ensuringToday
-              ? "Preparing today's session…"
-              : loadingSessions
-                ? "Loading session…"
-                : sessionsErrored
-                  ? "Could not load today's sessions."
-                  : "Students scan this QR with i-Check to mark attendance"}
+            {isExpired
+              ? "The attendance window has closed. Use the Amendment form for any remaining students."
+              : ensuringToday
+                ? "Preparing today's session…"
+                : loadingSessions
+                  ? "Loading session…"
+                  : sessionsErrored
+                    ? "Could not load today's sessions."
+                    : "Students scan this QR with i-Check to mark attendance"}
           </p>
         </>
       )}
