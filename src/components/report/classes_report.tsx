@@ -276,7 +276,9 @@ export default function ClassesReport() {
     const body = visibleReports.map((r) => [
       r.student?.name ?? "—",
       r.student?.studentNo ?? "—",
-      r.reportType === "MONTHLY"
+      r.reportType === "LIVE"
+        ? "Live (to date)"
+        : r.reportType === "MONTHLY"
         ? `${MONTHS[(r.reportMonth ?? 1) - 1]} ${r.reportYear}`
         : `Sem ${r.semester} / ${r.reportYear}`,
       r.totalSessions,
@@ -317,6 +319,7 @@ export default function ClassesReport() {
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();
     const NAVY: [number, number, number] = [39, 60, 151];
+    const BLUE: [number, number, number] = [13, 71, 161]; // ISTAD royal blue (title)
 
     // ── Letterhead ────────────────────────────────────────────────────────
     if (logo) {
@@ -326,7 +329,7 @@ export default function ClassesReport() {
     }
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.setTextColor(...NAVY);
+    doc.setTextColor(...BLUE);
     doc.text("Institute of Science and Technology Advanced Development", pageW / 2, 42, { align: "center" });
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
