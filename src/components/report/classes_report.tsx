@@ -321,22 +321,54 @@ export default function ClassesReport() {
     const NAVY: [number, number, number] = [39, 60, 151];
     const BLUE: [number, number, number] = [13, 71, 161]; // ISTAD royal blue (title)
 
-    // ── Letterhead ────────────────────────────────────────────────────────
+    // ── Letterhead (centered: logo → blue title box → subtitle → id line) ──
+    // "Generated …" timestamp, top-right.
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(140);
+    doc.text(`Generated ${new Date().toLocaleString()}`, pageW - 40, 42, { align: "right" });
+
+    let y = 28;
+    // Logo, centered.
     if (logo) {
-      const h = 44;
-      const w = Math.min(160, (logo.w / logo.h) * h);
-      try { doc.addImage(logo.data, "PNG", 40, 26, w, h); } catch { /* ignore */ }
+      const h = 58;
+      const w = (logo.w / logo.h) * h;
+      try { doc.addImage(logo.data, "PNG", (pageW - w) / 2, y, w, h); } catch { /* ignore */ }
+      y += h + 14;
+    } else {
+      y += 14;
     }
+
+    // Institute title — white bold text inside a filled blue box, wrapped.
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.setTextColor(...BLUE);
-    doc.text("Institute of Science and Technology Advanced Development", pageW / 2, 42, { align: "center" });
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.setTextColor(90);
-    doc.text("Student Attendance Report", pageW / 2, 60, { align: "center" });
+    const titleLines = doc.splitTextToSize(
+      "Institute of Science and Technology Advanced Development",
+      360,
+    ) as string[];
+    const lineH = 20;
+    const padX = 26;
+    const padY = 12;
+    const textW = Math.max(...titleLines.map((l) => doc.getTextWidth(l)));
+    const boxW = textW + padX * 2;
+    const boxH = titleLines.length * lineH + padY * 2;
+    const boxX = (pageW - boxW) / 2;
+    doc.setFillColor(...BLUE);
+    doc.roundedRect(boxX, y, boxW, boxH, 4, 4, "F");
+    doc.setTextColor(255);
+    titleLines.forEach((line, i) => {
+      doc.text(line, pageW / 2, y + padY + lineH * (i + 1) - 5, { align: "center" });
+    });
+    y += boxH + 18;
 
-    // Class identity line (name · code · generation · program · period)
+    // Subtitle.
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(13);
+    doc.setTextColor(80);
+    doc.text("Student Attendance Report", pageW / 2, y, { align: "center" });
+    y += 22;
+
+    // Class identity line (name · code · generation · program · period).
     const gen = selectedCls?.generation != null ? `Gen ${selectedCls.generation}` : "";
     const idParts = [
       selectedCls?.className,
@@ -345,24 +377,23 @@ export default function ClassesReport() {
       selectedCls?.programTypeName,
       periodLabel(),
     ].filter(Boolean);
-    doc.setFontSize(10);
+    doc.setFontSize(11);
     doc.setTextColor(40);
-    doc.text(idParts.join("  ·  "), pageW / 2, 78, { align: "center" });
-    doc.setTextColor(140);
-    doc.setFontSize(8);
-    doc.text(`Generated ${new Date().toLocaleString()}`, pageW - 40, 42, { align: "right" });
+    doc.text(idParts.join("   ·   "), pageW / 2, y, { align: "center" });
+    y += 18;
 
-    // Divider
-    doc.setDrawColor(...NAVY);
+    // Divider.
+    doc.setDrawColor(...BLUE);
     doc.setLineWidth(1);
-    doc.line(40, 88, pageW - 40, 88);
+    doc.line(40, y, pageW - 40, y);
+    y += 14;
 
     // ── Bordered data table (full data from the API) ──────────────────────
     const { head, body } = buildTableData();
     (autoTable as unknown as (d: unknown, opts: unknown) => void)(doc, {
       head: [head],
       body,
-      startY: 100,
+      startY: y,
       theme: "grid", // ruled rows + columns
       styles: { fontSize: 9, cellPadding: 5, lineColor: [210, 214, 224], lineWidth: 0.5 },
       headStyles: { fillColor: NAVY, textColor: 255, halign: "center", fontStyle: "bold" },
