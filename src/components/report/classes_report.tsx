@@ -339,27 +339,19 @@ export default function ClassesReport() {
       y += 14;
     }
 
-    // Institute title — white bold text inside a filled blue box, wrapped.
+    // Institute title — blue bold text, centered, wrapped (no background).
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
     const titleLines = doc.splitTextToSize(
       "Institute of Science and Technology Advanced Development",
-      360,
+      540,
     ) as string[];
     const lineH = 20;
-    const padX = 26;
-    const padY = 12;
-    const textW = Math.max(...titleLines.map((l) => doc.getTextWidth(l)));
-    const boxW = textW + padX * 2;
-    const boxH = titleLines.length * lineH + padY * 2;
-    const boxX = (pageW - boxW) / 2;
-    doc.setFillColor(...BLUE);
-    doc.roundedRect(boxX, y, boxW, boxH, 4, 4, "F");
-    doc.setTextColor(255);
+    doc.setTextColor(...BLUE);
     titleLines.forEach((line, i) => {
-      doc.text(line, pageW / 2, y + padY + lineH * (i + 1) - 5, { align: "center" });
+      doc.text(line, pageW / 2, y + lineH * (i + 1), { align: "center" });
     });
-    y += boxH + 18;
+    y += titleLines.length * lineH + 16;
 
     // Subtitle.
     doc.setFont("helvetica", "normal");
