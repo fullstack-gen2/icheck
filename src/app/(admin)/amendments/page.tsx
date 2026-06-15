@@ -96,7 +96,7 @@ export default function AmendmentsPage() {
   }
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 pt-10 pb-8 max-w-[1100px] mx-auto w-full">
+    <div className="px-4 sm:px-6 lg:px-8 pt-10 pb-8 max-w-275 mx-auto w-full">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap mb-8">
         <div>
@@ -209,7 +209,7 @@ export default function AmendmentsPage() {
                     value={remarks[a.id] ?? ""}
                     onChange={(e) => setRemarks((r) => ({ ...r, [a.id]: e.target.value }))}
                     placeholder="Optional note to the student…"
-                    className="h-9 flex-1 min-w-[200px]"
+                    className="h-9 flex-1 min-w-50"
                     disabled={busy}
                   />
                   <Button
