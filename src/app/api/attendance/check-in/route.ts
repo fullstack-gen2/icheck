@@ -74,5 +74,11 @@ export async function POST(req: Request) {
     body: JSON.stringify(payload),
   });
   const data = await res.json();
+  // On the "school network" rejection, surface the exact IP the server saw so
+  // the admin knows precisely which public IP to add to the allowlist (it is
+  // the school's NAT public IP — not the 192.168.x.x LAN address).
+  if (!res.ok && typeof data?.message === "string" && /school network/i.test(data.message)) {
+    data.message = `${data.message} — your IP is ${payload.ipAddress ?? "unknown"}. Ask the admin to add it to the allowlist.`;
+  }
   return NextResponse.json(data, { status: res.status });
 }
