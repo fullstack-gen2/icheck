@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import {
   SearchIcon,
   XIcon,
-  PlusIcon,
   GraduationCapIcon,
   MoreVerticalIcon,
   PencilIcon,
@@ -19,7 +18,10 @@ import {
   useDeleteTeacherMutation,
   type TeacherDto,
 } from "@/store/api/userApi";
-import { TeacherFormDialog, type TeacherFormValue } from "@/components/teacher-form-dialog";
+import {
+  TeacherFormDialog,
+  type TeacherFormValue,
+} from "@/components/teacher-form-dialog";
 import { getErrorMessage } from "@/lib/error-utils";
 import {
   DropdownMenu,
@@ -56,7 +58,11 @@ export function TeachersView() {
     const q = search.trim().toLowerCase();
     if (!q) return teachers;
     return teachers.filter((t) =>
-      [t.name, t.email, t.specialization].filter(Boolean).join(" ").toLowerCase().includes(q)
+      [t.name, t.email, t.specialization]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(q),
     );
   }, [search, teachers]);
 
@@ -87,36 +93,41 @@ export function TeachersView() {
 
   return (
     <>
-      <div className="flex items-center justify-end mb-4 flex-wrap gap-3">
-        <span className="text-sm text-muted-foreground">{filtered.length} of {teachers.length}</span>
-        <Button className="gap-1.5" onClick={openNew}>
-          <PlusIcon className="size-4" />
-          Register Teacher
-        </Button>
-      </div>
-
       {/* Search */}
-      <div className="relative max-w-md mb-4">
-        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, email, specialization…"
-          className="pl-9 pr-9"
-        />
-        {search && (
-          <button
-            onClick={() => setSearch("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted"
-            aria-label="Clear search"
-          >
-            <XIcon className="size-4" />
-          </button>
-        )}
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div className="relative max-w-md mb-4">
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, email, specialization…"
+            className="pl-9 pr-9"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted"
+              aria-label="Clear search"
+            >
+              <XIcon className="size-4" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end mb-4 flex-wrap gap-3">
+          <span className="text-sm text-muted-foreground">
+            {filtered.length} of {teachers.length}
+          </span>
+          <Button className="gap-1.5" onClick={openNew}>
+            Register Teacher
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
-        <div className="text-center py-16 text-muted-foreground/70">Loading teachers…</div>
+        <div className="text-center py-16 text-muted-foreground/70">
+          Loading teachers…
+        </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground/70 bg-card rounded-2xl border border-border">
           <GraduationCapIcon className="size-10 mx-auto mb-3 opacity-40" />
@@ -127,11 +138,21 @@ export function TeachersView() {
           <table className="w-full text-base">
             <thead>
               <tr className="bg-muted/50 border-b border-border">
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Teacher</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">Phone</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">Specialization</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Status</th>
-                <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Actions</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
+                  Teacher
+                </th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">
+                  Phone
+                </th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">
+                  Specialization
+                </th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
+                  Status
+                </th>
+                <th className="text-right px-4 py-3 font-semibold text-muted-foreground">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -143,8 +164,12 @@ export function TeachersView() {
                   }`}
                 >
                   <td className="px-4 py-3">
-                    <div className="font-medium text-foreground">{teacher.name}</div>
-                    <div className="text-sm text-muted-foreground/70">{teacher.email ?? "—"}</div>
+                    <div className="font-medium text-foreground">
+                      {teacher.name}
+                    </div>
+                    <div className="text-sm text-muted-foreground/70">
+                      {teacher.email ?? "—"}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
                     {teacher.phone ?? "—"}
@@ -190,15 +215,23 @@ export function TeachersView() {
         </div>
       )}
 
-      <TeacherFormDialog open={formOpen} initial={editing} onOpenChange={setFormOpen} />
+      <TeacherFormDialog
+        open={formOpen}
+        initial={editing}
+        onOpenChange={setFormOpen}
+      />
 
-      <AlertDialog open={deletingId != null} onOpenChange={(o) => !o && setDeletingId(null)}>
+      <AlertDialog
+        open={deletingId != null}
+        onOpenChange={(o) => !o && setDeletingId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this teacher?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently removes the teacher account. Schedules assigned to this
-              teacher will need to be reassigned. This action cannot be undone.
+              This permanently removes the teacher account. Schedules assigned
+              to this teacher will need to be reassigned. This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
