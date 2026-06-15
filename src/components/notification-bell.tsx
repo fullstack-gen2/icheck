@@ -53,7 +53,7 @@ export function NotificationBell() {
 
   const { data: notifications = [], refetch } = useGetNotificationsQuery(userId, {
     skip: !userId,
-    pollingInterval: 30_000, // sanity poll — STOMP could be added later
+    pollingInterval: 15_000, // near-real-time poll for new requests/decisions
   });
   const [markRead] = useMarkNotificationReadMutation();
   const [markAllRead] = useMarkAllNotificationsReadMutation();

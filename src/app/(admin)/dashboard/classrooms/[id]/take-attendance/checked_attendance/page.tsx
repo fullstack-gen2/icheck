@@ -109,6 +109,7 @@ export default async function CheckedAttendance({
             <section>
                 <ReportToday
                   students={students}
+                  sessionId={session?.id ?? null}
                   sessionDate={session?.sessionDate ?? null}
                   startTime={session?.startTime ?? null}
                   endTime={session?.endTime ?? null}

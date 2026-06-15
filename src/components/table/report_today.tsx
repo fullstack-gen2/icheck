@@ -15,10 +15,14 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Fragment, useState } from "react";
 import { Input } from "../ui/input";
+import { useAttendanceStream, type AttendanceUpdateEvent } from "@/lib/attendance-stream";
+import { useGetSessionAttendanceStatusQuery } from "@/store/api/attendanceApi";
 
 type ReportTodayProps = {
   students?: Student[];
   studentProfileBasePath?: string;
+  /** Today's session id — enables live status (WS + polling). */
+  sessionId?: number | null;
   sessionDate?: string | null;
   startTime?: string | null;
   endTime?: string | null;
@@ -47,6 +51,7 @@ function AttendanceMark({
 export default function ReportToday({
   students = [],
   studentProfileBasePath,
+  sessionId,
   sessionDate,
   startTime,
   endTime,
@@ -62,15 +67,39 @@ export default function ReportToday({
       ? `/dashboard/classrooms/${classroomId}/student-profile`
       : undefined);
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
-  const presentCount = students.filter(
-    (student) => student.status === AttendanceStatus.PRESENT,
-  ).length;
-  const permissionCount = students.filter(
-    (student) => student.status === AttendanceStatus.PENDING,
-  ).length;
-  const lateCount = students.filter(
-    (student) => student.status === AttendanceStatus.LATE,
-  ).length;
+
+  // Live status overlay — WebSocket (instant) + 8s polling fallback, so the
+  // P/PM/L columns flip the moment a student scans, without a refresh.
+  const numericClassroomId = classroomId ? Number(classroomId) : null;
+  const [liveById, setLiveById] = useState<Record<string, string>>({});
+  useAttendanceStream(
+    numericClassroomId,
+    (e: AttendanceUpdateEvent) => {
+      if (!e.studentId || !e.status) return;
+      const k = String(e.studentId);
+      const v = String(e.status).toLowerCase();
+      setLiveById((prev) => (prev[k] === v ? prev : { ...prev, [k]: v }));
+    },
+    sessionId ?? undefined,
+  );
+  const { data: polled } = useGetSessionAttendanceStatusQuery(sessionId ?? 0, {
+    skip: !sessionId,
+    pollingInterval: 8_000,
+  });
+  const polledKey = polled ? JSON.stringify(polled) : "";
+  const [prevPolledKey, setPrevPolledKey] = useState(polledKey);
+  if (polledKey !== prevPolledKey) {
+    setPrevPolledKey(polledKey);
+    if (polled) setLiveById((prev) => ({ ...prev, ...polled }));
+  }
+
+  const liveStudents = students.map((s) =>
+    liveById[s.id] ? { ...s, status: liveById[s.id] as AttendanceStatus } : s,
+  );
+
+  const presentCount = liveStudents.filter((s) => s.status === AttendanceStatus.PRESENT).length;
+  const permissionCount = liveStudents.filter((s) => s.status === AttendanceStatus.PENDING).length;
+  const lateCount = liveStudents.filter((s) => s.status === AttendanceStatus.LATE).length;
 
   function formatDate(raw?: string | null) {
     if (!raw) return "—";
@@ -177,7 +206,7 @@ export default function ReportToday({
           </TableHeader>
 
           <TableBody>
-            {students.map((student, index) => {
+            {liveStudents.map((student, index) => {
               const status = student.status;
               const isExpanded = expandedRowId === student.id;
               const hasDetails =
