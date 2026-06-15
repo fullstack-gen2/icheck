@@ -90,6 +90,18 @@ function CheckInContent() {
             : `Attendance recorded for ${user?.name ?? "you"}.`
         );
       } else {
+        // Session expired / not logged in → send the student straight to login,
+        // remembering this scan URL so they land right back here (better UX than
+        // a dead-end "session expired" error).
+        if (res.status === 401 || res.status === 403) {
+          const here = window.location.pathname + window.location.search;
+          document.cookie = `post_login_redirect=${encodeURIComponent(here)}; path=/; max-age=600; samesite=lax`;
+          setState("loading");
+          setMessage("Redirecting you to log in…");
+          window.location.href = "/api/auth/login";
+          return;
+        }
+
         // Surface the REAL reason — read every field the backend / proxy might
         // use (payload.message, message, error). Only fall back to the generic
         // hint when the response truly carries nothing.

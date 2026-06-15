@@ -57,12 +57,21 @@ export function StudentTodayClasses() {
   const [loading, setLoading] = useState(false);
   const [checkingOut, setCheckingOut] = useState<number | null>(null);
 
+  // Re-fetch every 25s so an admin-approved late/permission request shows up on
+  // the student's own profile without a manual refresh.
+  const [refreshTick, setRefreshTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setRefreshTick((n) => n + 1), 25_000);
+    return () => clearInterval(t);
+  }, []);
+
   useEffect(() => {
     if (!userId || enrollments.length === 0) return;
     let cancelled = false;
 
     (async () => {
-      setLoading(true);
+      // Only show the spinner on the first load — silent on the 25s polls.
+      if (refreshTick === 0) setLoading(true);
       const today = new Date().toISOString().slice(0, 10);
       const out: TodaySession[] = [];
 
@@ -126,7 +135,7 @@ export function StudentTodayClasses() {
     })();
 
     return () => { cancelled = true; };
-  }, [userId, enrollments]);
+  }, [userId, enrollments, refreshTick]);
 
   async function handleCheckOut(row: TodaySession) {
     if (!row.sessionId || !userId) return;
