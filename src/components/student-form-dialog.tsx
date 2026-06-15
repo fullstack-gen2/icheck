@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MultiCombobox } from "@/components/ui/multi-combobox";
 import {
   Select,
   SelectContent,
@@ -98,12 +99,6 @@ export function StudentFormDialog({ open, initial, classrooms, onOpenChange }: P
 
   function patch<K extends keyof StudentFormValue>(k: K, v: StudentFormValue[K]) {
     setForm((f) => ({ ...f, [k]: v }));
-  }
-
-  function toggleClassroom(id: number) {
-    setSelectedClassIds((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
-    );
   }
 
   async function handleSave() {
@@ -191,7 +186,7 @@ export function StudentFormDialog({ open, initial, classrooms, onOpenChange }: P
         <DialogHeader>
           <DialogTitle>{editing ? "Edit Student" : "Register Student"}</DialogTitle>
           <DialogDescription>
-            {editing ? "Update this student's details." : "Create a student account from live API data."}
+            {editing ? "Update this student's details." : "Create a student account."}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3">
@@ -291,29 +286,18 @@ export function StudentFormDialog({ open, initial, classrooms, onOpenChange }: P
             <p className="text-xs font-medium text-muted-foreground">
               Classes ({selectedClassIds.length} selected)
             </p>
-            <div className="max-h-40 overflow-y-auto rounded-lg border divide-y divide-border/50">
-              {classrooms.length === 0 ? (
-                <p className="px-3 py-2 text-sm text-muted-foreground/70">No classes available.</p>
-              ) : (
-                classrooms.map((c) => (
-                  <label
-                    key={c.id}
-                    htmlFor={`stu-class-${c.id}`}
-                    className="flex cursor-pointer items-center gap-2.5 px-3 py-2 hover:bg-muted/50"
-                  >
-                    <Checkbox
-                      id={`stu-class-${c.id}`}
-                      checked={selectedClassIds.includes(c.id)}
-                      onCheckedChange={() => toggleClassroom(c.id)}
-                    />
-                    <span className="text-sm">
-                      {c.className}
-                      <span className="ml-1.5 text-xs text-muted-foreground/70 font-mono">{c.classCode}</span>
-                    </span>
-                  </label>
-                ))
-              )}
-            </div>
+            <MultiCombobox
+              options={classrooms.map((c) => ({
+                value: String(c.id),
+                label: c.className,
+                hint: c.classCode,
+              }))}
+              selected={selectedClassIds.map(String)}
+              onChange={(next) => setSelectedClassIds(next.map(Number))}
+              placeholder="Search & select classes…"
+              searchPlaceholder="Search by class name or code…"
+              emptyText="No classes found."
+            />
           </div>
         </div>
         <DialogFooter>
