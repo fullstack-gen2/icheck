@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { useUser } from "@/components/user-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -28,11 +27,10 @@ import {
   AlertTriangleIcon,
   LockIcon,
   DownloadIcon,
-  SearchIcon,
-  XIcon,
   ChevronDownIcon,
 } from "lucide-react";
 import { ISTAD_LOGO_URL } from "@/components/logo";
+import { SingleCombobox } from "@/components/ui/multi-combobox";
 
 /** Load a remote image as a data URL so jsPDF can embed it. */
 async function loadImageDataUrl(url: string): Promise<{ data: string; w: number; h: number } | null> {
@@ -94,8 +92,6 @@ export default function ClassesReport() {
 
   // Left panel — classroom picker
   const { data: classrooms = [], isLoading: loadingCls } = useGetClassroomsQuery({ size: 200 });
-  const [progType, setProgType] = useState<"ALL" | "BACHELOR" | "SCHOLARSHIP">("ALL");
-  const [search, setSearch] = useState("");
   const [selectedCls, setSelectedCls] = useState<Classroom | null>(null);
 
   // Generate-form inputs (right panel header)
@@ -133,26 +129,9 @@ export default function ClassesReport() {
     { skip: !selectedCls },
   );
 
-  function resetFilters() {
-    setSearch("");
-    setSelectedCls(null);
-  }
-
-  /* ── Derived: filtered classroom list ────────────────────────────────── */
-  const filteredCls = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return classrooms.filter((c) => {
-      if (progType !== "ALL") {
-        if (!c.programTypeName?.toUpperCase().includes(progType)) return false;
-      }
-      if (q) {
-        const hay = [c.className, c.classCode, c.programTypeName, c.shift]
-          .filter(Boolean).join(" ").toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [classrooms, progType, search]);
+  // The combobox above is the searchable picker; the left list just shows all
+  // classes for quick browsing.
+  const filteredCls = classrooms;
 
   /* ── Derived: visible reports per tab ────────────────────────────────── */
   // Map live eligibility rows into the ReportDto shape so the table renders
@@ -417,40 +396,24 @@ export default function ClassesReport() {
             Pick a class, choose a period, then Generate to create and export report papers.
           </p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex gap-1.5">
-            {(["ALL", "BACHELOR", "SCHOLARSHIP"] as const).map((pt) => (
-              <button
-                key={pt}
-                onClick={() => { setProgType(pt); resetFilters(); }}
-                className={`px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-all ${
-                  progType === pt
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-card text-muted-foreground border-border hover:border-primary/40"
-                }`}
-              >
-                {pt === "ALL" ? "All" : pt === "BACHELOR" ? "Bachelor" : "Scholarship"}
-              </button>
-            ))}
-          </div>
-          <div className="relative w-full sm:w-72">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by class name, code…"
-              className="pl-9 pr-9"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted"
-                aria-label="Clear search"
-              >
-                <XIcon className="size-4" />
-              </button>
-            )}
-          </div>
+        {/* Single searchable combobox replaces the program tabs + text search —
+            type a class name or code (program shown as a hint) and pick. */}
+        <div className="w-full sm:w-96">
+          <SingleCombobox
+            options={classrooms.map((c) => ({
+              value: String(c.id),
+              label: c.className,
+              hint: c.classCode,
+            }))}
+            value={selectedCls ? String(selectedCls.id) : null}
+            onChange={(v) => {
+              const c = classrooms.find((cl) => String(cl.id) === v);
+              if (c) loadReports(c);
+            }}
+            placeholder="Search & select a class…"
+            searchPlaceholder="Search by class name or code…"
+            emptyText="No classes found."
+          />
         </div>
       </div>
 
