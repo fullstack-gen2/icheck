@@ -24,6 +24,7 @@ import {
 import { LoaderCircleIcon } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { useGetTeachersQuery } from "@/store/api/userApi";
+import { SingleCombobox } from "@/components/ui/multi-combobox";
 
 const DAYS = [
   "MONDAY",
@@ -183,11 +184,12 @@ export function ScheduleFormDialog({
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Class" required>
-            <Select
-              value={form.classId ? String(form.classId) : ""}
-              onValueChange={(v) => {
+            <SingleCombobox
+              options={classrooms.map((c) => ({ value: String(c.id), label: c.className }))}
+              value={form.classId ? String(form.classId) : null}
+              onChange={(v) => {
                 const c = classrooms.find((cl) => cl.id === Number(v));
-                patch("classId", Number(v));
+                patch("classId", v ? Number(v) : undefined);
                 patch("className", c?.className ?? "");
                 if (c?.className && isIteClassName(c.className)) {
                   patch("slot", 1);
@@ -195,44 +197,26 @@ export function ScheduleFormDialog({
                   patch("endTime", "17:30");
                 }
               }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select class" />
-              </SelectTrigger>
-              <SelectContent>
-                {classrooms.map((c) => (
-                  <SelectItem key={c.id} value={String(c.id)}>
-                    {c.className}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Select class"
+              searchPlaceholder="Search class…"
+              emptyText="No classes found."
+            />
           </Field>
 
           <Field label="Teacher" required>
-            <Select
-              value={form.teacherId ? String(form.teacherId) : ""}
-              onValueChange={(v) => {
+            <SingleCombobox
+              options={teachers.map((t) => ({ value: String(t.id), label: t.name }))}
+              value={form.teacherId ? String(form.teacherId) : null}
+              onChange={(v) => {
                 const t = teachers.find((teacher) => teacher.id === Number(v));
-                patch("teacherId", Number(v));
+                patch("teacherId", v ? Number(v) : undefined);
                 patch("teacherName", t?.name ?? "");
               }}
-            >
-              <SelectTrigger>
-                <SelectValue
-                  placeholder={
-                    loadingTeachers ? "Loading teachers..." : "Select teacher"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {teachers.map((t) => (
-                  <SelectItem key={t.id} value={String(t.id)}>
-                    {t.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder={loadingTeachers ? "Loading teachers…" : "Select teacher"}
+              searchPlaceholder="Search teacher…"
+              emptyText="No teachers found."
+              disabled={loadingTeachers}
+            />
           </Field>
 
           <Field label="Day">

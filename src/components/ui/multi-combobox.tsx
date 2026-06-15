@@ -27,6 +27,80 @@ export interface ComboOption {
   hint?: string;
 }
 
+/** Searchable single-select combobox (shadcn pattern: Popover + Command/cmdk). */
+export function SingleCombobox({
+  options,
+  value,
+  onChange,
+  placeholder = "Select…",
+  searchPlaceholder = "Search…",
+  emptyText = "No results.",
+  disabled,
+  className,
+}: {
+  options: ComboOption[];
+  value: string | null | undefined;
+  onChange: (next: string | null) => void;
+  placeholder?: string;
+  searchPlaceholder?: string;
+  emptyText?: string;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const current = options.find((o) => o.value === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled}
+          className={cn("w-full justify-between font-normal", className)}
+        >
+          <span className={cn("truncate", !current && "text-muted-foreground")}>
+            {current ? current.label : placeholder}
+          </span>
+          <ChevronsUpDownIcon className="ml-2 size-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command
+          filter={(v, search) => {
+            const o = options.find((opt) => opt.value === v);
+            const hay = `${o?.label ?? ""} ${o?.hint ?? ""}`.toLowerCase();
+            return hay.includes(search.toLowerCase()) ? 1 : 0;
+          }}
+        >
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandList>
+            <CommandEmpty>{emptyText}</CommandEmpty>
+            <CommandGroup>
+              {options.map((o) => (
+                <CommandItem
+                  key={o.value}
+                  value={o.value}
+                  onSelect={() => {
+                    onChange(o.value === value ? null : o.value);
+                    setOpen(false);
+                  }}
+                >
+                  <CheckIcon className={cn("size-4", value === o.value ? "opacity-100" : "opacity-0")} />
+                  <span className="flex-1 truncate">{o.label}</span>
+                  {o.hint && <span className="font-mono text-xs text-muted-foreground/70">{o.hint}</span>}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 /**
  * Searchable multi-select combobox (shadcn pattern: Popover + Command/cmdk).
  * Type to filter, click to toggle. Selected items show as removable chips.
