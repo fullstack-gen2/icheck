@@ -95,13 +95,13 @@ export function TeachersView() {
     <>
       {/* Search */}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <div className="relative mb-4">
+        <div className="relative w-80 mb-4">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, email, specialization…"
-            className="pl-9 pr-9"
+            className="px-4 w-full"
           />
           {search && (
             <button
