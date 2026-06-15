@@ -95,7 +95,7 @@ export function TeachersView() {
     <>
       {/* Search */}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <div className="relative max-w-md mb-4">
+        <div className="relative max-w-xl mb-4">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
           <Input
             value={search}
