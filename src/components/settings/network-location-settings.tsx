@@ -72,6 +72,21 @@ export function IpAllowlistCard({ settings }: { settings: SettingDto[] }) {
   const [newCidr, setNewCidr] = useState("");
   const [savingEnabled, setSavingEnabled] = useState(false);
   const [savingCidrs, setSavingCidrs] = useState(false);
+  const [detectedIp, setDetectedIp] = useState<string | null>(null);
+  const [detecting, setDetecting] = useState(false);
+
+  async function detectIp() {
+    setDetecting(true);
+    try {
+      const res = await fetch("/api/client-ip");
+      const json = await res.json();
+      setDetectedIp(json?.ip ?? "unknown");
+    } catch {
+      setDetectedIp("unknown");
+    } finally {
+      setDetecting(false);
+    }
+  }
 
   // Re-sync local state when the underlying settings change (e.g. after refetch),
   // without overwriting in-progress edits on every render.
@@ -240,6 +255,38 @@ export function IpAllowlistCard({ settings }: { settings: SettingDto[] }) {
             >
               <PlusIcon className="size-4" />
             </Button>
+          </div>
+
+          {/* Detected-IP helper — a cloud server sees the school's PUBLIC IP, not
+              the 192.168.x.x LAN address. Detect it here on the school Wi-Fi. */}
+          <div className="rounded-lg border border-dashed border-border bg-muted/30 p-3 text-xs">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground">
+                On the school Wi-Fi, detect the IP the server actually sees:
+              </span>
+              <Button type="button" variant="outline" size="sm" className="h-7 gap-1.5" onClick={detectIp} disabled={detecting}>
+                {detecting ? <LoaderCircleIcon className="size-3.5 animate-spin" /> : <CrosshairIcon className="size-3.5" />}
+                Detect my IP
+              </Button>
+            </div>
+            {detectedIp && (
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="font-mono text-foreground">{detectedIp}</span>
+                {detectedIp !== "unknown" && !cidrs.includes(detectedIp) && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-7 gap-1.5"
+                    onClick={() => { setCidrs((p) => [...p, detectedIp]); toast.success("Added — click Save list."); }}
+                  >
+                    <PlusIcon className="size-3.5" /> Add to list
+                  </Button>
+                )}
+              </div>
+            )}
+            <p className="mt-2 text-muted-foreground/70">
+              Tip: <span className="font-mono">192.168.x.x</span> is a LAN address — a cloud server can&apos;t see it. Use the detected public IP (or its <span className="font-mono">/24</span> range).
+            </p>
           </div>
         </div>
 
