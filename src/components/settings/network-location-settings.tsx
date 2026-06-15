@@ -257,8 +257,6 @@ export function IpAllowlistCard({ settings }: { settings: SettingDto[] }) {
             </Button>
           </div>
 
-          {/* Detected-IP helper — a cloud server sees the school's PUBLIC IP, not
-              the 192.168.x.x LAN address. Detect it here on the school Wi-Fi. */}
           <div className="rounded-lg border border-dashed border-border bg-muted/30 p-3 text-xs">
             <div className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground">
@@ -284,9 +282,9 @@ export function IpAllowlistCard({ settings }: { settings: SettingDto[] }) {
                 )}
               </div>
             )}
-            <p className="mt-2 text-muted-foreground/70">
+            {/* <p className="mt-2 text-muted-foreground/70">
               Tip: <span className="font-mono">192.168.x.x</span> is a LAN address a cloud server can&apos;t see it. Use the detected public IP (or its <span className="font-mono">/24</span> range).
-            </p>
+            </p> */}
           </div>
         </div>
 
