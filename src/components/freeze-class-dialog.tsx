@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SnowflakeIcon, FlameIcon, LoaderCircleIcon } from "lucide-react";
+import { ThermometerSnowflake, FlameIcon, LoaderCircleIcon } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-utils";
 
@@ -80,7 +80,7 @@ export function FreezeClassDialog({ classroomId, className }: Props) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" className="p-5 gap-1.5">
-          <SnowflakeIcon className="size-4" /> {isGlobal ? "Freeze All" : "Freeze"}
+          <ThermometerSnowflake className="size-4" /> {isGlobal ? "Freeze All" : "Freeze"}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
@@ -124,7 +124,7 @@ export function FreezeClassDialog({ classroomId, className }: Props) {
             Unfreeze
           </Button>
           <Button onClick={() => run("freeze")} disabled={busy != null} className="gap-1.5">
-            {busy === "freeze" ? <LoaderCircleIcon className="size-4 animate-spin" /> : <SnowflakeIcon className="size-4" />}
+            {busy === "freeze" ? <LoaderCircleIcon className="size-4 animate-spin" /> : <ThermometerSnowflake className="size-4" />}
             Freeze Range
           </Button>
         </DialogFooter>

@@ -280,7 +280,7 @@ export function IpAllowlistCard({ settings }: { settings: SettingDto[] }) {
                     <PlusIcon className="size-3.5" /> Add to list
                   </Button>
                 )}
-              </div>
+              </div>  
             )}
             {/* <p className="mt-2 text-muted-foreground/70">
               Tip: <span className="font-mono">192.168.x.x</span> is a LAN address a cloud server can&apos;t see it. Use the detected public IP (or its <span className="font-mono">/24</span> range).
