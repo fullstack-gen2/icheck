@@ -164,7 +164,7 @@ export default async function ClassroomDetailPage({
                 return (
                   <Button asChild variant="outline" className="p-5">
                     <Link href={`/dashboard/classrooms/${id}/take-attendance/checked_attendance`}>
-                      Submit Amendment
+                      Edit Attendance
                     </Link>
                   </Button>
                 );
