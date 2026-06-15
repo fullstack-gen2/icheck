@@ -408,7 +408,7 @@ export default function ClassesReport() {
   }
 
   return (
-    <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-[1600px] mx-auto w-full">
+    <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-400 mx-auto w-full">
       {/* ── Top row: title + clean filter bar (tabs + search) ─────────── */}
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
