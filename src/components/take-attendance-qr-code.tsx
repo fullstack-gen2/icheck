@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { AlertCircleIcon, LoaderCircleIcon, RefreshCwIcon } from "lucide-react";
+import { AlertCircleIcon, LoaderCircleIcon, RefreshCwIcon, ClipboardPenIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   useEnsureTodaySessionsForClassroomMutation,
@@ -192,6 +192,18 @@ export function TakeAttendanceQrCode({
       ? `${window.location.origin}/check-in?token=${qr.codeValue}`
       : "";
 
+  // After the 5-minute window the only path is the Amendment form. Detect the
+  // backend's "window closed" / "start window closed" errors so we can show the
+  // Amendment button instead of a pointless Retry.
+  const amendmentHref = `/dashboard/classrooms/${classroomId}/take-attendance/checked_attendance`;
+  const windowClosed = /window has closed|start window has closed|window closed|amendment/i.test(error);
+  const AmendmentButton = (
+    <Button onClick={() => router.push(amendmentHref)} className="gap-2 bg-primary hover:bg-primary/90">
+      <ClipboardPenIcon className="size-4" />
+      Submit Amendment
+    </Button>
+  );
+
   return (
     <div className="flex h-full min-h-0 flex-col items-center justify-center gap-5">
       {session && (
@@ -208,16 +220,27 @@ export function TakeAttendanceQrCode({
         <div className="flex flex-col items-center gap-3 text-center">
           <AlertCircleIcon className="size-12 text-red-400" />
           <p className="max-w-xs text-sm text-muted-foreground">{error}</p>
-          {session && (
-            <Button onClick={() => generate(session.id)} disabled={loading} className="gap-2">
-              {loading ? (
-                <LoaderCircleIcon className="size-4 animate-spin" />
-              ) : (
-                <RefreshCwIcon className="size-4" />
+          {/* Window closed → Amendment is the only path; otherwise allow Retry. */}
+          {windowClosed
+            ? AmendmentButton
+            : session && (
+                <Button onClick={() => generate(session.id)} disabled={loading} className="gap-2">
+                  {loading ? <LoaderCircleIcon className="size-4 animate-spin" /> : <RefreshCwIcon className="size-4" />}
+                  Retry
+                </Button>
               )}
-              Retry
-            </Button>
-          )}
+        </div>
+      ) : isExpired && qr ? (
+        // 5-minute scan window closed — close the QR and offer the Amendment form.
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="rounded-2xl bg-red-50 px-8 py-4 text-red-600 shadow-sm dark:bg-red-950/40">
+            <p className="text-sm font-medium uppercase tracking-wide opacity-70">QR expired</p>
+            <p className="font-mono text-5xl font-semibold leading-tight tabular-nums">0:00</p>
+          </div>
+          <p className="max-w-xs text-sm text-muted-foreground">
+            The 5-minute scan window has closed. Record any remaining students with an amendment.
+          </p>
+          {AmendmentButton}
         </div>
       ) : (
         <>
