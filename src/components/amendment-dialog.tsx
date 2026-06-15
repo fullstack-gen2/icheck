@@ -13,13 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { LoaderCircleIcon } from "lucide-react";
 import { useUser } from "@/components/user-provider";
 import { api } from "@/lib/api-client";
@@ -65,6 +58,17 @@ function beforeStatus(raw?: string): string {
  *  uses beforeStatus(), an unknown→Present row is still flagged as changed. */
 function seedStatus(raw?: string): string {
   return beforeStatus(raw) || "PRESENT";
+}
+
+/** Colour for the active (selected) status pill. */
+function statusActiveClass(value: string): string {
+  switch (value) {
+    case "PRESENT":  return "border-green-600 bg-green-600 text-white";
+    case "LATE":     return "border-amber-500 bg-amber-500 text-white";
+    case "LATE_OUT": return "border-orange-500 bg-orange-500 text-white";
+    case "ABSENT":   return "border-red-600 bg-red-600 text-white";
+    default:         return "border-primary bg-primary text-primary-foreground";
+  }
 }
 
 /**
@@ -243,29 +247,43 @@ export function AmendmentDialog({
                 return (
                   <div
                     key={s.id}
-                    className={`flex items-center gap-3 px-3 py-2 ${
+                    className={`px-3 py-2.5 ${
                       changed ? "bg-amber-50/40 dark:bg-amber-950/20" : ""
                     }`}
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">{s.name}</p>
-                      <p className="text-[11px] text-muted-foreground/70">
-                        Current: {s.currentStatus ?? "pending"}
-                      </p>
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-foreground">{s.name}</p>
+                        <p className="text-[11px] text-muted-foreground/70">
+                          Current: {s.currentStatus ?? "pending"}
+                          {changed && (
+                            <span className="ml-1 text-amber-600 dark:text-amber-400">
+                              → {STATUS_OPTIONS.find((o) => o.value === draft)?.label}
+                            </span>
+                          )}
+                        </p>
+                      </div>
                     </div>
-                    <Select
-                      value={draft}
-                      onValueChange={(v) => patchDraft(s.id, v)}
-                    >
-                      <SelectTrigger className="w-[140px] h-9">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STATUS_OPTIONS.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {/* Click a status to change it (no dropdown). */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {STATUS_OPTIONS.map((o) => {
+                        const active = draft === o.value;
+                        return (
+                          <button
+                            key={o.value}
+                            type="button"
+                            onClick={() => patchDraft(s.id, o.value)}
+                            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                              active
+                                ? statusActiveClass(o.value)
+                                : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                            }`}
+                          >
+                            {o.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })
