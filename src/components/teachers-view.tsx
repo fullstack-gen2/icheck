@@ -12,6 +12,8 @@ import {
   MoreVerticalIcon,
   PencilIcon,
   TrashIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from "lucide-react";
 import {
   useGetTeachersQuery,
@@ -65,6 +67,20 @@ export function TeachersView() {
         .includes(q),
     );
   }, [search, teachers]);
+
+  // Pagination — reset to page 1 when the search changes (adjust-during-render).
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+  const [prevSearch, setPrevSearch] = useState(search);
+  if (prevSearch !== search) {
+    setPrevSearch(search);
+    setPage(1);
+  }
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const firstRow = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const lastRow = Math.min(safePage * PAGE_SIZE, filtered.length);
 
   function openNew() {
     setEditing(null);
@@ -156,11 +172,11 @@ export function TeachersView() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((teacher, index) => (
+              {paged.map((teacher, index) => (
                 <tr
                   key={teacher.id}
                   className={`border-b border-border/50 hover:bg-muted/50 transition-colors ${
-                    index === filtered.length - 1 ? "border-b-0" : ""
+                    index === paged.length - 1 ? "border-b-0" : ""
                   }`}
                 >
                   <td className="px-4 py-3">
@@ -212,6 +228,25 @@ export function TeachersView() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {!isLoading && filtered.length > 0 && totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between flex-wrap gap-3">
+          <p className="text-sm text-muted-foreground">
+            Showing <span className="font-medium text-foreground">{firstRow}</span>–
+            <span className="font-medium text-foreground">{lastRow}</span> of{" "}
+            <span className="font-medium text-foreground">{filtered.length}</span> teachers
+          </p>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="icon" className="size-8" onClick={() => setPage(safePage - 1)} disabled={safePage <= 1} aria-label="Previous page">
+              <ChevronLeftIcon className="size-4" />
+            </Button>
+            <span className="px-2 text-sm text-muted-foreground">{safePage} / {totalPages}</span>
+            <Button variant="outline" size="icon" className="size-8" onClick={() => setPage(safePage + 1)} disabled={safePage >= totalPages} aria-label="Next page">
+              <ChevronRightIcon className="size-4" />
+            </Button>
+          </div>
         </div>
       )}
 
