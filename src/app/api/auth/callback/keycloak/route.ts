@@ -210,12 +210,19 @@ export async function GET(req: Request) {
   }
 
   const token = (await tokenRes.json()) as TokenResponse;
-  const response = NextResponse.redirect(new URL("/", requestUrl.origin));
+  // Honor a safe post-login return (e.g. a student whose session expired mid
+  // check-in) — only same-origin /check-in paths are allowed to avoid open
+  // redirects.
+  const rawReturn = getCookie(req, "post_login_redirect");
+  const decodedReturn = rawReturn ? decodeURIComponent(rawReturn) : "";
+  const dest = decodedReturn.startsWith("/check-in") ? decodedReturn : "/";
+  const response = NextResponse.redirect(new URL(dest, requestUrl.origin));
   const secure = requestUrl.protocol === "https:";
 
   response.cookies.delete(OAUTH_STATE_COOKIE);
   response.cookies.delete(OAUTH_CODE_VERIFIER_COOKIE);
   response.cookies.delete(OAUTH_RETRY_COOKIE); // login succeeded — reset the guard
+  response.cookies.delete("post_login_redirect");
   response.cookies.set(ACCESS_TOKEN_COOKIE, token.access_token, {
     httpOnly: true,
     sameSite: "lax",
