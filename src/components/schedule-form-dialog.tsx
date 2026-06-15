@@ -25,7 +25,15 @@ import { LoaderCircleIcon } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { useGetTeachersQuery } from "@/store/api/userApi";
 
-const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"] as const;
+const DAYS = [
+  "MONDAY",
+  "TUESDAY",
+  "WEDNESDAY",
+  "THURSDAY",
+  "FRIDAY",
+  "SATURDAY",
+  "SUNDAY",
+] as const;
 
 export interface ScheduleFormValue {
   id?: number;
@@ -42,19 +50,22 @@ export interface ScheduleFormValue {
 }
 
 const empty: ScheduleFormValue = {
-  classId:     undefined,
-  className:   "",
-  teacherId:   undefined,
+  classId: undefined,
+  className: "",
+  teacherId: undefined,
   teacherName: "",
-  dayOfWeek:   "MONDAY",
-  startTime:   "08:00",
-  endTime:     "10:00",
-  slot:        1,
+  dayOfWeek: "MONDAY",
+  startTime: "08:00",
+  endTime: "10:00",
+  slot: 1,
   attendanceRequired: true,
-  status:      true,
+  status: true,
 };
 
-interface ClassroomOpt { id: number; className: string; }
+interface ClassroomOpt {
+  id: number;
+  className: string;
+}
 
 interface Props {
   open: boolean;
@@ -63,10 +74,16 @@ interface Props {
   onOpenChange: (o: boolean) => void;
 }
 
-export function ScheduleFormDialog({ open, initial, classrooms = [], onOpenChange }: Props) {
+export function ScheduleFormDialog({
+  open,
+  initial,
+  classrooms = [],
+  onOpenChange,
+}: Props) {
   const router = useRouter();
   const editing = !!initial?.id;
-  const { data: teachers = [], isLoading: loadingTeachers } = useGetTeachersQuery();
+  const { data: teachers = [], isLoading: loadingTeachers } =
+    useGetTeachersQuery();
   const [form, setForm] = useState<ScheduleFormValue>(empty);
   const [saving, setSaving] = useState(false);
 
@@ -78,7 +95,10 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], onOpenChang
     if (open) setForm(initial ? { ...empty, ...initial } : empty);
   }
 
-  function patch<K extends keyof ScheduleFormValue>(k: K, v: ScheduleFormValue[K]) {
+  function patch<K extends keyof ScheduleFormValue>(
+    k: K,
+    v: ScheduleFormValue[K],
+  ) {
     setForm((f) => ({ ...f, [k]: v }));
   }
 
@@ -110,24 +130,30 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], onOpenChang
     setSaving(true);
     try {
       const body = {
-        classId:   form.classId,
+        classId: form.classId,
         teacherId: form.teacherId,
         dayOfWeek: form.dayOfWeek,
-        startTime: form.startTime.length === 5 ? form.startTime + ":00" : form.startTime,
-        endTime:   form.endTime.length === 5   ? form.endTime + ":00"   : form.endTime,
-        slot:      Number(form.slot),
+        startTime:
+          form.startTime.length === 5 ? form.startTime + ":00" : form.startTime,
+        endTime:
+          form.endTime.length === 5 ? form.endTime + ":00" : form.endTime,
+        slot: Number(form.slot),
         attendanceRequired: form.attendanceRequired ?? true,
       };
       if (editing) {
         await api.put(`/schedules/${form.id}`, body);
         // Active/Inactive status isn't part of ScheduleRequest — toggle separately.
         if (form.status !== initial?.status) {
-          await api.patch(`/schedules/${form.id}/status?active=${form.status}`, undefined);
+          await api.patch(
+            `/schedules/${form.id}/status?active=${form.status}`,
+            undefined,
+          );
         }
         toast.success("Schedule updated.");
       } else {
         const created = await api.post(`/schedules`, body);
-        const newId = (created as { payload?: { id?: number } } | null)?.payload?.id;
+        const newId = (created as { payload?: { id?: number } } | null)?.payload
+          ?.id;
         if (!form.status && newId) {
           await api.patch(`/schedules/${newId}/status?active=false`, undefined);
         }
@@ -146,7 +172,9 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], onOpenChang
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit Schedule" : "Add Schedule"}</DialogTitle>
+          <DialogTitle>
+            {editing ? "Edit Schedule" : "Add Schedule"}
+          </DialogTitle>
           <DialogDescription>
             Recurring weekly slot for a class.
           </DialogDescription>
@@ -167,10 +195,14 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], onOpenChang
                 }
               }}
             >
-              <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Select class" />
+              </SelectTrigger>
               <SelectContent>
                 {classrooms.map((c) => (
-                  <SelectItem key={c.id} value={String(c.id)}>{c.className}</SelectItem>
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    {c.className}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -186,7 +218,11 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], onOpenChang
               }}
             >
               <SelectTrigger>
-                <SelectValue placeholder={loadingTeachers ? "Loading teachers..." : "Select teacher"} />
+                <SelectValue
+                  placeholder={
+                    loadingTeachers ? "Loading teachers..." : "Select teacher"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {teachers.map((t) => (
@@ -199,8 +235,13 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], onOpenChang
           </Field>
 
           <Field label="Day">
-            <Select value={form.dayOfWeek} onValueChange={(v) => patch("dayOfWeek", v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={form.dayOfWeek}
+              onValueChange={(v) => patch("dayOfWeek", v)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {DAYS.map((d) => (
                   <SelectItem key={d} value={d}>
@@ -211,7 +252,7 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], onOpenChang
             </Select>
           </Field>
 
-          <Field label="Start Time">
+          {/* <Field label="Start Time">
             <Input
               type="time"
               value={form.startTime}
@@ -224,7 +265,25 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], onOpenChang
               value={form.endTime}
               onChange={(e) => patch("endTime", e.target.value)}
             />
-          </Field>
+          </Field> */}
+
+          <div className="col-span-2 grid grid-cols-2 gap-3">
+            <Field label="Start Time">
+              <Input
+                type="time"
+                value={form.startTime}
+                onChange={(e) => patch("startTime", e.target.value)}
+              />
+            </Field>
+
+            <Field label="End Time">
+              <Input
+                type="time"
+                value={form.endTime}
+                onChange={(e) => patch("endTime", e.target.value)}
+              />
+            </Field>
+          </div>
 
           <Field label="Slot">
             <Input
@@ -240,7 +299,9 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], onOpenChang
               value={form.status ? "active" : "inactive"}
               onValueChange={(v) => patch("status", v === "active")}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
@@ -250,11 +311,17 @@ export function ScheduleFormDialog({ open, initial, classrooms = [], onOpenChang
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={saving}>
-            {saving && <LoaderCircleIcon className="size-4 animate-spin mr-2" />}
+            {saving && (
+              <LoaderCircleIcon className="size-4 animate-spin mr-2" />
+            )}
             {editing ? "Save Changes" : "Create"}
           </Button>
         </DialogFooter>

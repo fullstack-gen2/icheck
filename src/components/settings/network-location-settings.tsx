@@ -170,7 +170,7 @@ export function IpAllowlistCard({ settings }: { settings: SettingDto[] }) {
         </div>
         <CardTitle>IP Validation</CardTitle>
         <CardDescription>
-          Optionally restrict check-ins to specific school networks. Disabled by default —
+          Optionally restrict check-ins to specific school networks. Disabled by default-
           when off, students can check in from any network.
         </CardDescription>
       </CardHeader>
@@ -285,7 +285,7 @@ export function IpAllowlistCard({ settings }: { settings: SettingDto[] }) {
               </div>
             )}
             <p className="mt-2 text-muted-foreground/70">
-              Tip: <span className="font-mono">192.168.x.x</span> is a LAN address — a cloud server can&apos;t see it. Use the detected public IP (or its <span className="font-mono">/24</span> range).
+              Tip: <span className="font-mono">192.168.x.x</span> is a LAN address a cloud server can&apos;t see it. Use the detected public IP (or its <span className="font-mono">/24</span> range).
             </p>
           </div>
         </div>

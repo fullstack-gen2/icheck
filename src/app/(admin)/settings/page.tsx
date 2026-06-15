@@ -316,7 +316,7 @@ export default function SettingsPage() {
                 Freeze Attendance (whole school)
               </CardTitle>
               <CardDescription>
-                Pause attendance for one or more days across every class — e.g.
+                Pause attendance for one or more days across every class. useful for
                 a public holiday or exam week. No sessions are generated and
                 check-ins are rejected on those days. To freeze just one class,
                 use the Freeze button on that class&apos;s page.
