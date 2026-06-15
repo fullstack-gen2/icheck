@@ -18,8 +18,9 @@ async function fetchClassroom(id: string): Promise<Classroom | null> {
   } catch { return null; }
 }
 
-async function fetchSessionStatusMap(sessionId: number | null): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
+type StatusEntry = { status: string; reason: string | null };
+async function fetchSessionStatusMap(sessionId: number | null): Promise<Map<string, StatusEntry>> {
+  const map = new Map<string, StatusEntry>();
   if (!sessionId) return map;
   try {
     const res = await backendFetch(`/attendances/sessions/${sessionId}?size=500`);
@@ -31,14 +32,14 @@ async function fetchSessionStatusMap(sessionId: number | null): Promise<Map<stri
       const studentId = row?.student?.id ?? row?.studentId;
       const status = row?.status;
       if (studentId != null && typeof status === "string") {
-        map.set(String(studentId), status);
+        map.set(String(studentId), { status, reason: row?.remark ?? null });
       }
     }
   } catch { /* empty map → PENDING */ }
   return map;
 }
 
-async function fetchStudents(id: string, statusMap: Map<string, string>): Promise<Student[]> {
+async function fetchStudents(id: string, statusMap: Map<string, StatusEntry>): Promise<Student[]> {
   try {
     const res = await backendFetch(`/classrooms/${id}/students?size=500`);
     if (!res.ok) return [];
@@ -48,7 +49,9 @@ async function fetchStudents(id: string, statusMap: Map<string, string>): Promis
 
     return rows.map((student) => {
       const idKey = String(student.id ?? student.studentNo ?? "");
-      const recordedStatus = statusMap.get(idKey) ?? student.status;
+      // ONLY the attendance status — never fall back to student.status, which is
+      // the account status ("ACTIVE") and would masquerade as an attendance state.
+      const recorded = statusMap.get(idKey);
       return {
         id: idKey,
         name: String(student.name ?? student.fullName ?? student.username ?? "—"),
@@ -56,9 +59,10 @@ async function fetchStudents(id: string, statusMap: Map<string, string>): Promis
         phone: String(student.phone ?? student.phoneNumber ?? "—"),
         dateOfBirth: String(student.dateOfBirth ?? student.dob ?? "—"),
         profile: String(student.profileImage ?? student.profile ?? "/file.svg"),
-        status: recordedStatus
-          ? (String(recordedStatus).toLowerCase() as AttendanceStatus)
+        status: recorded
+          ? (String(recorded.status).toLowerCase() as AttendanceStatus)
           : AttendanceStatus.PENDING,
+        reason: recorded?.reason ?? null,
       };
     });
   } catch {

@@ -51,12 +51,20 @@ const STATUS_OPTIONS = [
   { value: "ABSENT",   label: "Absent" },
 ];
 
-/** Lower-case roster status → backend enum value. Used to seed each row from
- *  whatever the SSR fetched, so "the value already there" matches an option. */
-function toEnumStatus(raw?: string): string {
-  if (!raw) return "PRESENT";
-  const up = raw.toUpperCase();
-  return STATUS_OPTIONS.some((o) => o.value === up) ? up : "PRESENT";
+/** The student's REAL current attendance status for diffing — returns "" for
+ *  pending/active/none, so that picking any status counts as a real change
+ *  (the previous version fell back to "PRESENT", which made "mark present"
+ *  look like a no-op and silently saved nothing). */
+function beforeStatus(raw?: string): string {
+  const up = (raw ?? "").toUpperCase();
+  return STATUS_OPTIONS.some((o) => o.value === up) ? up : "";
+}
+
+/** Initial value for a row's select — the real status if known, else default
+ *  to Present (the common "took attendance on paper" case). Because the diff
+ *  uses beforeStatus(), an unknown→Present row is still flagged as changed. */
+function seedStatus(raw?: string): string {
+  return beforeStatus(raw) || "PRESENT";
 }
 
 /**
@@ -103,7 +111,7 @@ export function AmendmentDialog({
       setStage("reason");
       setReason("");
       const seed: Record<string, string> = {};
-      for (const s of students) seed[String(s.id)] = toEnumStatus(s.currentStatus);
+      for (const s of students) seed[String(s.id)] = seedStatus(s.currentStatus);
       setDrafts(seed);
     }
   }
@@ -138,7 +146,7 @@ export function AmendmentDialog({
     // we don't spam the audit log with no-op amendments.
     const changed = students.filter((s) => {
       const next = drafts[String(s.id)];
-      const before = toEnumStatus(s.currentStatus);
+      const before = beforeStatus(s.currentStatus);
       return next && next !== before;
     });
 
@@ -189,7 +197,7 @@ export function AmendmentDialog({
 
   const changedCount = students.reduce((acc, s) => {
     const next = drafts[String(s.id)];
-    const before = toEnumStatus(s.currentStatus);
+    const before = beforeStatus(s.currentStatus);
     return next && next !== before ? acc + 1 : acc;
   }, 0);
 
@@ -229,8 +237,8 @@ export function AmendmentDialog({
               </div>
             ) : (
               students.map((s) => {
-                const draft = drafts[String(s.id)] ?? toEnumStatus(s.currentStatus);
-                const before = toEnumStatus(s.currentStatus);
+                const draft = drafts[String(s.id)] ?? seedStatus(s.currentStatus);
+                const before = beforeStatus(s.currentStatus);
                 const changed = draft !== before;
                 return (
                   <div

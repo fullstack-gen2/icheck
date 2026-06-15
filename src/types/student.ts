@@ -12,4 +12,6 @@ export type Student = {
   phone: string
   dateOfBirth: string
   status: AttendanceStatus
+  /** Reason/remark recorded with the attendance (late/permission explanation). */
+  reason?: string | null
 }

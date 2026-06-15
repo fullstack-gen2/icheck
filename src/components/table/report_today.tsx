@@ -273,13 +273,17 @@ export default function ReportToday({
                           {status === AttendanceStatus.PENDING && (
                             <p>
                               <span className="text-red-500">Permission:</span>{" "}
-                              <span className="text-[#1f1f1f]">Feeling unwell</span>
+                              <span className="text-[#1f1f1f] dark:text-white">
+                                {student.reason?.trim() || "No reason provided"}
+                              </span>
                             </p>
                           )}
                           {status === AttendanceStatus.LATE && (
                             <p>
                               <span className="text-amber-500">Late:</span>{" "}
-                              <span className="text-[#1f1f1f]">Traffic Jam</span>
+                              <span className="text-[#1f1f1f] dark:text-white">
+                                {student.reason?.trim() || "No reason provided"}
+                              </span>
                             </p>
                           )}
                         </div>
