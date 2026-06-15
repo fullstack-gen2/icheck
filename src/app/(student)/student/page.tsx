@@ -11,6 +11,7 @@ import {
   useGetUserEnrollmentsQuery,
 } from "@/store/api/userApi";
 import { StudentTodayClasses } from "@/components/student-today-classes";
+import { useGetStudentReportsQuery } from "@/store/api/reportApi";
 import {
   BadgeCheckIcon,
   CameraIcon,
@@ -101,6 +102,13 @@ export default function StudentHomePage() {
   const { data: attendanceRows = [] } = useGetStudentAttendanceQuery(studentId, {
     skip: !studentId,
   });
+  // Warnings come from generated reports (Scholarship/Bachelor < 7/10, ITE
+  // scholarship < 8/10 → 1 warning; 3 warnings → exam-ineligible).
+  const { data: studentReports = [] } = useGetStudentReportsQuery(Number(studentId), {
+    skip: !studentId,
+  });
+  const warningCount = studentReports.filter((r) => r.warningStatus).length;
+  const examBlocked = warningCount >= 3 || studentReports.some((r) => r.examEligible === false);
 
   const displayName = asText(profile?.name ?? profile?.username ?? user?.name);
   const email = asText(profile?.email ?? user?.email);
@@ -264,6 +272,31 @@ export default function StudentHomePage() {
             <InfoMini label="Present" value={present} />
             <InfoMini label="Late" value={late} />
             <InfoMini label="Absent" value={absent} />
+          </div>
+
+          {/* Warnings — 3 = exam-ineligible. */}
+          <div className={`mt-3 flex items-center justify-between rounded-xl border px-4 py-3 ${
+            examBlocked
+              ? "border-red-300 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30"
+              : warningCount > 0
+                ? "border-amber-300 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30"
+                : "border-border bg-background/50"
+          }`}>
+            <div className="flex items-center gap-2 text-sm">
+              <ClipboardListIcon className={`size-4 ${examBlocked ? "text-red-600" : warningCount > 0 ? "text-amber-600" : "text-muted-foreground"}`} />
+              <span className="font-medium text-foreground">Warnings</span>
+              <span className="text-muted-foreground/70">· 3 = exam-ineligible</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`text-lg font-bold tabular-nums ${examBlocked ? "text-red-600" : warningCount > 0 ? "text-amber-600" : "text-foreground"}`}>
+                {warningCount}/3
+              </span>
+              {examBlocked && (
+                <span className="rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+                  Not eligible for exam
+                </span>
+              )}
+            </div>
           </div>
         </section>
       </div>

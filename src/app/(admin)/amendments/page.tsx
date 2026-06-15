@@ -20,7 +20,9 @@ import {
   InboxIcon,
   SearchIcon,
   ClockIcon,
+  BellIcon,
 } from "lucide-react";
+import { NotificationsPanel } from "@/components/notifications-panel";
 
 function ago(iso?: string | null): string {
   if (!iso) return "";
@@ -58,6 +60,7 @@ export default function AmendmentsPage() {
   const [search, setSearch] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
   const [remarks, setRemarks] = useState<Record<number, string>>({});
+  const [view, setView] = useState<"requests" | "notifications">("requests");
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -111,6 +114,30 @@ export default function AmendmentsPage() {
         </div>
       </div>
 
+      {/* Tabs: pending requests vs all notifications */}
+      <div className="mb-6 flex gap-1 border-b border-border">
+        <button
+          onClick={() => setView("requests")}
+          className={`-mb-px flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+            view === "requests" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground/80"
+          }`}
+        >
+          <InboxIcon className="size-4" /> Requests ({pending.length})
+        </button>
+        <button
+          onClick={() => setView("notifications")}
+          className={`-mb-px flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+            view === "notifications" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground/80"
+          }`}
+        >
+          <BellIcon className="size-4" /> Notifications
+        </button>
+      </div>
+
+      {view === "notifications" ? (
+        <NotificationsPanel />
+      ) : (
+      <>
       {/* Search */}
       <div className="relative max-w-md mb-6">
         <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
@@ -218,6 +245,8 @@ export default function AmendmentsPage() {
             Refresh
           </Button>
         </div>
+      )}
+      </>
       )}
     </div>
   );

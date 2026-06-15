@@ -55,6 +55,14 @@ export const reportApi = baseApi.injectEndpoints({
         unwrapContent<ReportDto>(response),
       providesTags: ["Report"],
     }),
+    /** A student's generated reports (across classes) — used on the student
+     *  profile to show the warning count (3 warnings = exam-ineligible). */
+    getStudentReports: builder.query<ReportDto[], number>({
+      query: (studentId) => `/reports/students/${studentId}?size=200`,
+      transformResponse: (response: ApiEnvelope<PagePayload<ReportDto> | ReportDto[]>) =>
+        unwrapContent<ReportDto>(response),
+      providesTags: ["Report"],
+    }),
     /** Live eligibility — actual attendance computed now, shown when no
      *  formal report has been generated for the class yet. */
     getClassroomEligibility: builder.query<EligibilityDto[], number>({
@@ -96,6 +104,7 @@ export const {
   useGenerateMonthlyReportMutation,
   useGenerateSemesterReportMutation,
   useGetClassroomReportsQuery,
+  useGetStudentReportsQuery,
   useGetClassroomEligibilityQuery,
   useLockReportMutation,
 } = reportApi;

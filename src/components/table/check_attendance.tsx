@@ -209,11 +209,12 @@ export default function AttendanceCheckingList({
 function StatusBadge({ status }: { status: string }) {
   const s = status.toLowerCase();
   const cls =
-    s === "present"  ? "bg-green-100 text-green-700" :
-    s === "late"     ? "bg-amber-100 text-amber-700" :
-    s === "late_out" ? "bg-orange-100 text-orange-700" :
-    s === "absent"   ? "bg-red-100 text-red-700" :
-                       "bg-muted text-muted-foreground";
+    s === "present"    ? "bg-green-100 text-green-700" :
+    s === "late"       ? "bg-amber-100 text-amber-700" :
+    s === "permission" ? "bg-blue-100 text-blue-700" :
+    s === "late_out"   ? "bg-orange-100 text-orange-700" :
+    s === "absent"     ? "bg-red-100 text-red-700" :
+                         "bg-muted text-muted-foreground";
   return (
     <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}>
       {s.replace("_", " ")}
