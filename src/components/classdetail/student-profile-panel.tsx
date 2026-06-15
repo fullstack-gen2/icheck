@@ -24,7 +24,7 @@ interface StudentProfile {
 
 async function fetchStudent(studentId: string): Promise<StudentProfile | null> {
   try {
-    const res = await backendFetch(`/students/${encodeURIComponent(studentId)}`);
+    const res = await backendFetch(`/users/students/${encodeURIComponent(studentId)}`);
     if (!res.ok) return null;
     const json = await res.json();
     const student = json?.payload ?? json;
