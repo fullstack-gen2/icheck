@@ -101,7 +101,7 @@ export function TeachersView() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, email, specialization…"
-            className="px-4 w-full"
+            className="px-9 w-full"
           />
           {search && (
             <button
