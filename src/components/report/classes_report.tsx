@@ -168,9 +168,11 @@ export default function ClassesReport() {
       reportYear: new Date().getFullYear(),
       semester: null,
       totalSessions: e.totalSessions,
-      presentCount: e.attendedSessions,
-      lateCount: 0,
-      absentCount: Math.max(0, e.totalSessions - e.attendedSessions),
+      // attendedSessions = present + late + late_out; split late out so the
+      // Present / Late / Absent columns are accurate.
+      presentCount: e.attendedSessions - (e.lateSessions ?? 0),
+      lateCount: e.lateSessions ?? 0,
+      absentCount: e.absentSessions ?? Math.max(0, e.totalSessions - e.attendedSessions),
       attendancePercentage: e.attendancePct,
       attendanceScore: e.attendancePct,
       warningStatus: !e.eligible,
