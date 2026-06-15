@@ -25,7 +25,7 @@ import {
   SaveIcon,
   Settings2Icon,
   ShieldCheckIcon,
-  SnowflakeIcon,
+  ThermometerSnowflake,
 } from "lucide-react";
 import { FreezeClassDialog } from "@/components/freeze-class-dialog";
 import {
@@ -312,7 +312,7 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <SnowflakeIcon className="size-5 text-sky-600" />
+                <ThermometerSnowflake className="size-5 text-sky-600" />
                 Freeze Attendance (whole school)
               </CardTitle>
               <CardDescription>
