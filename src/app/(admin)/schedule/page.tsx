@@ -332,7 +332,12 @@ export default async function SchedulePage({
                           key={item.id}
                           className={`rounded-xl border border-border/50 border-l-4 p-3 flex flex-col gap-1.5 ${cardBg} ${!item.status ? "opacity-50" : ""}`}
                         >
-                          <p className="line-clamp-2 text-sm font-bold leading-tight text-foreground">{scheduleTitle()}</p>
+                          <div className="flex items-start justify-between gap-1">
+                            <p className="line-clamp-2 text-sm font-bold leading-tight text-foreground">{scheduleTitle()}</p>
+                            {isAdmin && (
+                              <ScheduleRowActions schedule={item} classrooms={classroomOptions} />
+                            )}
+                          </div>
                           <p className="truncate text-xs text-muted-foreground">{item.className}</p>
                           {role === "ADMIN" && (
                             <p className="truncate text-xs text-muted-foreground/70">{item.teacherName}</p>

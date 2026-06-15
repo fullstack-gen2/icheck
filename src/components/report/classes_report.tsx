@@ -32,7 +32,7 @@ import {
   XIcon,
   ChevronDownIcon,
 } from "lucide-react";
-import { LOGO_WORDMARK_URL } from "@/components/logo";
+import { ISTAD_LOGO_URL } from "@/components/logo";
 
 /** Load a remote image as a data URL so jsPDF can embed it. */
 async function loadImageDataUrl(url: string): Promise<{ data: string; w: number; h: number } | null> {
@@ -276,7 +276,9 @@ export default function ClassesReport() {
     const body = visibleReports.map((r) => [
       r.student?.name ?? "—",
       r.student?.studentNo ?? "—",
-      r.reportType === "MONTHLY"
+      r.reportType === "LIVE"
+        ? "Live (to date)"
+        : r.reportType === "MONTHLY"
         ? `${MONTHS[(r.reportMonth ?? 1) - 1]} ${r.reportYear}`
         : `Sem ${r.semester} / ${r.reportYear}`,
       r.totalSessions,
@@ -310,30 +312,55 @@ export default function ClassesReport() {
     const [{ jsPDF }, autoTableMod, logo] = await Promise.all([
       import("jspdf"),
       import("jspdf-autotable"),
-      loadImageDataUrl(LOGO_WORDMARK_URL),
+      loadImageDataUrl(ISTAD_LOGO_URL),
     ]);
     const autoTable =
       (autoTableMod as { default?: unknown }).default ?? autoTableMod;
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();
     const NAVY: [number, number, number] = [39, 60, 151];
+    const BLUE: [number, number, number] = [13, 71, 161]; // ISTAD royal blue (title)
 
-    // ── Letterhead ────────────────────────────────────────────────────────
-    if (logo) {
-      const h = 30;
-      const w = Math.min(120, (logo.w / logo.h) * h);
-      try { doc.addImage(logo.data, "PNG", 40, 30, w, h); } catch { /* ignore */ }
-    }
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.setTextColor(...NAVY);
-    doc.text("ISTAD", pageW / 2, 42, { align: "center" });
+    // ── Letterhead (centered: logo → blue title box → subtitle → id line) ──
+    // "Generated …" timestamp, top-right.
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.setTextColor(90);
-    doc.text("Student Attendance Report", pageW / 2, 60, { align: "center" });
+    doc.setFontSize(8);
+    doc.setTextColor(140);
+    doc.text(`Generated ${new Date().toLocaleString()}`, pageW - 40, 42, { align: "right" });
 
-    // Class identity line (name · code · generation · program · period)
+    let y = 28;
+    // Logo, centered.
+    if (logo) {
+      const h = 58;
+      const w = (logo.w / logo.h) * h;
+      try { doc.addImage(logo.data, "PNG", (pageW - w) / 2, y, w, h); } catch { /* ignore */ }
+      y += h + 14;
+    } else {
+      y += 14;
+    }
+
+    // Institute title — blue bold text, centered, wrapped (no background).
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    const titleLines = doc.splitTextToSize(
+      "Institute of Science and Technology Advanced Development",
+      540,
+    ) as string[];
+    const lineH = 20;
+    doc.setTextColor(...BLUE);
+    titleLines.forEach((line, i) => {
+      doc.text(line, pageW / 2, y + lineH * (i + 1), { align: "center" });
+    });
+    y += titleLines.length * lineH + 16;
+
+    // Subtitle.
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(13);
+    doc.setTextColor(80);
+    doc.text("Student Attendance Report", pageW / 2, y, { align: "center" });
+    y += 22;
+
+    // Class identity line (name · code · generation · program · period).
     const gen = selectedCls?.generation != null ? `Gen ${selectedCls.generation}` : "";
     const idParts = [
       selectedCls?.className,
@@ -342,24 +369,23 @@ export default function ClassesReport() {
       selectedCls?.programTypeName,
       periodLabel(),
     ].filter(Boolean);
-    doc.setFontSize(10);
+    doc.setFontSize(11);
     doc.setTextColor(40);
-    doc.text(idParts.join("  ·  "), pageW / 2, 78, { align: "center" });
-    doc.setTextColor(140);
-    doc.setFontSize(8);
-    doc.text(`Generated ${new Date().toLocaleString()}`, pageW - 40, 42, { align: "right" });
+    doc.text(idParts.join("   ·   "), pageW / 2, y, { align: "center" });
+    y += 18;
 
-    // Divider
-    doc.setDrawColor(...NAVY);
+    // Divider.
+    doc.setDrawColor(...BLUE);
     doc.setLineWidth(1);
-    doc.line(40, 88, pageW - 40, 88);
+    doc.line(40, y, pageW - 40, y);
+    y += 14;
 
     // ── Bordered data table (full data from the API) ──────────────────────
     const { head, body } = buildTableData();
     (autoTable as unknown as (d: unknown, opts: unknown) => void)(doc, {
       head: [head],
       body,
-      startY: 100,
+      startY: y,
       theme: "grid", // ruled rows + columns
       styles: { fontSize: 9, cellPadding: 5, lineColor: [210, 214, 224], lineWidth: 0.5 },
       headStyles: { fillColor: NAVY, textColor: 255, halign: "center", fontStyle: "bold" },

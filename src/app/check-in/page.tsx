@@ -36,8 +36,10 @@ function CheckInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
-  // Static (classroom-printed) QR redirects with ?kind=static — those scans
-  // always require the student to give a reason (Rule 7 / late explanation).
+  // Static (classroom-printed) QR redirects with ?kind=static. A static scan is
+  // a fast scan like the dynamic QR: on time it records immediately with no
+  // reason. Only if the backend rejects it as a LATE scan ("reason is required")
+  // do we prompt the student for a reason.
   const kindParam = searchParams.get("kind");
   const isStatic = kindParam === "static";
   const user = useUser();
@@ -80,17 +82,22 @@ function CheckInContent() {
       const json = await res.json();
 
       if (res.ok) {
+        const usedReason = Boolean((reasonOverride ?? reason)?.trim());
         setState("success");
         setMessage(
-          isStatic
-            ? "Reason submitted. Status will appear after admin review."
+          usedReason
+            ? "Late check-in recorded — your reason was submitted for review."
             : `Attendance recorded for ${user?.name ?? "you"}.`
         );
       } else {
+        // Surface the REAL reason — read every field the backend / proxy might
+        // use (payload.message, message, error). Only fall back to the generic
+        // hint when the response truly carries nothing.
         const errMsg: string =
           json?.payload?.message ??
           json?.message ??
-          "Check-in failed. The QR may have expired — ask your teacher to refresh it.";
+          json?.error ??
+          "Check-in failed. Please try again, or ask your teacher to re-open the QR.";
 
         // Backend signal that a reason is required (static QR, missing reason).
         if (/reason is required/i.test(errMsg)) {
@@ -115,26 +122,17 @@ function CheckInContent() {
     }
   };
 
-  // Static-QR pre-prompt: we already know the backend will demand a reason, so
-  // surface the form immediately rather than burn a guaranteed-to-fail round
-  // trip. Adjusting state during render (with a prev-prop guard) avoids the
-  // `set-state-in-effect` lint and matches React's recommended pattern for
-  // "reset state in response to a prop change".
-  const [staticPromptApplied, setStaticPromptApplied] = useState(false);
-  if (isStatic && token && !staticPromptApplied) {
-    setStaticPromptApplied(true);
-    setState("needReason");
-    setMessage("This is a static (classroom) QR — please give a short reason for your late scan.");
-  }
-
+  // Both static and dynamic scans auto-attempt the check-in on load. A static
+  // on-time scan succeeds immediately (no reason); a static LATE scan comes back
+  // with "reason is required", which flips us to the needReason form below.
   useEffect(() => {
-    if (!token || isStatic) return;
+    if (!token) return;
     const timer = window.setTimeout(() => {
       doCheckIn(token);
     }, 0);
     return () => window.clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, isStatic]);
+  }, [token]);
 
   return (
     <div className="min-h-screen bg-muted/50 flex items-center justify-center p-6">

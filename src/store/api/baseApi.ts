@@ -35,6 +35,7 @@ export const baseApi = createApi({
     credentials: "include",
   }),
   tagTypes: [
+    "Amendment",
     "Classroom",
     "Report",
     "Session",

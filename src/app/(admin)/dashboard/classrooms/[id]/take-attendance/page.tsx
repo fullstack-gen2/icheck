@@ -1,7 +1,7 @@
 import AttendanceCheckingList from "@/components/table/check_attendance";
 import { AmendmentButton } from "@/components/amendment-button";
 import { backendFetch } from "@/lib/api-fetch";
-import { todayIso } from "@/lib/school-time";
+import { todayIso, schoolNowMinutes, timeToMinutes } from "@/lib/school-time";
 import { AttendanceStatus, type Student } from "@/types/student";
 import Link from "next/link";
 import { AiOutlineQrcode } from "react-icons/ai";
@@ -21,6 +21,8 @@ interface SessionLite {
   /** Set when the teacher opens the session — used to clamp the QR window
    *  to 5 minutes from actual start (matches the backend). */
   actualStartTime?: string | null;
+  /** Minutes after scheduled start the QR can still be opened (system setting). */
+  lateThresholdMinutes?: number | null;
 }
 
 async function fetchClassroom(id: string): Promise<Classroom | null> {
@@ -150,23 +152,27 @@ export default async function TakeAttendance({
           //      the backend caps the QR window to 5 min from actualStartTime.
           //      So even an ACTIVE session past that point should hide QR.
           // Either gate failing → amendment is the only path.
-          const TEACHER_START_GRACE_MINUTES = 10;
+          // Minutes-of-day in the SCHOOL timezone — not `new Date("…T…")`,
+          // which a server component parses in the host TZ (UTC) and shifts the
+          // window by hours.
+          const TEACHER_START_GRACE_MINUTES = session?.lateThresholdMinutes ?? 10;
           const QR_WINDOW_MINUTES = 5;
-          const now = new Date();
-          const startIso = session?.sessionDate && session?.startTime
-            ? `${session.sessionDate}T${session.startTime}`
+          const nowMin = schoolNowMinutes();
+          const startMin = timeToMinutes(session?.startTime ?? null);
+          const actualStartMin = session?.actualStartTime
+            ? timeToMinutes(session.actualStartTime.split("T")[1] ?? null)
             : null;
-          const scheduledStart = startIso ? new Date(startIso) : null;
-          const actualStart = session?.actualStartTime ? new Date(session.actualStartTime) : null;
-          const startCutoffPassed = scheduledStart
-            ? now.getTime() > scheduledStart.getTime() + TEACHER_START_GRACE_MINUTES * 60_000
+          const startCutoffPassed = startMin != null
+            ? nowMin > startMin + TEACHER_START_GRACE_MINUTES
             : false;
-          const qrCutoffPassed = actualStart
-            ? now.getTime() > actualStart.getTime() + QR_WINDOW_MINUTES * 60_000
+          // Teacher can't open the session before its scheduled start time.
+          const beforeStart = startMin != null ? nowMin < startMin : false;
+          const qrCutoffPassed = actualStartMin != null
+            ? nowMin > actualStartMin + QR_WINDOW_MINUTES
             : false;
           const qrAvailable =
             (session?.status === "ACTIVE" && !qrCutoffPassed)
-            || (session?.status === "UPCOMING" && !startCutoffPassed);
+            || (session?.status === "UPCOMING" && !startCutoffPassed && !beforeStart);
           // QR XOR Amendment — never both. While the QR window is open the
           // teacher shows the QR; once it closes, only Amendment remains (the
           // way to change any status is to submit a reason).
@@ -193,6 +199,7 @@ export default async function TakeAttendance({
             <section>
                 <AttendanceCheckingList
                   students={students}
+                  sessionId={session?.id ?? null}
                   sessionDate={session?.sessionDate ?? null}
                   startTime={session?.startTime ?? null}
                   endTime={session?.endTime ?? null}

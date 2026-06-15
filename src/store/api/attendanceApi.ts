@@ -147,6 +147,31 @@ export const attendanceApi = baseApi.injectEndpoints({
       ) => unwrapContent(response),
       providesTags: ["Student"],
     }),
+    /**
+     * Live attendance status for a session as `{ [studentId]: status }`.
+     * Polled by the take-attendance list as a fallback to the STOMP stream so
+     * the teacher still sees rows flip even when the WebSocket can't connect
+     * (e.g. a proxy that strips the Upgrade header).
+     */
+    getSessionAttendanceStatus: builder.query<Record<string, string>, number>({
+      query: (sessionId) => `/attendances/sessions/${sessionId}?size=500`,
+      transformResponse: (
+        response: ApiEnvelope<
+          | PagePayload<{ student?: { id?: number }; studentId?: number; status?: string }>
+          | { student?: { id?: number }; studentId?: number; status?: string }[]
+        >,
+      ) => {
+        const rows = unwrapContent<{ student?: { id?: number }; studentId?: number; status?: string }>(response);
+        const map: Record<string, string> = {};
+        for (const row of rows) {
+          const id = row?.student?.id ?? row?.studentId;
+          if (id != null && typeof row.status === "string") {
+            map[String(id)] = row.status.toLowerCase();
+          }
+        }
+        return map;
+      },
+    }),
   }),
 });
 
@@ -160,4 +185,5 @@ export const {
   useCreateSettingMutation,
   useUpsertSettingMutation,
   useDeleteSettingMutation,
+  useGetSessionAttendanceStatusQuery,
 } = attendanceApi;

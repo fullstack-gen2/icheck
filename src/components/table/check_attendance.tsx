@@ -15,10 +15,13 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { Input } from "../ui/input";
 import { useAttendanceStream, type AttendanceUpdateEvent } from "@/lib/attendance-stream";
+import { useGetSessionAttendanceStatusQuery } from "@/store/api/attendanceApi";
 
 type AttendanceCheckingListProps = {
   students?: Student[];
   studentProfileBasePath?: string;
+  /** Today's session id — enables the polling fallback for live status. */
+  sessionId?: number | null;
   /** ISO date (yyyy-MM-dd) of today's session. */
   sessionDate?: string | null;
   /** HH:mm[:ss] start time of today's session. */
@@ -55,6 +58,7 @@ function fmtDate(raw?: string | null): string {
 export default function AttendanceCheckingList({
   students = [],
   studentProfileBasePath,
+  sessionId,
   sessionDate,
   startTime,
   endTime,
@@ -95,6 +99,21 @@ export default function AttendanceCheckingList({
         : { ...prev, [key]: String(event.status).toLowerCase() },
     );
   });
+
+  // Polling fallback — guarantees the list still updates if the WebSocket can't
+  // connect (e.g. a proxy strips the Upgrade header). Every 8s we re-fetch the
+  // session's status map and merge it in. Merge (not replace) so an instant WS
+  // patch is never clobbered back to "pending" between polls.
+  const { data: polledStatus } = useGetSessionAttendanceStatusQuery(sessionId ?? 0, {
+    skip: !sessionId,
+    pollingInterval: 8_000,
+  });
+  const polledKey = polledStatus ? JSON.stringify(polledStatus) : "";
+  const [prevPolledKey, setPrevPolledKey] = useState(polledKey);
+  if (polledKey !== prevPolledKey) {
+    setPrevPolledKey(polledKey);
+    if (polledStatus) setStatusById((prev) => ({ ...prev, ...polledStatus }));
+  }
 
   const [search, setSearch] = useState("");
   const visible = students.filter((s) =>

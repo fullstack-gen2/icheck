@@ -27,6 +27,8 @@ import {
   PencilIcon,
   TrashIcon,
   PlusIcon,
+  EyeOffIcon,
+  EyeIcon,
 } from "lucide-react";
 import {
   ScheduleFormDialog,
@@ -71,6 +73,8 @@ export function ScheduleRowActions({
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
   const [delOpen, setDelOpen]   = useState(false);
+  const [togglingStatus, setTogglingStatus] = useState(false);
+  const isActive = schedule.status;
 
   async function confirmDelete() {
     try {
@@ -86,6 +90,22 @@ export function ScheduleRowActions({
     }
   }
 
+  // One-click activate/deactivate — the safe alternative to delete for a
+  // schedule that already has attendance. Inactive schedules are skipped by
+  // future session generation but keep all historical reports.
+  async function toggleStatus() {
+    setTogglingStatus(true);
+    try {
+      await api.patch(`/schedules/${schedule.id}/status?active=${!isActive}`, undefined);
+      toast.success(isActive ? "Schedule set inactive." : "Schedule set active.");
+      router.refresh();
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Could not change status."));
+    } finally {
+      setTogglingStatus(false);
+    }
+  }
+
   return (
     <>
       <DropdownMenu>
@@ -97,6 +117,11 @@ export function ScheduleRowActions({
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => setEditOpen(true)}>
             <PencilIcon className="size-4 mr-2" /> Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={toggleStatus} disabled={togglingStatus}>
+            {isActive
+              ? <><EyeOffIcon className="size-4 mr-2" /> Set Inactive</>
+              : <><EyeIcon className="size-4 mr-2" /> Set Active</>}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { columns } from "@/components/classdetail/column";
 import { DataTableList } from "@/components/classdetail/data-table";
 import type { AttendanceList } from "@/types/attendance";
-import { formatTime12 } from "@/lib/school-time";
+import { formatTime12, schoolNowMinutes, timeToMinutes } from "@/lib/school-time";
 import { fetchTodaySessionForClassroom, type SessionSummary } from "@/lib/session-helpers";
 import Link from "next/link";
 
@@ -102,27 +102,36 @@ export default async function ClassroomDetailPage({
         <div className="flex-col">
           <div className="flex flex-wrap items-center justify-end gap-2">
             {(() => {
-              const TEACHER_START_GRACE_MINUTES = 10;
+              // All comparisons are done in minutes-of-day in the SCHOOL
+              // timezone (schoolNowMinutes / timeToMinutes), NOT via
+              // `new Date("…T…")` — a server component parses that in the host's
+              // timezone (UTC), shifting the window by hours so the Start button
+              // stays disabled even after the session has opened.
+              // Teacher can open the session ONLY from the scheduled start time
+              // until lateThreshold after it — never before. (Students may scan
+              // the static QR earlier; that's a separate, server-side rule.)
+              // The QR then stays live qr_window_minutes from the actual start.
+              const TEACHER_START_GRACE_MINUTES = session?.lateThresholdMinutes ?? 10;
               const QR_WINDOW_MINUTES = 5;
-              const earlyCheckin = session?.earlyCheckinMinutes ?? 15;
-              const now = new Date();
-              const startIso = session?.sessionDate && session?.startTime
-                ? `${session.sessionDate}T${session.startTime}`
-                : null;
-              const scheduledStart = startIso ? new Date(startIso) : null;
-              const actualStart = session?.actualStartTime ? new Date(session.actualStartTime) : null;
 
-              // Start is only ALLOWED within [start − earlyCheckin, start + 10min].
-              const opensAt = scheduledStart
-                ? new Date(scheduledStart.getTime() - earlyCheckin * 60_000) : null;
-              const closesAt = scheduledStart
-                ? new Date(scheduledStart.getTime() + TEACHER_START_GRACE_MINUTES * 60_000) : null;
-              const beforeWindow = opensAt ? now.getTime() < opensAt.getTime() : false;
-              const cutoffPassed = closesAt ? now.getTime() > closesAt.getTime() : false;
+              const nowMin = schoolNowMinutes();
+              const startMin = timeToMinutes(session?.startTime ?? null);
+              const actualStartMin = session?.actualStartTime
+                ? timeToMinutes(session.actualStartTime.split("T")[1] ?? null)
+                : null;
+
+              const opensAtMin = startMin;
+              const closesAtMin = startMin != null ? startMin + TEACHER_START_GRACE_MINUTES : null;
+              const beforeWindow = opensAtMin != null ? nowMin < opensAtMin : false;
+              const cutoffPassed = closesAtMin != null ? nowMin > closesAtMin : false;
               const withinStartWindow = !beforeWindow && !cutoffPassed;
 
-              const qrWindowPassed = actualStart
-                ? now.getTime() > actualStart.getTime() + QR_WINDOW_MINUTES * 60_000
+              const opensAtLabel = opensAtMin != null
+                ? formatTime12(`${String(Math.floor(opensAtMin / 60)).padStart(2, "0")}:${String(opensAtMin % 60).padStart(2, "0")}`)
+                : null;
+
+              const qrWindowPassed = actualStartMin != null
+                ? nowMin > actualStartMin + QR_WINDOW_MINUTES
                 : false;
               const amendmentOnly =
                 (session?.status === "UPCOMING" && cutoffPassed)
@@ -164,7 +173,7 @@ export default async function ClassroomDetailPage({
               if (session?.status === "UPCOMING" && beforeWindow) {
                 return (
                   <Button disabled className="bg-primary/60 p-5 cursor-not-allowed">
-                    Start Session{opensAt ? ` (opens ${formatTime12(session?.startTime)})` : ""}
+                    Start Session{opensAtLabel ? ` (opens ${opensAtLabel})` : ""}
                   </Button>
                 );
               }
@@ -221,6 +230,7 @@ export default async function ClassroomDetailPage({
         <DataTableList
           columns={columns}
           data={students}
+          canUnassign={isAdmin}
           showStudentActions
           studentProfileBasePath={`/dashboard/classrooms/${id}/student-profile`}
           sessionDate={session?.sessionDate ?? null}

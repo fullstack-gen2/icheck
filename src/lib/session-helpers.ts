@@ -1,6 +1,9 @@
 import { backendFetch } from "@/lib/api-fetch";
-import { schoolNowMinutes, schoolToday, timeToMinutes } from "@/lib/school-time";
+import { schoolToday } from "@/lib/school-time";
 import { fetchTeacherClassrooms, type ClassroomSummary } from "@/lib/classroom-helpers";
+import { isOpenableStatus, isTeacherStartableSession } from "@/lib/session-window";
+
+export { isTeacherStartableSession } from "@/lib/session-window";
 
 export interface SessionSummary {
   id: number | null;
@@ -16,6 +19,7 @@ export interface SessionSummary {
   substituteTeacherName?: string | null;
   substituteReason?: string | null;
   earlyCheckinMinutes?: number | null;
+  lateThresholdMinutes?: number | null;
   actualStartTime?: string | null;
   actualEndTime?: string | null;
 }
@@ -47,20 +51,6 @@ function sessionSort(a: Pick<SessionSummary, "startTime">, b: Pick<SessionSummar
   return (a.startTime ?? "").localeCompare(b.startTime ?? "");
 }
 
-function isOpenableStatus(status?: string | null) {
-  return status === "UPCOMING" || status === "SCHEDULED";
-}
-
-export function isTeacherStartableSession(session: Pick<SessionSummary, "status" | "startTime" | "earlyCheckinMinutes">) {
-  if (session.status === "ACTIVE") return true;
-  if (!isOpenableStatus(session.status)) return false;
-  const start = timeToMinutes(session.startTime);
-  if (start == null) return false;
-  const now = schoolNowMinutes();
-  const early = session.earlyCheckinMinutes ?? 15;
-  return now >= start - early && now <= start + 15;
-}
-
 /**
  * Show on "My Classes" if today's session is still upcoming or live — i.e.
  * ACTIVE or UPCOMING/SCHEDULED. Unlike {@link isTeacherStartableSession} this
@@ -90,7 +80,8 @@ function scheduleToSession(schedule: ScheduleSummary): SessionSummary {
     startTime: schedule.startTime,
     endTime: schedule.endTime,
     status: "UPCOMING",
-    earlyCheckinMinutes: 15,
+    earlyCheckinMinutes: 10,
+    lateThresholdMinutes: 10,
   };
 }
 
