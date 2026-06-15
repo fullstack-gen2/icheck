@@ -187,7 +187,7 @@ export function StudentFormDialog({ open, initial, classrooms, onOpenChange }: P
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[75vw] px-8 sm:max-w-2xl">
+      <DialogContent className="w-[75vw] sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{editing ? "Edit Student" : "Register Student"}</DialogTitle>
           <DialogDescription>
