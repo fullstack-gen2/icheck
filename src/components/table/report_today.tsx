@@ -98,7 +98,7 @@ export default function ReportToday({
   );
 
   const presentCount = liveStudents.filter((s) => s.status === AttendanceStatus.PRESENT).length;
-  const permissionCount = liveStudents.filter((s) => s.status === AttendanceStatus.PENDING).length;
+  const permissionCount = liveStudents.filter((s) => s.status === AttendanceStatus.PERMISSION).length;
   const lateCount = liveStudents.filter((s) => s.status === AttendanceStatus.LATE).length;
 
   function formatDate(raw?: string | null) {
@@ -210,7 +210,7 @@ export default function ReportToday({
               const status = student.status;
               const isExpanded = expandedRowId === student.id;
               const hasDetails =
-                status === AttendanceStatus.PENDING || status === AttendanceStatus.LATE;
+                status === AttendanceStatus.PERMISSION || status === AttendanceStatus.LATE;
 
               return (
                 <Fragment key={student.id}>
@@ -254,7 +254,7 @@ export default function ReportToday({
                           checked={status === AttendanceStatus.PRESENT}
                         />
                         <AttendanceMark
-                          checked={status === AttendanceStatus.PENDING}
+                          checked={status === AttendanceStatus.PERMISSION}
                         />
                         <AttendanceMark
                           checked={status === AttendanceStatus.LATE}
@@ -270,9 +270,9 @@ export default function ReportToday({
                     <TableRow>
                       <TableCell colSpan={7} className="bg-white px-8 py-4">
                         <div className="space-y-2 text-right text-sm">
-                          {status === AttendanceStatus.PENDING && (
+                          {status === AttendanceStatus.PERMISSION && (
                             <p>
-                              <span className="text-red-500">Permission:</span>{" "}
+                              <span className="text-blue-500">Permission:</span>{" "}
                               <span className="text-[#1f1f1f] dark:text-white">
                                 {student.reason?.trim() || "No reason provided"}
                               </span>
