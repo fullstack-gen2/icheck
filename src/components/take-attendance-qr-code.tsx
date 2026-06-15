@@ -18,7 +18,10 @@ import { isTeacherStartableSession } from "@/lib/session-window";
 
 const QR_LOGO_URL =
   "https://res.cloudinary.com/dsmqsivcj/image/upload/v1780286128/c4lgj7uipplt47mergga.png";
-const FALLBACK_QR_SECONDS = 30;
+// Only a safety net if the backend ever omits expireTime — the real countdown
+// always comes from the token's expireTime, which the backend derives from the
+// `qr_window_minutes` system setting (5 min). Never a 30s "refresh".
+const FALLBACK_QR_SECONDS = 300;
 
 function isOpenable(status: SessionDto["status"]) {
   return status === "UPCOMING" || status === "SCHEDULED";
@@ -257,7 +260,9 @@ export function TakeAttendanceQrCode({
               {isExpired ? "QR expired" : "QR expires in"}
             </p>
             <p className="font-mono text-5xl font-semibold leading-tight tabular-nums">
-              {formatRemaining(remaining)}
+              {/* Show the timer only once the real token (5-min expiry) is
+                  loaded — avoids flashing the fallback value on open. */}
+              {qr ? formatRemaining(remaining) : "—:—"}
             </p>
           </div>
 
