@@ -17,7 +17,7 @@ export default async function TeachersPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Teachers</h1>
             <p className="text-sm text-muted-foreground">
-              Manage lecturer accounts — register, edit, or remove teachers.
+              Manage lecturer accounts. register, edit, or remove teachers.
             </p>
           </div>
         </div>

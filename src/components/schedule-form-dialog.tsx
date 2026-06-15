@@ -170,6 +170,7 @@ export function ScheduleFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
@@ -251,22 +252,6 @@ export function ScheduleFormDialog({
               </SelectContent>
             </Select>
           </Field>
-
-          {/* <Field label="Start Time">
-            <Input
-              type="time"
-              value={form.startTime}
-              onChange={(e) => patch("startTime", e.target.value)}
-            />
-          </Field>
-          <Field label="End Time">
-            <Input
-              type="time"
-              value={form.endTime}
-              onChange={(e) => patch("endTime", e.target.value)}
-            />
-          </Field> */}
-
           <div className="col-span-2 grid grid-cols-2 gap-3">
             <Field label="Start Time">
               <Input
@@ -326,6 +311,7 @@ export function ScheduleFormDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+            
     </Dialog>
   );
 }
