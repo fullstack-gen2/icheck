@@ -41,6 +41,8 @@ export interface EligibilityDto {
   studentName: string;
   totalSessions: number;
   attendedSessions: number;
+  lateSessions?: number;
+  absentSessions?: number;
   attendancePct: number;
   requiredPct: number;
   eligible: boolean;
