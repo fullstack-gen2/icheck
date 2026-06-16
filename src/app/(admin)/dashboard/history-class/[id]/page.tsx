@@ -36,8 +36,8 @@ export default async function HistoryClassDetailPage({
   const dates = students[0]?.attendances.map((attendance) => attendance.date) ?? [];
 
   return (
-    <div className="px-7">
-      <section className="mx-auto mb-6 w-full px-7">
+    <div className="mx-auto w-full px-7">
+      <section className="mb-6 w-full">
         <Link
           href="/dashboard/history-class"
           className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
