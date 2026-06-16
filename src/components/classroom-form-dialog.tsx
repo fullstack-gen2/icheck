@@ -23,10 +23,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
-import { CheckCircle2Icon, DownloadIcon, LoaderCircleIcon, QrCodeIcon, UsersIcon } from "lucide-react";
+import {
+  CheckCircle2Icon,
+  DownloadIcon,
+  LoaderCircleIcon,
+  MessageCircleIcon,
+  QrCodeIcon,
+  SendIcon,
+  UsersIcon,
+} from "lucide-react";
 import { todayIso } from "@/lib/school-time";
 import {
   useCreateClassroomMutation,
+  useTestClassroomTelegramMutation,
   useUpdateClassroomMutation,
 } from "@/store/api/attendanceApi";
 import { useGetClassroomStaticQrMutation } from "@/store/api/qrApi";
@@ -46,6 +55,8 @@ export interface ClassroomFormValue {
   endDate: string;
   /** Lab/room name, e.g. "Lab DevOps", "Lab AI". */
   lab?: string | null;
+  telegramChatId?: string | null;
+  telegramAlertEnabled?: boolean | null;
   status: boolean;
 }
 
@@ -90,6 +101,8 @@ const empty: ClassroomFormValue = {
   startDate: todayIso(),
   endDate: todayIso(),
   lab: "",
+  telegramChatId: "",
+  telegramAlertEnabled: false,
   status: true,
 };
 
@@ -101,9 +114,10 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
   const [generatingQr, setGeneratingQr] = useState(false);
   const [createClassroom, { isLoading: creating }] = useCreateClassroomMutation();
   const [updateClassroom, { isLoading: updating }] = useUpdateClassroomMutation();
+  const [testTelegram, { isLoading: testingTelegram }] = useTestClassroomTelegramMutation();
   const [getClassroomStaticQr] = useGetClassroomStaticQrMutation();
   const { data: programTypes = [] } = useGetProgramTypesQuery();
-  const saving = creating || updating || generatingQr;
+  const saving = creating || updating || generatingQr || testingTelegram;
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
@@ -139,6 +153,11 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
       toast.error("Please pick a program.");
       return;
     }
+    const telegramChatId = form.telegramChatId?.trim() || null;
+    if (form.telegramAlertEnabled && !telegramChatId) {
+      toast.error("Telegram group chat ID is required when alerts are enabled.");
+      return;
+    }
     // Backend `ClassroomRequest` requires a numeric `programTypeId` (not the
     // display name) — look it up from the live /program-types list.
     const programType = programTypes.find(
@@ -162,6 +181,8 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
         startDate:        form.startDate,
         endDate:          form.endDate,
         lab:              form.lab?.trim() || null,
+        telegramChatId,
+        telegramAlertEnabled: Boolean(form.telegramAlertEnabled),
         status:           form.status,
       };
       if (editing) {
@@ -192,6 +213,31 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
       onOpenChange(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed.");
+    }
+  }
+
+  async function handleTestTelegram() {
+    const telegramChatId = form.telegramChatId?.trim() || null;
+    if (!editing || !form.id) {
+      toast.error("Save the class first, then test Telegram.");
+      return;
+    }
+    if (!telegramChatId) {
+      toast.error("Telegram group chat ID is required.");
+      return;
+    }
+    try {
+      const result = await testTelegram({
+        id: form.id,
+        body: { telegramChatId, telegramAlertEnabled: true },
+      }).unwrap();
+      if (result.success) {
+        toast.success(result.message || "Telegram test message sent.");
+      } else {
+        toast.error(result.message || "Telegram test failed.");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Telegram test failed.");
     }
   }
 
@@ -393,6 +439,55 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
               </SelectContent>
             </Select>
           </Field>
+
+          <div className="col-span-2 grid gap-3 rounded-lg border p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <Label className="flex items-center gap-1.5 text-[12px]">
+                  <MessageCircleIcon className="size-4" />
+                  Telegram Group
+                </Label>
+                <p className="text-xs text-muted-foreground/70">
+                  Connect this class to a Telegram group for attendance alerts and session reports.
+                </p>
+              </div>
+              <label
+                htmlFor="telegram-alert-enabled"
+                className="flex cursor-pointer items-center gap-2 text-sm font-medium"
+              >
+                <Checkbox
+                  id="telegram-alert-enabled"
+                  checked={Boolean(form.telegramAlertEnabled)}
+                  onCheckedChange={(v) => patch("telegramAlertEnabled", v === true)}
+                />
+                Enable alerts
+              </label>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                value={form.telegramChatId ?? ""}
+                onChange={(e) => patch("telegramChatId", e.target.value)}
+                placeholder="e.g. -1001234567890"
+                className="font-mono"
+              />
+              {editing && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleTestTelegram}
+                  disabled={saving || !(form.telegramChatId ?? "").trim()}
+                  className="shrink-0 gap-1.5"
+                >
+                  {testingTelegram ? (
+                    <LoaderCircleIcon className="size-4 animate-spin" />
+                  ) : (
+                    <SendIcon className="size-4" />
+                  )}
+                  Test
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
 
         {!editing && (
