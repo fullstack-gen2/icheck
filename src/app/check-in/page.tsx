@@ -7,22 +7,11 @@ import { CheckCircleIcon, AlertCircleIcon, LoaderCircleIcon } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/logo";
+import { useLiveLocation } from "@/lib/geolocation";
 
 type State = "loading" | "success" | "error" | "noToken" | "needReason";
 
 const FETCH_TIMEOUT_MS = 12_000;
-
-/** Get GPS coords with a 2s timeout — never throws, returns null on fail/timeout */
-async function getCoords(): Promise<{ latitude: number; longitude: number } | null> {
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => resolve(null), 2000);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => { clearTimeout(timer); resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }); },
-      () => { clearTimeout(timer); resolve(null); },
-      { timeout: 1500, maximumAge: 60000 }
-    );
-  });
-}
 
 export default function CheckInPage() {
   return (
@@ -43,6 +32,9 @@ function CheckInContent() {
   const kindParam = searchParams.get("kind");
   const isStatic = kindParam === "static";
   const user = useUser();
+  // Live location — pre-warms a GPS watch on mount so a fresh fix is ready by
+  // the time we auto-submit (and on every retry), instead of a stale/null one.
+  const { getFreshCoords } = useLiveLocation();
   const [state, setState] = useState<State>("loading");
   const [message, setMessage] = useState("");
   const [reason, setReason] = useState("");
@@ -54,15 +46,23 @@ function CheckInContent() {
     didSubmit.current = true;
     setState("loading");
 
-    // GPS: fire in parallel, don't block — 2s max
-    const coordsPromise = getCoords();
+    // Get a fresh, live GPS fix (no stale cache). This is the step that used to
+    // fail silently and force a refresh — now we wait for a real fix and, if we
+    // genuinely can't get one, stop with a clear message instead of posting null.
+    const coords = await getFreshCoords();
+    if (!coords) {
+      didSubmit.current = false; // allow retry
+      setState("error");
+      setMessage(
+        "We couldn't read your location. Turn on GPS / Location for this site, then tap Try Again."
+      );
+      return;
+    }
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
     try {
-      const coords = await coordsPromise; // at most 2s wait
-
       // The proxy reads the HttpOnly device cookie server-side, so we never
       // expose or send the device id from client JS.
       const res = await fetch("/api/attendance/check-in", {
@@ -73,8 +73,8 @@ function CheckInContent() {
           qrToken,
           kind: isStatic ? "static" : "dynamic",
           reason: reasonOverride ?? (isStatic ? reason : undefined),
-          latitude: coords?.latitude ?? null,
-          longitude: coords?.longitude ?? null,
+          latitude: coords.latitude,
+          longitude: coords.longitude,
         }),
       });
       clearTimeout(timeout);
