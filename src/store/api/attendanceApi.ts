@@ -5,6 +5,8 @@ export interface ClassroomDto {
   className: string;
   classCode: string;
   programTypeName: string;
+  programTypeCode?: string | null;
+  programTypeStructureType?: string | null;
   generation: number;
   year: number | null;
   semester: number | null;

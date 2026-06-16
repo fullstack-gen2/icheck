@@ -9,6 +9,7 @@ export interface ReportDto {
   semester: number | null;
   totalSessions: number;
   presentCount: number;
+  leaveEarlyCount?: number | null;
   lateCount: number;
   absentCount: number;
   attendancePercentage: number;
@@ -16,6 +17,12 @@ export interface ReportDto {
   warningStatus: boolean;
   examEligible: boolean;
   locked?: boolean;
+  attendanceWeightSnapshot?: number | null;
+  latePenaltySnapshot?: number | null;
+  leaveEarlyPenaltySnapshot?: number | null;
+  absentPenaltySnapshot?: number | null;
+  minAttendanceSnapshot?: number | null;
+  generatedAt?: string | null;
 }
 
 /** Maps to POST /api/v1/reports/monthly — backend generates ONE report per student. */
