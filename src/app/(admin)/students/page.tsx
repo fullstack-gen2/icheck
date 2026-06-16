@@ -252,7 +252,32 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
             Manage and enroll students across all programs.
           </p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
+        {/*length of students  and register btn*/}
+        
+      </div>
+
+      {/* Search */}
+      <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
+        <div className="relative max-w-md mb-4">
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, student no., email, class…"
+            className="pl-9 pr-9"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted"
+              aria-label="Clear search"
+            >
+              <XIcon className="size-4" />
+            </button>
+          )}
+        </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
           <span className="text-sm text-muted-foreground">
             {filtered.length} of {students.length}
             {selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ""}
@@ -287,29 +312,8 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
               Register Student
             </Button>
           )}
-        </div>
+          </div>
       </div>
-
-      {/* Search */}
-      <div className="relative max-w-md mb-4">
-        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, student no., email, class…"
-          className="pl-9 pr-9"
-        />
-        {search && (
-          <button
-            onClick={() => setSearch("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted"
-            aria-label="Clear search"
-          >
-            <XIcon className="size-4" />
-          </button>
-        )}
-      </div>
-
       {/* Program Type Tabs */}
       <div className="flex gap-2 mb-4 flex-wrap">
         {(["ALL", "BACHELOR", "SCHOLARSHIP"] as const).map((pt) => (

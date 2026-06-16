@@ -14,6 +14,8 @@ export interface ClassroomDto {
   endDate?: string;
   /** Lab/room name, e.g. "Lab DevOps", "Lab AI", "Lab Data Analytics". */
   lab?: string | null;
+  telegramChatId?: string | null;
+  telegramAlertEnabled?: boolean | null;
   status: boolean;
 }
 
@@ -30,10 +32,23 @@ export interface ClassroomRequestBody {
   startDate: string;
   endDate: string;
   telegramChatId?: string | null;
+  telegramAlertEnabled?: boolean | null;
   latitude?: number | null;
   longitude?: number | null;
   lab?: string | null;
   status: boolean;
+}
+
+export interface TelegramSettingsDto {
+  classroomId: number;
+  className: string;
+  telegramChatId: string | null;
+  telegramAlertEnabled: boolean;
+}
+
+export interface TelegramTestResponse {
+  success: boolean;
+  message: string;
 }
 
 export interface SettingDto {
@@ -70,6 +85,42 @@ export const attendanceApi = baseApi.injectEndpoints({
       }),
       transformResponse: (response: ApiEnvelope<ClassroomDto>) => unwrapPayload(response),
       invalidatesTags: ["Classroom"],
+    }),
+    getClassroomTelegram: builder.query<TelegramSettingsDto, number>({
+      query: (id) => `/classrooms/${id}/telegram`,
+      transformResponse: (response: ApiEnvelope<TelegramSettingsDto>) => unwrapPayload(response),
+      providesTags: (_result, _error, id) => [{ type: "Classroom", id }],
+    }),
+    updateClassroomTelegram: builder.mutation<
+      TelegramSettingsDto,
+      { id: number; body: Pick<TelegramSettingsDto, "telegramChatId" | "telegramAlertEnabled"> }
+    >({
+      query: ({ id, body }) => ({
+        url: `/classrooms/${id}/telegram`,
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: ApiEnvelope<TelegramSettingsDto>) => unwrapPayload(response),
+      invalidatesTags: (_result, _error, { id }) => ["Classroom", { type: "Classroom", id }],
+    }),
+    testClassroomTelegram: builder.mutation<
+      TelegramTestResponse,
+      { id: number; body: Pick<TelegramSettingsDto, "telegramChatId" | "telegramAlertEnabled"> }
+    >({
+      query: ({ id, body }) => ({
+        url: `/classrooms/${id}/telegram/test`,
+        method: "POST",
+        body,
+      }),
+      transformResponse: (response: ApiEnvelope<TelegramTestResponse>) => unwrapPayload(response),
+    }),
+    clearClassroomTelegram: builder.mutation<TelegramSettingsDto, number>({
+      query: (id) => ({
+        url: `/classrooms/${id}/telegram`,
+        method: "DELETE",
+      }),
+      transformResponse: (response: ApiEnvelope<TelegramSettingsDto>) => unwrapPayload(response),
+      invalidatesTags: (_result, _error, id) => ["Classroom", { type: "Classroom", id }],
     }),
     getSettings: builder.query<SettingDto[], void>({
       query: () => "/settings",
@@ -179,7 +230,11 @@ export const {
   useCreateClassroomMutation,
   useGetClassroomsQuery,
   useGetSettingsQuery,
+  useGetClassroomTelegramQuery,
   useGetStudentsByClassroomQuery,
+  useTestClassroomTelegramMutation,
+  useUpdateClassroomTelegramMutation,
+  useClearClassroomTelegramMutation,
   useUpdateClassroomMutation,
   useUpdateSettingMutation,
   useCreateSettingMutation,

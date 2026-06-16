@@ -50,6 +50,8 @@ export interface ClassroomItem {
   startDate: string;
   endDate: string;
   lab?: string | null;
+  telegramChatId?: string | null;
+  telegramAlertEnabled?: boolean | null;
   status: boolean;
 }
 

@@ -75,8 +75,8 @@ export default async function DashboardPage() {
           {isTeacher ? "All My Classes" : "Class Info"}
         </h2>
         <div className="flex items-center gap-3">
-          {!isTeacher && <ClassroomAddButton />}
           <span className="text-sm pr-2 text-muted-foreground/70">{classrooms.length} classes</span>
+          {!isTeacher && <ClassroomAddButton />}
         </div>
       </div>
 
