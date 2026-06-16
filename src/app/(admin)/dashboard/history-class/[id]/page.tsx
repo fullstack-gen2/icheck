@@ -1,56 +1,25 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArchiveIcon, ArrowLeftIcon, UsersIcon } from "lucide-react";
+import { ArchiveIcon, ArrowLeftIcon, CalendarDaysIcon, ClockIcon, ShieldCheckIcon, UsersIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { backendFetch } from "@/lib/api-fetch";
+import {
+  getHistoryAttendanceTotals,
+  getHistoryClassById,
+  getHistoryStudentsByClassId,
+  type HistoryAttendanceStatus,
+} from "@/lib/data/mockData/history-classes";
 
-interface Classroom {
-  id: number;
-  className: string;
-  classCode: string;
-  programTypeName: string;
-  generation: number;
-  year: number | null;
-  semester: number | null;
-  shift: string;
-  academicYear: number;
-  startDate: string;
-  endDate: string;
-  status: boolean;
-}
+const statusLabel: Record<HistoryAttendanceStatus, string> = {
+  PRESENT: "Present",
+  LATE: "Late",
+  PERMISSION: "Permission",
+};
 
-interface Student {
-  id: number;
-  studentNo: string;
-  name: string;
-  gender: string;
-  email: string;
-  phone: string | null;
-  className: string;
-  status: string;
-}
-
-async function fetchClassroom(id: string): Promise<Classroom | null> {
-  try {
-    const res = await backendFetch(`/classrooms/${id}`);
-    if (!res.ok) return null;
-    const json = await res.json();
-    return json?.payload ?? null;
-  } catch {
-    return null;
-  }
-}
-
-async function fetchStudents(id: string): Promise<Student[]> {
-  try {
-    const res = await backendFetch(`/classrooms/${id}/students?size=200`);
-    if (!res.ok) return [];
-    const json = await res.json();
-    return json?.payload?.content ?? [];
-  } catch {
-    return [];
-  }
-}
+const statusClassName: Record<HistoryAttendanceStatus, string> = {
+  PRESENT: "bg-green-100 text-green-700 hover:bg-green-100",
+  LATE: "bg-amber-100 text-amber-700 hover:bg-amber-100",
+  PERMISSION: "bg-sky-100 text-sky-700 hover:bg-sky-100",
+};
 
 export default async function HistoryClassDetailPage({
   params,
@@ -58,12 +27,13 @@ export default async function HistoryClassDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [classroom, students] = await Promise.all([
-    fetchClassroom(id),
-    fetchStudents(id),
-  ]);
+  const classroom = getHistoryClassById(Number(id));
 
   if (!classroom) notFound();
+
+  const students = getHistoryStudentsByClassId(classroom.id);
+  const totals = getHistoryAttendanceTotals(students);
+  const dates = students[0]?.attendances.map((attendance) => attendance.date) ?? [];
 
   return (
     <div className="px-7">
@@ -90,14 +60,39 @@ export default async function HistoryClassDetailPage({
             <p className="mt-2 text-sm text-muted-foreground">
               {classroom.programTypeName} · Code {classroom.classCode}
             </p>
+            <div className="mt-3 flex flex-wrap gap-2 text-sm text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-background px-2 py-1">
+                <CalendarDaysIcon className="size-4" />
+                {classroom.startDate} - {classroom.endDate}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-background px-2 py-1">
+                <ClockIcon className="size-4" />
+                {classroom.shift.toLowerCase()}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-background px-2 py-1">
+                <ShieldCheckIcon className="size-4" />
+                Gen {classroom.generation} · {classroom.lab}
+              </span>
+            </div>
           </div>
         </div>
       </section>
 
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <SummaryCard label="Present" value={totals.PRESENT} tone="text-green-700" />
+        <SummaryCard label="Late" value={totals.LATE} tone="text-amber-700" />
+        <SummaryCard label="Permission" value={totals.PERMISSION} tone="text-sky-700" />
+        <SummaryCard
+          label="Attendance rate"
+          value={`${Math.round(((totals.PRESENT + totals.LATE + totals.PERMISSION) / Math.max(totals.total, 1)) * 100)}%`}
+          tone="text-primary"
+        />
+      </div>
+
       <div className="mb-5 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-xl font-semibold text-foreground">
           <UsersIcon className="size-5 text-muted-foreground" />
-          Students
+          Student Attendance History
         </h2>
         <span className="text-sm text-muted-foreground/70">
           {students.length} enrolled
@@ -118,51 +113,67 @@ export default async function HistoryClassDetailPage({
                 <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Student</th>
                 <th className="hidden px-4 py-3 text-left font-semibold text-muted-foreground sm:table-cell">Student No.</th>
                 <th className="hidden px-4 py-3 text-left font-semibold text-muted-foreground md:table-cell">Gender</th>
-                <th className="hidden px-4 py-3 text-left font-semibold text-muted-foreground md:table-cell">Phone</th>
-                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Status</th>
+                {dates.map((date) => (
+                  <th key={date} className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                    {date.slice(5)}
+                  </th>
+                ))}
+                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Summary</th>
               </tr>
             </thead>
             <tbody>
-              {students.map((student, index) => (
-                <tr
-                  key={student.id}
-                  className={`border-b border-border/50 transition-colors hover:bg-muted/50 ${
-                    index === students.length - 1 ? "border-b-0" : ""
-                  }`}
-                >
-                  <td className="w-10 px-4 py-3 text-sm text-muted-foreground/70">
-                    {index + 1}
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-foreground">{student.name}</p>
-                    <p className="text-sm text-muted-foreground/70">{student.email}</p>
-                  </td>
-                  <td className="hidden px-4 py-3 font-mono text-sm text-muted-foreground sm:table-cell">
-                    {student.studentNo}
-                  </td>
-                  <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
-                    {student.gender === "M" ? "Male" : student.gender === "F" ? "Female" : student.gender ?? "-"}
-                  </td>
-                  <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
-                    {student.phone ?? "-"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge
-                      className={
-                        student.status === "ACTIVE"
-                          ? "bg-green-100 text-green-700 hover:bg-green-100"
-                          : "bg-muted text-muted-foreground hover:bg-muted"
-                      }
-                    >
-                      {student.status}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
+              {students.map((student, index) => {
+                const late = student.attendances.filter((attendance) => attendance.status === "LATE").length;
+                const permission = student.attendances.filter((attendance) => attendance.status === "PERMISSION").length;
+                return (
+                  <tr
+                    key={student.id}
+                    className={`border-b border-border/50 transition-colors hover:bg-muted/50 ${
+                      index === students.length - 1 ? "border-b-0" : ""
+                    }`}
+                  >
+                    <td className="w-10 px-4 py-3 text-sm text-muted-foreground/70">
+                      {index + 1}
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-foreground">{student.name}</p>
+                      <p className="text-sm text-muted-foreground/70">{student.email}</p>
+                    </td>
+                    <td className="hidden px-4 py-3 font-mono text-sm text-muted-foreground sm:table-cell">
+                      {student.studentNo}
+                    </td>
+                    <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
+                      {student.gender === "M" ? "Male" : "Female"}
+                    </td>
+                    {student.attendances.map((attendance) => (
+                      <td key={`${student.id}-${attendance.date}`} className="px-4 py-3">
+                        <div className="flex flex-col gap-1">
+                          <Badge className={statusClassName[attendance.status]}>
+                            {statusLabel[attendance.status]}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground/60">{attendance.checkInTime}</span>
+                        </div>
+                      </td>
+                    ))}
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                      {late} late · {permission} permission
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function SummaryCard({ label, value, tone }: { label: string; value: number | string; tone: string }) {
+  return (
+    <div className="rounded-xl border bg-card p-4">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className={`mt-1 text-2xl font-semibold ${tone}`}>{value}</p>
     </div>
   );
 }

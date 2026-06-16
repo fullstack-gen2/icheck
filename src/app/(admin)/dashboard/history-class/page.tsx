@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { ArchiveIcon } from "lucide-react";
-import { getServerUser } from "@/auth-server";
 import { MyDropdownMenuCheckboxes } from "@/components/drop-donw";
 import { ClassCard } from "@/components/ui/class-card";
-import { fetchAllClassrooms, fetchTeacherClassrooms, fetchClassCounts, type ClassroomSummary } from "@/lib/classroom-helpers";
+import {
+  getHistoryClassCounts,
+  getHistoryClasses,
+  type HistoryClassroom,
+} from "@/lib/data/mockData/history-classes";
 
-type Classroom = ClassroomSummary;
+type Classroom = HistoryClassroom;
 
 const shiftLabel: Record<string, string> = {
   MORNING: "Morning",
@@ -14,17 +17,8 @@ const shiftLabel: Record<string, string> = {
 };
 
 export default async function HistoryClassPage() {
-  const user = await getServerUser();
-  const role = user?.role ?? "ADMIN";
-  const userId = user?.id ?? "";
-  const isTeacher = role === "TEACHER";
-
-  const [classrooms, classCounts] = await Promise.all([
-    isTeacher ? fetchTeacherClassrooms(userId, 200) : fetchAllClassrooms(200),
-    fetchClassCounts(),
-  ]);
-
-  const historyClassrooms = classrooms.filter((c) => !c.status);
+  const historyClassrooms = getHistoryClasses();
+  const classCounts = getHistoryClassCounts();
   const grouped = historyClassrooms.reduce<Record<string, Classroom[]>>((acc, c) => {
     const key = c.programTypeName ?? "Other";
     (acc[key] ??= []).push(c);
