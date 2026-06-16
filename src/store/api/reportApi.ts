@@ -1,4 +1,4 @@
-import { baseApi, unwrapContent, type ApiEnvelope, type PagePayload } from "@/store/api/baseApi";
+import { baseApi, unwrapContent, unwrapPayload, type ApiEnvelope, type PagePayload } from "@/store/api/baseApi";
 
 export interface ReportDto {
   id: number;
@@ -81,21 +81,23 @@ export const reportApi = baseApi.injectEndpoints({
       providesTags: ["Report"],
     }),
     /** Rule: MONTHLY report is only valid for classrooms whose program type is MONTHLY. */
-    generateMonthlyReport: builder.mutation<unknown, GenerateMonthlyReportRequest>({
+    generateMonthlyReport: builder.mutation<ReportDto, GenerateMonthlyReportRequest>({
       query: (body) => ({
         url: "/reports/monthly",
         method: "POST",
         body,
       }),
+      transformResponse: (response: ApiEnvelope<ReportDto>) => unwrapPayload(response),
       invalidatesTags: ["Report"],
     }),
     /** Rule: SEMESTER report is only valid for classrooms whose program type is SEMESTER. */
-    generateSemesterReport: builder.mutation<unknown, GenerateSemesterReportRequest>({
+    generateSemesterReport: builder.mutation<ReportDto, GenerateSemesterReportRequest>({
       query: (body) => ({
         url: "/reports/semester",
         method: "POST",
         body,
       }),
+      transformResponse: (response: ApiEnvelope<ReportDto>) => unwrapPayload(response),
       invalidatesTags: ["Report"],
     }),
     /** Rule 15 — only admin can lock a report; backend requires ?adminId=. */

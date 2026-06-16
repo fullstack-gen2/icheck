@@ -182,6 +182,7 @@ export default function ClassesReport() {
   // Right panel — results
   const [tab, setTab] = useState<"reports" | "warnings">("reports");
   const [lockingId, setLockingId]     = useState<number | null>(null);
+  const [generatedReports, setGeneratedReports] = useState<ReportDto[]>([]);
   const [generateMonthlyReport] = useGenerateMonthlyReportMutation();
   const [generateSemesterReport] = useGenerateSemesterReportMutation();
   const [lockReport] = useLockReportMutation();
@@ -276,9 +277,20 @@ export default function ClassesReport() {
   /* ── Derived: visible reports per tab ────────────────────────────────── */
   // Reports are official only after Generate persists them on the backend.
   // Live attendance belongs in a preview/monitor page, not in report papers.
+  const mergedReports = useMemo(() => {
+    const map = new Map<number, ReportDto>();
+    for (const report of reports) {
+      map.set(report.id, report);
+    }
+    for (const report of generatedReports) {
+      map.set(report.id, report);
+    }
+    return Array.from(map.values());
+  }, [generatedReports, reports]);
+
   const effectiveReports = useMemo(
-    () => reports.map(applyAttendanceScoreRule),
-    [reports],
+    () => mergedReports.map(applyAttendanceScoreRule),
+    [mergedReports],
   );
   const warnings = useMemo(
     () => effectiveReports.filter((r) => r.warningStatus),
@@ -289,6 +301,7 @@ export default function ClassesReport() {
   /* ── Click a classroom → load its existing reports ───────────────────── */
   function loadReports(c: Classroom) {
     setSelectedCls(c);
+    setGeneratedReports([]);
     setTab("reports");
   }
 
@@ -324,7 +337,19 @@ export default function ClassesReport() {
         )
       );
       const failed = results.filter((r) => r.status === "rejected").length;
-      const succeeded = results.length - failed;
+      const createdReports = results
+        .filter((result): result is PromiseFulfilledResult<ReportDto> => result.status === "fulfilled")
+        .map((result) => result.value)
+        .filter((report) => typeof report?.id === "number");
+      const succeeded = createdReports.length;
+      if (createdReports.length > 0) {
+        setGeneratedReports((current) => {
+          const map = new Map<number, ReportDto>();
+          for (const report of current) map.set(report.id, report);
+          for (const report of createdReports) map.set(report.id, report);
+          return Array.from(map.values());
+        });
+      }
       if (succeeded > 0) {
         toast.success(`Generated ${succeeded} report${succeeded === 1 ? "" : "s"}.`);
       }
