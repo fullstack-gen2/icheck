@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useUser } from "@/components/user-provider";
 import { Badge } from "@/components/ui/badge";
@@ -57,13 +57,13 @@ async function loadImageDataUrl(url: string): Promise<{ data: string; w: number;
 import {
   useGetClassroomsQuery,
   useGetStudentsByClassroomQuery,
+  useGetSettingsQuery,
   type ClassroomDto,
 } from "@/store/api/attendanceApi";
 import {
   useGenerateMonthlyReportMutation,
   useGenerateSemesterReportMutation,
   useGetClassroomReportsQuery,
-  useGetClassroomEligibilityQuery,
   useLockReportMutation,
   type ReportDto,
 } from "@/store/api/reportApi";
@@ -82,43 +82,80 @@ const ATTENDANCE_WEIGHT_SCORE = 10;
 const LATE_PENALTY = 0.5;
 const ABSENT_PENALTY = 1;
 const MIN_ATTENDANCE_REQUIRED = 50;
+const ALL = "ALL";
+const REPORT_YEARS = [2024, 2025, 2026, 2027];
 
 function pct(n: number) { return `${(n ?? 0).toFixed(1)}%`; }
-function scoreLabel(n: number) { return `${(n ?? 0).toFixed(1)}/10`; }
+function scoreLabel(n: number, max = ATTENDANCE_WEIGHT_SCORE) {
+  const maxLabel = Number.isInteger(max) ? max.toFixed(0) : max.toFixed(1);
+  return `${(n ?? 0).toFixed(1)}/${maxLabel}`;
+}
 function isSemesterProgram(programType: string | undefined) {
   return /associate|bachelor|higher/i.test(programType ?? "");
+}
+function isSemesterClass(classroom: Classroom | undefined | null) {
+  return classroom?.programTypeStructureType === "SEMESTER" || isSemesterProgram(classroom?.programTypeName);
 }
 function positiveCount(n: number | null | undefined) {
   return Math.max(0, Number(n ?? 0));
 }
 function applyAttendanceScoreRule(report: ReportDto): ReportDto {
+  if (
+    report.attendanceWeightSnapshot == null &&
+    report.latePenaltySnapshot == null &&
+    report.absentPenaltySnapshot == null &&
+    report.minAttendanceSnapshot == null
+  ) {
+    return report;
+  }
   const totalSessions = positiveCount(report.totalSessions);
   const lateCount = positiveCount(report.lateCount);
+  const leaveEarlyCount = positiveCount(report.leaveEarlyCount);
   const presentCount = positiveCount(report.presentCount);
   const absentCount = positiveCount(
-    report.absentCount ?? Math.max(0, totalSessions - presentCount - lateCount),
+    report.absentCount ?? Math.max(0, totalSessions - presentCount - lateCount - leaveEarlyCount),
   );
-  const attendedSessions = Math.min(totalSessions, presentCount + lateCount);
+  const attendedSessions = Math.min(totalSessions, presentCount + lateCount + leaveEarlyCount);
+  const attendanceWeight = Number(report.attendanceWeightSnapshot ?? ATTENDANCE_WEIGHT_SCORE);
+  const latePenalty = Number(report.latePenaltySnapshot ?? LATE_PENALTY);
+  const absentPenalty = Number(report.absentPenaltySnapshot ?? ABSENT_PENALTY);
+  const minAttendance = Number(report.minAttendanceSnapshot ?? MIN_ATTENDANCE_REQUIRED);
   const attendancePercentage = totalSessions > 0
     ? (attendedSessions / totalSessions) * 100
     : 0;
   const attendanceScore = Math.max(
     0,
-    ATTENDANCE_WEIGHT_SCORE - (lateCount * LATE_PENALTY + absentCount * ABSENT_PENALTY),
+    attendanceWeight - ((lateCount + leaveEarlyCount) * latePenalty + absentCount * absentPenalty),
   );
-  const examEligible = attendancePercentage >= MIN_ATTENDANCE_REQUIRED;
+  const examEligible = attendancePercentage >= minAttendance;
 
   return {
     ...report,
     totalSessions,
     presentCount,
     lateCount,
+    leaveEarlyCount,
     absentCount,
     attendancePercentage,
     attendanceScore,
     examEligible,
     warningStatus: report.warningStatus || !examEligible,
   };
+}
+function settingNumber(settings: { settingKey: string; settingValue: string }[], key: string, fallback: number) {
+  const raw = settings.find((setting) => setting.settingKey === key)?.settingValue;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+function uniqueSortedNumbers(values: Array<number | null | undefined>) {
+  return Array.from(new Set(values.filter((value): value is number => value != null && Number.isFinite(value))))
+    .sort((a, b) => a - b);
+}
+function programKey(classroom: Classroom) {
+  return classroom.programTypeCode || classroom.programTypeName || "UNKNOWN";
+}
+function reportMaxScore(report: ReportDto) {
+  return Number(report.attendanceWeightSnapshot ?? ATTENDANCE_WEIGHT_SCORE);
 }
 
 /* ── Page ──────────────────────────────────────────────────────────────── */
@@ -128,7 +165,12 @@ export default function ClassesReport() {
   const isAdmin = user?.role === "ADMIN";
 
   const { data: classrooms = [], isLoading: loadingCls } = useGetClassroomsQuery({ size: 200 });
+  const { data: settings = [] } = useGetSettingsQuery();
   const [selectedCls, setSelectedCls] = useState<Classroom | null>(null);
+  const [programFilter, setProgramFilter] = useState(ALL);
+  const [generationFilter, setGenerationFilter] = useState(ALL);
+  const [yearFilter, setYearFilter] = useState(ALL);
+  const [semesterFilter, setSemesterFilter] = useState(ALL);
 
   // Generate-form inputs (right panel header)
   const now = new Date();
@@ -157,47 +199,86 @@ export default function ClassesReport() {
     { classroomId: selectedCls?.id ?? 0, size: 500 },
     { skip: !selectedCls },
   );
-  // Live eligibility — actual attendance computed by the backend now. Shown as
-  // a fallback so the report is never empty: even before a formal report is
-  // generated, the admin sees real attendance figures per student.
-  const { data: eligibility = [] } = useGetClassroomEligibilityQuery(
-    selectedCls?.id ?? 0,
-    { skip: !selectedCls },
+
+  const policyPreview = useMemo(() => ({
+    weight: settingNumber(settings, "attendance_weight", ATTENDANCE_WEIGHT_SCORE),
+    latePenalty: settingNumber(settings, "late_penalty", LATE_PENALTY),
+    absentPenalty: settingNumber(settings, "absent_penalty", ABSENT_PENALTY),
+    minAttendance: settingNumber(settings, "min_attendance_required", MIN_ATTENDANCE_REQUIRED),
+  }), [settings]);
+
+  const programOptions = useMemo(() => {
+    const map = new Map<string, { value: string; label: string; structureType?: string | null }>();
+    for (const classroom of classrooms) {
+      const value = programKey(classroom);
+      if (!map.has(value)) {
+        map.set(value, {
+          value,
+          label: classroom.programTypeName || classroom.programTypeCode || "Unknown Program",
+          structureType: classroom.programTypeStructureType,
+        });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [classrooms]);
+
+  const selectedProgram = programOptions.find((program) => program.value === programFilter);
+  const semesterFilterMode =
+    selectedProgram?.structureType === "SEMESTER" ||
+    isSemesterProgram(selectedProgram?.label);
+
+  const filteredByProgram = useMemo(
+    () => classrooms.filter((classroom) => programFilter === ALL || programKey(classroom) === programFilter),
+    [classrooms, programFilter],
   );
+
+  const generationOptions = useMemo(
+    () => uniqueSortedNumbers(filteredByProgram.map((classroom) => classroom.generation)),
+    [filteredByProgram],
+  );
+
+  const yearOptions = useMemo(
+    () => uniqueSortedNumbers(filteredByProgram.map((classroom) => classroom.year ?? classroom.academicYear)),
+    [filteredByProgram],
+  );
+
+  const semesterOptions = useMemo(
+    () => uniqueSortedNumbers(filteredByProgram.map((classroom) => classroom.semester)),
+    [filteredByProgram],
+  );
+
+  const filteredClassrooms = useMemo(
+    () => filteredByProgram.filter((classroom) => {
+      if (generationFilter !== ALL && String(classroom.generation) !== generationFilter) return false;
+      if (semesterFilterMode) {
+        const classroomYear = classroom.year ?? classroom.academicYear;
+        if (yearFilter !== ALL && String(classroomYear) !== yearFilter) return false;
+        if (semesterFilter !== ALL && String(classroom.semester) !== semesterFilter) return false;
+      }
+      return true;
+    }),
+    [filteredByProgram, generationFilter, semesterFilter, semesterFilterMode, yearFilter],
+  );
+
+  useEffect(() => {
+    setGenerationFilter(ALL);
+    setYearFilter(ALL);
+    setSemesterFilter(ALL);
+  }, [programFilter]);
+
+  useEffect(() => {
+    if (selectedCls && !filteredClassrooms.some((classroom) => classroom.id === selectedCls.id)) {
+      setSelectedCls(null);
+      setTab("reports");
+    }
+  }, [filteredClassrooms, selectedCls]);
 
   /* ── Derived: visible reports per tab ────────────────────────────────── */
-  // Map live eligibility rows into the ReportDto shape so the table renders
-  // them identically. Late/absent/score aren't part of the eligibility
-  // payload, so they show as derived/zero — the rate, present count, exam
-  // eligibility and warnings are all real.
-  const liveRows: ReportDto[] = useMemo(
-    () => eligibility.map((e) => ({
-      id: -e.studentId, // negative synthetic id (live, not a persisted report)
-      student: { id: e.studentId, name: e.studentName, studentNo: e.studentNo },
-      reportType: "LIVE",
-      reportMonth: null,
-      reportYear: new Date().getFullYear(),
-      semester: null,
-      totalSessions: e.totalSessions,
-      // attendedSessions = present + late + late_out; split late out so the
-      // Present / Late / Absent columns are accurate.
-      presentCount: Math.max(0, e.attendedSessions - (e.lateSessions ?? 0)),
-      lateCount: e.lateSessions ?? 0,
-      absentCount: e.absentSessions ?? Math.max(0, e.totalSessions - e.attendedSessions),
-      attendancePercentage: e.attendancePct,
-      attendanceScore: 0,
-      warningStatus: !e.eligible,
-      examEligible: e.eligible,
-      locked: false,
-    })),
-    [eligibility],
-  );
-
-  // Prefer generated reports; fall back to live eligibility so the panel is
-  // never empty when attendance exists.
+  // Reports are official only after Generate persists them on the backend.
+  // Live attendance belongs in a preview/monitor page, not in report papers.
   const effectiveReports = useMemo(
-    () => (reports.length > 0 ? reports : liveRows).map(applyAttendanceScoreRule),
-    [reports, liveRows],
+    () => reports.map(applyAttendanceScoreRule),
+    [reports],
   );
   const warnings = useMemo(
     () => effectiveReports.filter((r) => r.warningStatus),
@@ -224,7 +305,7 @@ export default function ClassesReport() {
     }
     setGenerating(true);
     try {
-      const semesterProgram = isSemesterProgram(selectedCls.programTypeName);
+      const semesterProgram = isSemesterClass(selectedCls);
       const results = await Promise.allSettled(
         classroomStudents.map((student) =>
           semesterProgram
@@ -278,7 +359,7 @@ export default function ClassesReport() {
 
   function periodLabel(): string {
     if (!selectedCls) return "";
-    return isSemesterProgram(selectedCls.programTypeName)
+    return isSemesterClass(selectedCls)
       ? `Sem ${genSemester} / ${genYear}`
       : `${MONTHS[Number(genMonth) - 1]} ${genYear}`;
   }
@@ -287,7 +368,7 @@ export default function ClassesReport() {
     const head = [
       "Student", "Student No.", "Period",
       "Total", "Present", "Late", "Absent",
-      "Attendance %", "Score /10", "Exam", "Warning",
+      "Attendance %", "Score", "Exam", "Warning",
     ];
     const body = visibleReports.map((r) => [
       r.student?.name ?? "—",
@@ -302,7 +383,7 @@ export default function ClassesReport() {
       r.lateCount,
       r.absentCount,
       pct(r.attendancePercentage),
-      scoreLabel(r.attendanceScore),
+      scoreLabel(r.attendanceScore, reportMaxScore(r)),
       r.examEligible ? "Eligible" : "No",
       r.warningStatus ? "Yes" : "",
     ]);
@@ -435,7 +516,7 @@ export default function ClassesReport() {
             type a class name or code (program shown as a hint) and pick. */}
         <div className="w-full sm:w-96">
           <SingleCombobox
-            options={classrooms.map((c) => ({
+            options={filteredClassrooms.map((c) => ({
               value: String(c.id),
               label: c.className,
               hint: c.classCode,
@@ -449,6 +530,60 @@ export default function ClassesReport() {
             searchPlaceholder="Search by class name or code…"
             emptyText="No classes found."
           />
+        </div>
+      </div>
+
+      <div className="mb-6 rounded-2xl border border-border bg-card p-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <FilterSelect
+            label="Program type"
+            value={programFilter}
+            onChange={setProgramFilter}
+            options={[
+              { label: "All programs", value: ALL },
+              ...programOptions,
+            ]}
+          />
+          <FilterSelect
+            label="Generation"
+            value={generationFilter}
+            onChange={setGenerationFilter}
+            options={[
+              { label: "All generations", value: ALL },
+              ...generationOptions.map((generation) => ({
+                label: `Gen ${generation}`,
+                value: String(generation),
+              })),
+            ]}
+          />
+          {semesterFilterMode && (
+            <>
+              <FilterSelect
+                label="Year"
+                value={yearFilter}
+                onChange={setYearFilter}
+                options={[
+                  { label: "All years", value: ALL },
+                  ...yearOptions.map((year) => ({
+                    label: `Year ${year}`,
+                    value: String(year),
+                  })),
+                ]}
+              />
+              <FilterSelect
+                label="Semester"
+                value={semesterFilter}
+                onChange={setSemesterFilter}
+                options={[
+                  { label: "All semesters", value: ALL },
+                  ...semesterOptions.map((semester) => ({
+                    label: `Semester ${semester}`,
+                    value: String(semester),
+                  })),
+                ]}
+              />
+            </>
+          )}
         </div>
       </div>
 
@@ -473,12 +608,12 @@ export default function ClassesReport() {
                     {selectedCls.shift ? ` · ${SHIFT_LABEL[selectedCls.shift] ?? selectedCls.shift}` : ""}
                   </p>
                   <p className="mb-1.5 text-sm font-medium text-muted-foreground">
-                    {isSemesterProgram(selectedCls.programTypeName)
+                    {isSemesterClass(selectedCls)
                       ? "Generate Semester Report"
                       : "Generate Monthly Report"}
                   </p>
                   <div className="flex gap-2 flex-wrap">
-                    {isSemesterProgram(selectedCls.programTypeName) ? (
+                    {isSemesterClass(selectedCls) ? (
                       <SmSelect
                         value={genSemester}
                         onChange={setGenSemester}
@@ -494,11 +629,11 @@ export default function ClassesReport() {
                     <SmSelect
                       value={genYear}
                       onChange={setGenYear}
-                      options={[2024,2025,2026,2027].map((y) => ({ label: String(y), value: String(y) }))}
+                      options={REPORT_YEARS.map((y) => ({ label: String(y), value: String(y) }))}
                     />
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground/80">
-                    Attendance weight 10% · late -0.5 · absent -1 · minimum 50%
+                    Attendance weight {policyPreview.weight}% · late/early-out -{policyPreview.latePenalty} · absent -{policyPreview.absentPenalty} · minimum {policyPreview.minAttendance}%
                   </p>
                 </div>
 
@@ -590,7 +725,7 @@ export default function ClassesReport() {
                           <TableHead className="px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">Late</TableHead>
                           <TableHead className="px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">Absent</TableHead>
                           <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Rate</TableHead>
-                          <TableHead className="hidden px-4 py-3 font-semibold text-muted-foreground lg:table-cell">Score /10</TableHead>
+                          <TableHead className="hidden px-4 py-3 font-semibold text-muted-foreground lg:table-cell">Score</TableHead>
                           <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Exam</TableHead>
                           <TableHead className="px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">Status</TableHead>
                           {isAdmin && (
@@ -646,7 +781,7 @@ export default function ClassesReport() {
                               </div>
                             </TableCell>
                             <TableCell className="hidden px-4 py-3 text-sm font-semibold text-foreground/80 lg:table-cell tabular-nums">
-                              {scoreLabel(r.attendanceScore)}
+                              {scoreLabel(r.attendanceScore, reportMaxScore(r))}
                             </TableCell>
                             <TableCell className="px-4 py-3">
                               <Badge className={r.examEligible
@@ -728,5 +863,37 @@ function SmSelect({
       </select>
       <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/70" />
     </div>
+  );
+}
+
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { label: string; value: string }[];
+}) {
+  return (
+    <label className="space-y-1.5">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-10 w-full appearance-none rounded-lg border border-border bg-background px-3 pr-9 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25"
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/70" />
+      </div>
+    </label>
   );
 }

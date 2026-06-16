@@ -50,6 +50,10 @@ const KEY_LABELS: Record<string, string> = {
   attendance_reminder_enabled: "Attendance reminder",
   ip_validation_enabled: "IP validation",
   school_ip_cidrs: "School IP ranges",
+  attendance_weight: "Attendance weight",
+  late_penalty: "Late / early-out penalty",
+  absent_penalty: "Absent penalty",
+  min_attendance_required: "Minimum attendance required",
 };
 
 const KEY_HELP: Record<string, string> = {
@@ -63,7 +67,18 @@ const KEY_HELP: Record<string, string> = {
   attendance_reminder_enabled: "Enable or disable attendance reminders.",
   ip_validation_enabled: "Require check-ins to come from school IP ranges.",
   school_ip_cidrs: "Comma-separated school network ranges.",
+  attendance_weight: "Maximum attendance score points. 10 means attendance is worth 10% of a 100-point course score.",
+  late_penalty: "Points removed for each late or early-out attendance record.",
+  absent_penalty: "Points removed for each absence.",
+  min_attendance_required: "Minimum attendance percentage required for exam eligibility.",
 };
+
+const ATTENDANCE_POLICY_KEYS = [
+  "attendance_weight",
+  "late_penalty",
+  "absent_penalty",
+  "min_attendance_required",
+];
 
 function humanizeKey(key: string) {
   return KEY_LABELS[key] ?? key
@@ -72,6 +87,8 @@ function humanizeKey(key: string) {
 }
 
 function unitForSetting(key: string) {
+  if (key === "attendance_weight" || key === "min_attendance_required") return "%";
+  if (key.endsWith("_penalty")) return "points";
   if (key.includes("minutes")) return "minutes";
   if (key.includes("seconds")) return "seconds";
   if (key.includes("meters")) return "meters";
@@ -80,6 +97,7 @@ function unitForSetting(key: string) {
 }
 
 function stepForSetting(key: string) {
+  if (key.endsWith("_penalty")) return 0.5;
   if (key.includes("seconds")) return 30;
   return 1;
 }
@@ -88,6 +106,7 @@ function isNumberSetting(setting: SettingDto) {
   const type = setting.type.toUpperCase();
   return (
     type === "INT" ||
+    ATTENDANCE_POLICY_KEYS.includes(setting.settingKey) ||
     setting.settingKey.includes("minutes") ||
     setting.settingKey.includes("seconds") ||
     setting.settingKey.includes("meters") ||
@@ -96,6 +115,9 @@ function isNumberSetting(setting: SettingDto) {
 }
 
 function settingGroup(key: string) {
+  if (ATTENDANCE_POLICY_KEYS.includes(key)) {
+    return "Attendance Policy";
+  }
   if (key.includes("minutes") || key.includes("seconds") || key.includes("sessions")) {
     return "Session Timing";
   }
@@ -106,6 +128,7 @@ function settingGroup(key: string) {
 }
 
 function SettingIcon({ settingKey }: { settingKey: string }) {
+  if (ATTENDANCE_POLICY_KEYS.includes(settingKey)) return <ShieldCheckIcon className="size-5" />;
   if (settingKey === "late_threshold_minutes") return <ClockIcon className="size-5" />;
   if (settingKey.includes("qr")) return <QrCodeIcon className="size-5" />;
   if (settingKey.includes("gps")) return <MapPinIcon className="size-5" />;
@@ -150,9 +173,9 @@ function SettingOptionCard({
   }
 
   function nudge(delta: number) {
-    const current = Number.parseInt(draftValue || "0", 10);
+    const current = Number.parseFloat(draftValue || "0");
     const next = Number.isFinite(current) ? Math.max(0, current + delta) : 0;
-    setDraftValue(String(next));
+    setDraftValue(Number.isInteger(next) ? String(next) : next.toFixed(2).replace(/\.?0+$/, ""));
   }
 
   return (
@@ -201,6 +224,8 @@ function SettingOptionCard({
               <Input
                 type="number"
                 min={0}
+                max={100}
+                step={stepForSetting(setting.settingKey)}
                 value={draftValue}
                 onChange={(e) => setDraftValue(e.target.value)}
                 className="h-12 pr-20 text-center text-2xl font-semibold tabular-nums"
