@@ -78,10 +78,47 @@ const MONTHS = [
 const SHIFT_LABEL: Record<string, string> = {
   MORNING: "Morning", AFTERNOON: "Afternoon", EVENING: "Evening",
 };
+const ATTENDANCE_WEIGHT_SCORE = 10;
+const LATE_PENALTY = 0.5;
+const ABSENT_PENALTY = 1;
+const MIN_ATTENDANCE_REQUIRED = 50;
 
 function pct(n: number) { return `${(n ?? 0).toFixed(1)}%`; }
-function isBachelor(programType: string | undefined) {
-  return /bachelor/i.test(programType ?? "");
+function scoreLabel(n: number) { return `${(n ?? 0).toFixed(1)}/10`; }
+function isSemesterProgram(programType: string | undefined) {
+  return /associate|bachelor|higher/i.test(programType ?? "");
+}
+function positiveCount(n: number | null | undefined) {
+  return Math.max(0, Number(n ?? 0));
+}
+function applyAttendanceScoreRule(report: ReportDto): ReportDto {
+  const totalSessions = positiveCount(report.totalSessions);
+  const lateCount = positiveCount(report.lateCount);
+  const presentCount = positiveCount(report.presentCount);
+  const absentCount = positiveCount(
+    report.absentCount ?? Math.max(0, totalSessions - presentCount - lateCount),
+  );
+  const attendedSessions = Math.min(totalSessions, presentCount + lateCount);
+  const attendancePercentage = totalSessions > 0
+    ? (attendedSessions / totalSessions) * 100
+    : 0;
+  const attendanceScore = Math.max(
+    0,
+    ATTENDANCE_WEIGHT_SCORE - (lateCount * LATE_PENALTY + absentCount * ABSENT_PENALTY),
+  );
+  const examEligible = attendancePercentage >= MIN_ATTENDANCE_REQUIRED;
+
+  return {
+    ...report,
+    totalSessions,
+    presentCount,
+    lateCount,
+    absentCount,
+    attendancePercentage,
+    attendanceScore,
+    examEligible,
+    warningStatus: report.warningStatus || !examEligible,
+  };
 }
 
 /* ── Page ──────────────────────────────────────────────────────────────── */
@@ -90,7 +127,6 @@ export default function ClassesReport() {
   const user = useUser();
   const isAdmin = user?.role === "ADMIN";
 
-  // Left panel — classroom picker
   const { data: classrooms = [], isLoading: loadingCls } = useGetClassroomsQuery({ size: 200 });
   const [selectedCls, setSelectedCls] = useState<Classroom | null>(null);
 
@@ -129,10 +165,6 @@ export default function ClassesReport() {
     { skip: !selectedCls },
   );
 
-  // The combobox above is the searchable picker; the left list just shows all
-  // classes for quick browsing.
-  const filteredCls = classrooms;
-
   /* ── Derived: visible reports per tab ────────────────────────────────── */
   // Map live eligibility rows into the ReportDto shape so the table renders
   // them identically. Late/absent/score aren't part of the eligibility
@@ -149,11 +181,11 @@ export default function ClassesReport() {
       totalSessions: e.totalSessions,
       // attendedSessions = present + late + late_out; split late out so the
       // Present / Late / Absent columns are accurate.
-      presentCount: e.attendedSessions - (e.lateSessions ?? 0),
+      presentCount: Math.max(0, e.attendedSessions - (e.lateSessions ?? 0)),
       lateCount: e.lateSessions ?? 0,
       absentCount: e.absentSessions ?? Math.max(0, e.totalSessions - e.attendedSessions),
       attendancePercentage: e.attendancePct,
-      attendanceScore: e.attendancePct,
+      attendanceScore: 0,
       warningStatus: !e.eligible,
       examEligible: e.eligible,
       locked: false,
@@ -163,7 +195,10 @@ export default function ClassesReport() {
 
   // Prefer generated reports; fall back to live eligibility so the panel is
   // never empty when attendance exists.
-  const effectiveReports = reports.length > 0 ? reports : liveRows;
+  const effectiveReports = useMemo(
+    () => (reports.length > 0 ? reports : liveRows).map(applyAttendanceScoreRule),
+    [reports, liveRows],
+  );
   const warnings = useMemo(
     () => effectiveReports.filter((r) => r.warningStatus),
     [effectiveReports],
@@ -176,7 +211,7 @@ export default function ClassesReport() {
     setTab("reports");
   }
 
-  /* ── Generate (semester for Bachelor / month for everything else) ─────
+  /* ── Generate (semester programs / monthly custom programs) ───────────
    * The backend generates ONE report per student
    * (POST /reports/monthly | /reports/semester, body: studentId+classId+...).
    * So "Generate" here fans out across every student enrolled in the class.
@@ -189,10 +224,10 @@ export default function ClassesReport() {
     }
     setGenerating(true);
     try {
-      const bachelor = isBachelor(selectedCls.programTypeName);
+      const semesterProgram = isSemesterProgram(selectedCls.programTypeName);
       const results = await Promise.allSettled(
         classroomStudents.map((student) =>
-          bachelor
+          semesterProgram
             ? generateSemesterReport({
                 studentId: student.id,
                 classId: selectedCls.id,
@@ -243,7 +278,7 @@ export default function ClassesReport() {
 
   function periodLabel(): string {
     if (!selectedCls) return "";
-    return isBachelor(selectedCls.programTypeName)
+    return isSemesterProgram(selectedCls.programTypeName)
       ? `Sem ${genSemester} / ${genYear}`
       : `${MONTHS[Number(genMonth) - 1]} ${genYear}`;
   }
@@ -252,7 +287,7 @@ export default function ClassesReport() {
     const head = [
       "Student", "Student No.", "Period",
       "Total", "Present", "Late", "Absent",
-      "Attendance %", "Score", "Exam", "Warning",
+      "Attendance %", "Score /10", "Exam", "Warning",
     ];
     const body = visibleReports.map((r) => [
       r.student?.name ?? "—",
@@ -267,7 +302,7 @@ export default function ClassesReport() {
       r.lateCount,
       r.absentCount,
       pct(r.attendancePercentage),
-      r.attendanceScore?.toFixed?.(1) ?? r.attendanceScore,
+      scoreLabel(r.attendanceScore),
       r.examEligible ? "Eligible" : "No",
       r.warningStatus ? "Yes" : "",
     ]);
@@ -410,63 +445,14 @@ export default function ClassesReport() {
               const c = classrooms.find((cl) => String(cl.id) === v);
               if (c) loadReports(c);
             }}
-            placeholder="Search & select a class…"
+            placeholder={loadingCls ? "Loading classes…" : "Search & select a class…"}
             searchPlaceholder="Search by class name or code…"
             emptyText="No classes found."
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6">
-        {/* ─────── Left: classroom picker ─────────────────────────────── */}
-        <div className="flex flex-col gap-3">
-          {/* Class list */}
-          <div className="rounded-xl border border-border bg-card overflow-hidden">
-            {loadingCls ? (
-              <div className="flex justify-center py-12">
-                <LoaderCircleIcon className="size-5 animate-spin text-primary" />
-              </div>
-            ) : filteredCls.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground/70">
-                No classes found.
-              </p>
-            ) : (
-              <div className="divide-y divide-border/50 max-h-[60vh] overflow-y-auto">
-                {filteredCls.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => loadReports(c)}
-                    className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${
-                      selectedCls?.id === c.id
-                        ? "bg-primary/5 border-l-2 border-primary"
-                        : ""
-                    }`}
-                  >
-                    <p className={`text-sm font-semibold leading-tight ${
-                      selectedCls?.id === c.id ? "text-primary" : "text-foreground"
-                    }`}>
-                      {c.className}
-                    </p>
-                    <p className="mt-0.5 font-mono text-xs text-muted-foreground/70">
-                      {c.classCode}
-                    </p>
-                    <div className="flex gap-1.5 mt-1 flex-wrap">
-                      <span className="text-xs text-muted-foreground/80">
-                        {c.programTypeName}
-                      </span>
-                      {c.shift && (
-                        <span className="text-xs text-muted-foreground/50">
-                          · {SHIFT_LABEL[c.shift] ?? c.shift}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
+      <div>
         <div>
           {!selectedCls ? (
             <div className="flex flex-col items-center justify-center py-24 text-muted-foreground/40 bg-card rounded-2xl border border-dashed border-border">
@@ -479,13 +465,20 @@ export default function ClassesReport() {
               {/* Generate bar */}
               <div className="bg-card rounded-2xl border border-border px-5 py-4 flex flex-wrap items-end gap-3 justify-between">
                 <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    {selectedCls.className}
+                  </p>
+                  <p className="mb-2 text-xs text-muted-foreground">
+                    {selectedCls.classCode} · {selectedCls.programTypeName}
+                    {selectedCls.shift ? ` · ${SHIFT_LABEL[selectedCls.shift] ?? selectedCls.shift}` : ""}
+                  </p>
                   <p className="mb-1.5 text-sm font-medium text-muted-foreground">
-                    {isBachelor(selectedCls.programTypeName)
+                    {isSemesterProgram(selectedCls.programTypeName)
                       ? "Generate Semester Report"
                       : "Generate Monthly Report"}
                   </p>
                   <div className="flex gap-2 flex-wrap">
-                    {isBachelor(selectedCls.programTypeName) ? (
+                    {isSemesterProgram(selectedCls.programTypeName) ? (
                       <SmSelect
                         value={genSemester}
                         onChange={setGenSemester}
@@ -504,6 +497,9 @@ export default function ClassesReport() {
                       options={[2024,2025,2026,2027].map((y) => ({ label: String(y), value: String(y) }))}
                     />
                   </div>
+                  <p className="mt-2 text-xs text-muted-foreground/80">
+                    Attendance weight 10% · late -0.5 · absent -1 · minimum 50%
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -554,7 +550,7 @@ export default function ClassesReport() {
                     }`}
                   >
                     {t === "reports"
-                      ? `All Reports (${reports.length})`
+                      ? `All Reports (${effectiveReports.length})`
                       : (
                         <span className="flex items-center gap-1.5">
                           <AlertTriangleIcon className="size-3.5 text-orange-400" />
@@ -594,7 +590,7 @@ export default function ClassesReport() {
                           <TableHead className="px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">Late</TableHead>
                           <TableHead className="px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">Absent</TableHead>
                           <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Rate</TableHead>
-                          <TableHead className="px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">Score</TableHead>
+                          <TableHead className="hidden px-4 py-3 font-semibold text-muted-foreground lg:table-cell">Score /10</TableHead>
                           <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Exam</TableHead>
                           <TableHead className="px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">Status</TableHead>
                           {isAdmin && (
@@ -650,7 +646,7 @@ export default function ClassesReport() {
                               </div>
                             </TableCell>
                             <TableCell className="hidden px-4 py-3 text-sm font-semibold text-foreground/80 lg:table-cell tabular-nums">
-                              {r.attendanceScore?.toFixed?.(1) ?? r.attendanceScore}
+                              {scoreLabel(r.attendanceScore)}
                             </TableCell>
                             <TableCell className="px-4 py-3">
                               <Badge className={r.examEligible
