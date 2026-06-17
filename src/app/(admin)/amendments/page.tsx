@@ -37,16 +37,33 @@ function ago(iso?: string | null): string {
 }
 
 const TYPE_LABEL: Record<string, string> = {
-  late_out: "Early leave / Permission",
+  late_out: "Leaving early",
+  leave_early: "Leaving early",
   late: "Late arrival",
+  late_arrival: "Late arrival",
+  permission: "Permission / excused",
   correction: "Status correction",
   static_qr: "Manual check-in",
   teacher_late: "Teacher late",
 };
 
-function typeLabel(name?: string | null) {
+function typeLabel(name?: string | null, reason?: string | null) {
+  const normalizedReason = reason?.trim().toLowerCase() ?? "";
+  if (normalizedReason.startsWith("[late_out]") || normalizedReason.startsWith("[early_leave]") || normalizedReason.startsWith("[leave_early]")) {
+    return "Leaving early";
+  }
+  if (normalizedReason.startsWith("[permission]")) {
+    return "Permission / excused";
+  }
+  if (normalizedReason.startsWith("[late]") || normalizedReason.startsWith("[late_arrival]")) {
+    return "Late arrival";
+  }
   if (!name) return "Amendment";
   return TYPE_LABEL[name.toLowerCase()] ?? name.replace(/_/g, " ");
+}
+
+function cleanReason(reason?: string | null) {
+  return reason?.replace(/^\[(late|late_arrival|permission|late_out|early_leave|leave_early)\]\s*/i, "").trim() ?? "";
 }
 
 export default function AmendmentsPage() {
@@ -102,7 +119,7 @@ export default function AmendmentsPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Amendment Requests</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Review student late / permission requests. Approving updates the student&apos;s
+            Review student late, permission, and early-leave requests. Approving updates the student&apos;s
             attendance status and notifies them.
           </p>
         </div>
@@ -186,7 +203,7 @@ export default function AmendmentsPage() {
                         {a.requestedBy ?? "Unknown student"}
                       </span>
                       <Badge variant="secondary" className="text-xs font-medium">
-                        {typeLabel(a.requestTypeName)}
+                        {typeLabel(a.requestTypeName, a.reason)}
                       </Badge>
                       {a.sessionId != null && (
                         <span className="text-xs text-muted-foreground/70">
@@ -195,7 +212,7 @@ export default function AmendmentsPage() {
                       )}
                     </div>
                     <p className="mt-1.5 text-sm text-foreground/90">
-                      {a.reason || <span className="text-muted-foreground/60">No reason provided.</span>}
+                      {cleanReason(a.reason) || <span className="text-muted-foreground/60">No reason provided.</span>}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground/60">
                       Submitted {ago(a.createdAt)}

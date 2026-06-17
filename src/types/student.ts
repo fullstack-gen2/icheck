@@ -2,8 +2,8 @@ export enum AttendanceStatus{
   PRESENT    = "present",
   LATE       = "late",
   PENDING    = "pending",
-  PERMISSION = "permission",   // approved permission / leaving early
-  LATE_OUT   = "late_out"      // left early WITHOUT permission
+  PERMISSION = "permission",   // approved excused permission
+  LATE_OUT   = "late_out"      // left early; penalized like late attendance
 }
 
 export type Student = {

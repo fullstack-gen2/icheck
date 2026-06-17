@@ -317,14 +317,14 @@ export default function StudentHomePage() {
           </p>
         </button>
 
-        {/* Missed the QR (expired / late) or leaving early? Submit a request. */}
+        {/* Missed the QR, need permission, or leaving early? Submit a request. */}
         <Link
           href="/student/require-permission"
           className="bg-card rounded-2xl border border-border p-6 shadow-sm hover:border-primary/40 active:scale-95 transition-all"
         >
           <ClipboardListIcon className="size-8 mb-3 text-primary opacity-80" />
           <h2 className="text-lg font-semibold text-foreground mb-1">
-            Request Late / Permission
+            Request Attendance Amendment
           </h2>
           <p className="text-sm text-muted-foreground">
             Couldn&apos;t scan in time, or need to leave early? Send a request —
