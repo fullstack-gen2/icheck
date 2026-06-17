@@ -51,9 +51,12 @@ export function QrScanner({ onClose }: Props) {
   }, []);
 
   // Submit a scanned token. Always fetches a fresh, live location first so we
-  // never post a stale/null position that the backend would reject.
+  // never post a stale/null position that the backend would reject. If the
+  // guessed kind is wrong (e.g. a static QR whose link lacked &kind=static), the
+  // backend returns "only accepts … QR codes" — we flip to the other endpoint
+  // once and retry, so the student never sees that error.
   const submit = useCallback(
-    async (token: string, kind: QrKind, reasonText?: string) => {
+    async (token: string, initialKind: QrKind, reasonText?: string) => {
       setScanState("submitting");
       setMessage("");
 
@@ -66,47 +69,60 @@ export function QrScanner({ onClose }: Props) {
         return;
       }
 
-      try {
-        // deviceId + IP are added server-side by the proxy (httpOnly cookie).
-        const res = await fetch("/api/attendance/check-in", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            qrToken: token,
-            kind,
-            reason: reasonText,
-            latitude: coords.latitude,
-            longitude: coords.longitude,
-          }),
-        });
-        const json = await res.json().catch(() => ({}));
+      let kind = initialKind;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          // deviceId + IP are added server-side by the proxy (httpOnly cookie).
+          const res = await fetch("/api/attendance/check-in", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              qrToken: token,
+              kind,
+              reason: reasonText,
+              latitude: coords.latitude,
+              longitude: coords.longitude,
+            }),
+          });
+          const json = await res.json().catch(() => ({}));
 
-        if (res.ok) {
-          setScanState("success");
-          setMessage(
-            reasonText
-              ? "Late check-in recorded — your reason was sent for review."
-              : "Attendance recorded successfully!"
-          );
+          if (res.ok) {
+            setLastScan({ token, kind });
+            setScanState("success");
+            setMessage(
+              reasonText
+                ? "Late check-in recorded — your reason was sent for review."
+                : "Attendance recorded successfully!"
+            );
+            return;
+          }
+
+          const errMsg: string =
+            json?.payload?.message ?? json?.message ?? json?.error ?? "Check-in failed. Try again.";
+
+          // Wrong endpoint for this token type → flip kind once and retry.
+          if (/only accepts (dynamic|static) qr codes/i.test(errMsg) && attempt === 0) {
+            kind = kind === "static" ? "dynamic" : "static";
+            setLastScan({ token, kind });
+            continue;
+          }
+
+          // Static (classroom) QR scanned late → backend asks for a reason.
+          if (/reason is required/i.test(errMsg)) {
+            setLastScan({ token, kind: "static" });
+            setScanState("needReason");
+            setMessage("This is a classroom (static) QR — add a short reason for your late scan.");
+            return;
+          }
+
+          setScanState("error");
+          setMessage(errMsg);
+          return;
+        } catch {
+          setScanState("error");
+          setMessage("Network error. Check your connection and tap Retry.");
           return;
         }
-
-        const errMsg: string =
-          json?.payload?.message ?? json?.message ?? json?.error ?? "Check-in failed. Try again.";
-
-        // Static (classroom) QR scanned late → backend asks for a reason.
-        if (/reason is required/i.test(errMsg)) {
-          setLastScan({ token, kind: "static" });
-          setScanState("needReason");
-          setMessage("This is a classroom (static) QR — add a short reason for your late scan.");
-          return;
-        }
-
-        setScanState("error");
-        setMessage(errMsg);
-      } catch {
-        setScanState("error");
-        setMessage("Network error. Check your connection and tap Retry.");
       }
     },
     [getFreshCoords]
