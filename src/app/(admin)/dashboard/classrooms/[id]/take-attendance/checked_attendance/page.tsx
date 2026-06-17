@@ -1,7 +1,13 @@
 import ReportToday from "@/components/table/report_today";
 import { AmendmentButton } from "@/components/amendment-button";
+import { Button } from "@/components/ui/button";
+import { getServerUser } from "@/auth-server";
 import { backendFetch } from "@/lib/api-fetch";
-import { fetchTodaySessionForClassroom, type SessionSummary } from "@/lib/session-helpers";
+import {
+  fetchTodaySessionForClassroom,
+  isTeacherCorrectionOpen,
+  type SessionSummary,
+} from "@/lib/session-helpers";
 import { AttendanceStatus, type Student } from "@/types/student";
 
 interface Classroom {
@@ -76,12 +82,15 @@ export default async function CheckedAttendance({
   params: Promise<{ id: string }>;
 }) {
     const { id } = await params;
-    const [classroom, session] = await Promise.all([
+    const [classroom, session, user] = await Promise.all([
       fetchClassroom(id),
       fetchTodaySessionForClassroom(id) as Promise<SessionSummary | null>,
+      getServerUser(),
     ]);
     const statusMap = await fetchSessionStatusMap(session?.id ?? null);
     const students = await fetchStudents(id, statusMap);
+    const isAdmin = (user?.role ?? "").toUpperCase() === "ADMIN";
+    const canEditAttendance = isAdmin || isTeacherCorrectionOpen(session);
     const femaleStudents = students.filter((student) => {
       const gender = student.gender?.toLowerCase?.() ?? "";
       return gender === "female" || gender === "f";
@@ -100,14 +109,21 @@ export default async function CheckedAttendance({
                 </div>
                 </div>
                 <div className="flex-col">
-                  <AmendmentButton
-                    sessionId={session?.id ?? null}
-                    students={students.map((s) => ({
-                      id: s.id,
-                      name: s.name,
-                      currentStatus: s.status,
-                    }))}
-                  />
+                  {canEditAttendance ? (
+                    <AmendmentButton
+                      mode={isAdmin ? "admin" : "teacher"}
+                      sessionId={session?.id ?? null}
+                      students={students.map((s) => ({
+                        id: s.id,
+                        name: s.name,
+                        currentStatus: s.status,
+                      }))}
+                    />
+                  ) : (
+                    <Button disabled variant="outline" className="p-5 cursor-not-allowed">
+                      Correction closed
+                    </Button>
+                  )}
                 </div>
             </section>
             <section>

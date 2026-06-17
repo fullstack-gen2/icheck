@@ -41,7 +41,7 @@ const TYPE_LABEL: Record<string, string> = {
   leave_early: "Leaving early",
   late: "Late arrival",
   late_arrival: "Late arrival",
-  permission: "Permission / excused",
+  permission: "Permission",
   correction: "Status correction",
   static_qr: "Manual check-in",
   teacher_late: "Teacher late",
@@ -53,7 +53,7 @@ function typeLabel(name?: string | null, reason?: string | null) {
     return "Leaving early";
   }
   if (normalizedReason.startsWith("[permission]")) {
-    return "Permission / excused";
+    return "Permission";
   }
   if (normalizedReason.startsWith("[late]") || normalizedReason.startsWith("[late_arrival]")) {
     return "Late arrival";

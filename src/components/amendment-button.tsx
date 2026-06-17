@@ -8,6 +8,7 @@ import { AmendmentDialog, type AmendmentDialogStudent } from "@/components/amend
 interface Props {
   students: AmendmentDialogStudent[];
   sessionId: number | null;
+  mode?: "teacher" | "admin";
 }
 
 /**
@@ -17,7 +18,7 @@ interface Props {
  * the new status (the realtime stream also patches it in place — this is the
  * fallback for the rare browser that can't open a WebSocket).
  */
-export function AmendmentButton({ students, sessionId }: Props) {
+export function AmendmentButton({ students, sessionId, mode = "teacher" }: Props) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   return (
@@ -28,9 +29,10 @@ export function AmendmentButton({ students, sessionId }: Props) {
         disabled={!sessionId}
         onClick={() => setOpen(true)}
       >
-        Amendment
+        {mode === "admin" ? "Edit Attendance" : "Amendment"}
       </Button>
       <AmendmentDialog
+        mode={mode}
         open={open}
         onOpenChange={setOpen}
         students={students}

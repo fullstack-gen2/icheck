@@ -10,7 +10,11 @@ import { columns } from "@/components/classdetail/column";
 import { DataTableList } from "@/components/classdetail/data-table";
 import type { AttendanceList } from "@/types/attendance";
 import { formatTime12, schoolNowMinutes, timeToMinutes } from "@/lib/school-time";
-import { fetchTodaySessionForClassroom, type SessionSummary } from "@/lib/session-helpers";
+import {
+  fetchTodaySessionForClassroom,
+  isTeacherCorrectionOpen,
+  type SessionSummary,
+} from "@/lib/session-helpers";
 import Link from "next/link";
 
 interface Classroom {
@@ -76,6 +80,7 @@ export default async function ClassroomDetailPage({
   ]);
 
   const isAdmin = (user?.role ?? "").toUpperCase() === "ADMIN";
+  const canCorrectAttendance = isAdmin || isTeacherCorrectionOpen(session);
   const femaleStudents = students.filter((student) => {
     const gender = student.gender?.toLowerCase?.() ?? "";
     return gender === "female" || gender === "f";
@@ -161,11 +166,15 @@ export default async function ClassroomDetailPage({
               }
               // Window passed / completed → amendment only.
               if (amendmentOnly) {
-                return (
+                return canCorrectAttendance ? (
                   <Button asChild variant="outline" className="p-5">
                     <Link href={`/dashboard/classrooms/${id}/take-attendance/checked_attendance`}>
                       Edit Attendance
                     </Link>
+                  </Button>
+                ) : (
+                  <Button disabled variant="outline" className="p-5 cursor-not-allowed">
+                    Correction closed
                   </Button>
                 );
               }

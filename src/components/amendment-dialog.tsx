@@ -28,6 +28,7 @@ export interface AmendmentDialogStudent {
 }
 
 interface Props {
+  mode?: "teacher" | "admin";
   open: boolean;
   onOpenChange: (open: boolean) => void;
   students: AmendmentDialogStudent[];
@@ -92,6 +93,7 @@ function statusActiveClass(value: string): string {
  *   - broadcasts a live update.
  */
 export function AmendmentDialog({
+  mode = "teacher",
   open,
   onOpenChange,
   students,
@@ -141,7 +143,7 @@ export function AmendmentDialog({
       toast.error("No session is open for this class right now.");
       return;
     }
-    if (!user?.id) {
+    if (mode === "teacher" && !user?.id) {
       toast.error("Could not identify the current teacher.");
       return;
     }
@@ -167,13 +169,22 @@ export function AmendmentDialog({
       const failures: string[] = [];
       for (const s of changed) {
         try {
-          await api.post("/amendments/teacher-amend-by-student", {
-            teacherId: Number(user.id),
-            studentId: Number(s.id),
-            sessionId,
-            newStatus: drafts[String(s.id)],
-            reason: reason.trim(),
-          });
+          if (mode === "admin") {
+            await api.post("/attendances/admin-override-by-student", {
+              studentId: Number(s.id),
+              sessionId,
+              status: drafts[String(s.id)],
+              remark: reason.trim(),
+            });
+          } else {
+            await api.post("/amendments/teacher-amend-by-student", {
+              teacherId: Number(user?.id),
+              studentId: Number(s.id),
+              sessionId,
+              newStatus: drafts[String(s.id)],
+              reason: reason.trim(),
+            });
+          }
         } catch (e) {
           failures.push(`${s.name}: ${getErrorMessage(e, "save failed")}`);
         }
@@ -210,11 +221,15 @@ export function AmendmentDialog({
       <DialogContent className={stage === "list" ? "sm:max-w-2xl" : "sm:max-w-md"}>
         <DialogHeader>
           <DialogTitle>
-            {stage === "reason" ? "Amendment Reason" : "Amend Attendance"}
+            {stage === "reason"
+              ? mode === "admin" ? "Edit Reason" : "Amendment Reason"
+              : "Edit Attendance"}
           </DialogTitle>
           <DialogDescription>
             {stage === "reason"
-              ? "Give one reason for this batch of changes — it gets attached to every status you adjust on the next screen."
+              ? mode === "admin"
+                ? "Give one reason for this admin override. No amendment request is created."
+                : "Give one reason for this batch of changes — it gets attached to every status you adjust on the next screen."
               : `Adjust each student's status, then save. Reason: “${reason}”.`}
           </DialogDescription>
         </DialogHeader>

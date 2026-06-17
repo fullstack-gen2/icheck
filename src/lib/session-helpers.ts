@@ -1,5 +1,5 @@
 import { backendFetch } from "@/lib/api-fetch";
-import { schoolToday } from "@/lib/school-time";
+import { schoolNowMinutes, schoolToday, timeToMinutes, todayIso } from "@/lib/school-time";
 import { fetchTeacherClassrooms, type ClassroomSummary } from "@/lib/classroom-helpers";
 import { isOpenableStatus, isTeacherStartableSession } from "@/lib/session-window";
 
@@ -22,6 +22,7 @@ export interface SessionSummary {
   lateThresholdMinutes?: number | null;
   actualStartTime?: string | null;
   actualEndTime?: string | null;
+  teacherEditDeadlineMinutes?: number | null;
 }
 
 interface ScheduleSummary {
@@ -94,6 +95,29 @@ export function chooseBestSession(sessions: SessionSummary[]) {
     sorted.find((session) => session.status !== "CANCELLED") ??
     null
   );
+}
+
+function localTimeFromDateTime(value?: string | null): string | null {
+  if (!value) return null;
+  return value.includes("T") ? value.split("T")[1] ?? null : value.split(" ")[1] ?? null;
+}
+
+export function isTeacherCorrectionOpen(
+  session: SessionSummary | null | undefined,
+  fallbackDeadlineMinutes = 30,
+  now = new Date(),
+) {
+  if (!session?.id || !session.sessionDate) return false;
+  const currentDate = todayIso(now);
+  if (session.sessionDate !== currentDate) return false;
+
+  const deadlineMinutes = session.teacherEditDeadlineMinutes ?? fallbackDeadlineMinutes;
+  const endMinutes = session.actualEndTime
+    ? timeToMinutes(localTimeFromDateTime(session.actualEndTime))
+    : timeToMinutes(session.endTime);
+
+  if (endMinutes == null) return false;
+  return schoolNowMinutes(now) <= endMinutes + deadlineMinutes;
 }
 
 export async function fetchTodaySessionForClassroom(classroomId: string): Promise<SessionSummary | null> {
