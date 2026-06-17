@@ -30,10 +30,8 @@ export default async function ClassroomsPage() {
 
   // ── Teacher: session-based "My Classes" (today's upcoming/live), grouped. ──
   if (isTeacher) {
-    const [classrooms, classCounts] = await Promise.all([
-      fetchTeacherActiveClassrooms(userId),
-      fetchClassCounts(),
-    ]);
+    const classrooms = await fetchTeacherActiveClassrooms(userId);
+    const classCounts = await fetchClassCounts(classrooms);
 
     const grouped = classrooms.reduce<Record<string, TeacherClassroomView[]>>((acc, c) => {
       const key = c.programTypeName ?? "Other";
@@ -73,7 +71,7 @@ export default async function ClassroomsPage() {
                 </h2>
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-6">
                   {grouped[group].map((c) => {
-                    const counts = classCounts[c.className];
+                    const counts = classCounts[c.id];
                     return (
                       <Link
                         key={c.id}
@@ -106,10 +104,8 @@ export default async function ClassroomsPage() {
   }
 
   // ── Admin: all classes with sort / filter / search. ──
-  const [allClassrooms, classCounts] = await Promise.all([
-    fetchAllClassrooms(200),
-    fetchClassCounts(),
-  ]);
+  const allClassrooms = await fetchAllClassrooms(200);
+  const classCounts = await fetchClassCounts(allClassrooms);
   const activeClassrooms: Classroom[] = allClassrooms.filter((c) => c.status);
 
   return (

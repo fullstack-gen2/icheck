@@ -28,7 +28,6 @@ interface TeacherSession {
 }
 
 interface StudentSummary {
-  className?: string;
   gender?: string;
 }
 
@@ -42,30 +41,27 @@ export async function fetchAllClassrooms(size = 200): Promise<ClassroomSummary[]
   }
 }
 
-/** Real per-class headcounts (total / female), keyed by className. */
-export async function fetchClassCounts(): Promise<Record<string, { total: number; female: number }>> {
-  try {
-    const res = await backendFetch(`/users/students?size=2000`);
-    if (!res.ok) return {};
-    const students: StudentSummary[] = (await res.json())?.payload?.content ?? [];
-    const counts: Record<string, { total: number; female: number }> = {};
-    for (const s of students) {
-      if (!s.className) continue;
-      const entry = (counts[s.className] ??= { total: 0, female: 0 });
-      entry.total += 1;
-      if (s.gender?.toUpperCase().startsWith("F")) entry.female += 1;
-    }
-    return counts;
-  } catch {
-    return {};
-  }
+export async function fetchClassCounts(
+  classrooms?: Pick<ClassroomSummary, "id">[]
+): Promise<Record<number, { total: number; female: number }>> {
+  const list = classrooms ?? await fetchAllClassrooms();
+  const entries = await Promise.all(
+    list.map(async (classroom) => {
+      try {
+        const res = await backendFetch(`/classrooms/${classroom.id}/students?size=500`);
+        if (!res.ok) return [classroom.id, { total: 0, female: 0 }] as const;
+        const json = await res.json();
+        const students: StudentSummary[] = json?.payload?.content ?? json?.payload ?? [];
+        const female = students.filter((s) => s.gender?.toUpperCase().startsWith("F")).length;
+        return [classroom.id, { total: students.length, female }] as const;
+      } catch {
+        return [classroom.id, { total: 0, female: 0 }] as const;
+      }
+    })
+  );
+  return Object.fromEntries(entries);
 }
 
-/**
- * A teacher's "My Classes" = classes on their regular weekly schedule, PLUS
- * any class where an admin assigned them as a substitute teacher for a
- * specific session (the substitute also sees that class here).
- */
 export async function fetchTeacherClassrooms(teacherId: string, size = 200): Promise<ClassroomSummary[]> {
   try {
     const date = new Date();
