@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useUser } from "@/components/user-provider";
 import { Badge } from "@/components/ui/badge";
@@ -67,6 +67,13 @@ import {
   useLockReportMutation,
   type ReportDto,
 } from "@/store/api/reportApi";
+import {
+  PROGRAM_CATEGORIES,
+  programCategoryOf,
+  scholarshipCourseOf,
+  isSemesterCategory,
+  type ProgramCategory,
+} from "@/lib/program-category";
 
 type Classroom = ClassroomDto;
 
@@ -151,9 +158,6 @@ function uniqueSortedNumbers(values: Array<number | null | undefined>) {
   return Array.from(new Set(values.filter((value): value is number => value != null && Number.isFinite(value))))
     .sort((a, b) => a - b);
 }
-function programKey(classroom: Classroom) {
-  return classroom.programTypeCode || classroom.programTypeName || "UNKNOWN";
-}
 function reportMaxScore(report: ReportDto) {
   return Number(report.attendanceWeightSnapshot ?? ATTENDANCE_WEIGHT_SCORE);
 }
@@ -171,6 +175,7 @@ export default function ClassesReport() {
   const [generationFilter, setGenerationFilter] = useState(ALL);
   const [yearFilter, setYearFilter] = useState(ALL);
   const [semesterFilter, setSemesterFilter] = useState(ALL);
+  const [courseFilter, setCourseFilter] = useState(ALL);
 
   // Generate-form inputs (right panel header)
   const now = new Date();
@@ -208,29 +213,31 @@ export default function ClassesReport() {
     minAttendance: settingNumber(settings, "min_attendance_required", MIN_ATTENDANCE_REQUIRED),
   }), [settings]);
 
-  const programOptions = useMemo(() => {
-    const map = new Map<string, { value: string; label: string; structureType?: string | null }>();
-    for (const classroom of classrooms) {
-      const value = programKey(classroom);
-      if (!map.has(value)) {
-        map.set(value, {
-          value,
-          label: classroom.programTypeName || classroom.programTypeCode || "Unknown Program",
-          structureType: classroom.programTypeStructureType,
-        });
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
-  }, [classrooms]);
+  const programOptions = PROGRAM_CATEGORIES;
 
-  const selectedProgram = programOptions.find((program) => program.value === programFilter);
+  const scholarshipMode = programFilter === "SCHOLARSHIP";
   const semesterFilterMode =
-    selectedProgram?.structureType === "SEMESTER" ||
-    isSemesterProgram(selectedProgram?.label);
+    programFilter !== ALL && isSemesterCategory(programFilter as ProgramCategory);
 
   const filteredByProgram = useMemo(
-    () => classrooms.filter((classroom) => programFilter === ALL || programKey(classroom) === programFilter),
+    () =>
+      classrooms.filter(
+        (classroom) =>
+          programFilter === ALL || programCategoryOf(classroom.programTypeName) === programFilter,
+      ),
     [classrooms, programFilter],
+  );
+
+  const courseOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          filteredByProgram
+            .map((c) => scholarshipCourseOf(c.className))
+            .filter((c): c is string => c != null),
+        ),
+      ).sort(),
+    [filteredByProgram],
   );
 
   const generationOptions = useMemo(
@@ -251,6 +258,7 @@ export default function ClassesReport() {
   const filteredClassrooms = useMemo(
     () => filteredByProgram.filter((classroom) => {
       if (generationFilter !== ALL && String(classroom.generation) !== generationFilter) return false;
+      if (scholarshipMode && courseFilter !== ALL && scholarshipCourseOf(classroom.className) !== courseFilter) return false;
       if (semesterFilterMode) {
         const classroomYear = classroom.year ?? classroom.academicYear;
         if (yearFilter !== ALL && String(classroomYear) !== yearFilter) return false;
@@ -258,21 +266,25 @@ export default function ClassesReport() {
       }
       return true;
     }),
-    [filteredByProgram, generationFilter, semesterFilter, semesterFilterMode, yearFilter],
+    [filteredByProgram, generationFilter, semesterFilter, semesterFilterMode, yearFilter, scholarshipMode, courseFilter],
   );
 
-  useEffect(() => {
+  // Reset dependent filters when the program category changes (adjust-during-
+  // render — avoids a cascading setState-in-effect).
+  const [prevProgram, setPrevProgram] = useState(programFilter);
+  if (prevProgram !== programFilter) {
+    setPrevProgram(programFilter);
     setGenerationFilter(ALL);
     setYearFilter(ALL);
     setSemesterFilter(ALL);
-  }, [programFilter]);
+    setCourseFilter(ALL);
+  }
 
-  useEffect(() => {
-    if (selectedCls && !filteredClassrooms.some((classroom) => classroom.id === selectedCls.id)) {
-      setSelectedCls(null);
-      setTab("reports");
-    }
-  }, [filteredClassrooms, selectedCls]);
+  // Drop the selected class if it falls outside the current filter.
+  if (selectedCls && !filteredClassrooms.some((classroom) => classroom.id === selectedCls.id)) {
+    setSelectedCls(null);
+    setTab("reports");
+  }
 
   /* ── Derived: visible reports per tab ────────────────────────────────── */
   // Reports are official only after Generate persists them on the backend.
@@ -581,6 +593,17 @@ export default function ClassesReport() {
               })),
             ]}
           />
+          {scholarshipMode && courseOptions.length > 0 && (
+            <FilterSelect
+              label="Course"
+              value={courseFilter}
+              onChange={setCourseFilter}
+              options={[
+                { label: "All courses", value: ALL },
+                ...courseOptions.map((c) => ({ label: c, value: c })),
+              ]}
+            />
+          )}
           {semesterFilterMode && (
             <>
               <FilterSelect

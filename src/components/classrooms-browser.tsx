@@ -25,6 +25,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { ClassroomSummary } from "@/lib/classroom-helpers";
+import {
+  PROGRAM_CATEGORIES,
+  programCategoryOf,
+  scholarshipCourseOf,
+} from "@/lib/program-category";
 
 const SHIFT_LABEL: Record<string, string> = {
   MORNING: "Morning",
@@ -52,23 +57,20 @@ interface Props {
 }
 
 /**
- * Admin "Classes" browser — client-side sort (asc/desc), filters (program,
- * shift, generation, status) and search over the class cards. Filtering happens
- * on the already-fetched list, so it's instant.
+ * Admin "Classes" browser — client-side sort (asc/desc), filters and search.
+ * The Program filter is one of the 3 categories (Higher Degree / Bachelor /
+ * Scholarship); picking Scholarship reveals its Course sub-filter.
  */
 export function ClassroomsBrowser({ classrooms, classCounts }: Props) {
   const [query, setQuery] = useState("");
-  const [programType, setProgramType] = useState<string>(ALL);
+  const [category, setCategory] = useState<string>(ALL);
+  const [course, setCourse] = useState<string>(ALL);
   const [shift, setShift] = useState<string>(ALL);
   const [generation, setGeneration] = useState<string>(ALL);
   const [status, setStatus] = useState<StatusFilter>("all");
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  const programOptions = useMemo(
-    () => Array.from(new Set(classrooms.map((c) => c.programTypeName).filter(Boolean))).sort(),
-    [classrooms]
-  );
   const shiftOptions = useMemo(
     () => Array.from(new Set(classrooms.map((c) => c.shift).filter(Boolean))).sort(),
     [classrooms]
@@ -80,11 +82,26 @@ export function ClassroomsBrowser({ classrooms, classCounts }: Props) {
       ),
     [classrooms]
   );
+  // Courses that actually exist among the Scholarship classes.
+  const courseOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          classrooms
+            .filter((c) => programCategoryOf(c.programTypeName) === "SCHOLARSHIP")
+            .map((c) => scholarshipCourseOf(c.className))
+            .filter((c): c is string => c != null)
+        )
+      ).sort(),
+    [classrooms]
+  );
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = classrooms.filter((c) => {
-      if (programType !== ALL && c.programTypeName !== programType) return false;
+      if (category !== ALL && programCategoryOf(c.programTypeName) !== category) return false;
+      if (category === "SCHOLARSHIP" && course !== ALL && scholarshipCourseOf(c.className) !== course)
+        return false;
       if (shift !== ALL && c.shift !== shift) return false;
       if (generation !== ALL && String(c.generation) !== generation) return false;
       if (status === "active" && !c.status) return false;
@@ -127,20 +144,27 @@ export function ClassroomsBrowser({ classrooms, classCounts }: Props) {
       if (cmp === 0) cmp = a.className.localeCompare(b.className);
       return cmp * dir;
     });
-  }, [classrooms, query, programType, shift, generation, status, sortKey, sortDir]);
+  }, [classrooms, query, category, course, shift, generation, status, sortKey, sortDir]);
 
   const activeFilters =
-    (programType !== ALL ? 1 : 0) +
+    (category !== ALL ? 1 : 0) +
+    (category === "SCHOLARSHIP" && course !== ALL ? 1 : 0) +
     (shift !== ALL ? 1 : 0) +
     (generation !== ALL ? 1 : 0) +
     (status !== "all" ? 1 : 0);
 
   function reset() {
-    setProgramType(ALL);
+    setCategory(ALL);
+    setCourse(ALL);
     setShift(ALL);
     setGeneration(ALL);
     setStatus("all");
     setQuery("");
+  }
+
+  function changeCategory(v: string) {
+    setCategory(v);
+    if (v !== "SCHOLARSHIP") setCourse(ALL);
   }
 
   return (
@@ -180,14 +204,30 @@ export function ClassroomsBrowser({ classrooms, classCounts }: Props) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="max-h-[70vh] w-56 overflow-y-auto">
             <DropdownMenuLabel>Program</DropdownMenuLabel>
-            <DropdownMenuRadioGroup value={programType} onValueChange={setProgramType}>
+            <DropdownMenuRadioGroup value={category} onValueChange={changeCategory}>
               <DropdownMenuRadioItem value={ALL}>All programs</DropdownMenuRadioItem>
-              {programOptions.map((p) => (
-                <DropdownMenuRadioItem key={p} value={p}>
-                  {p}
+              {PROGRAM_CATEGORIES.map((c) => (
+                <DropdownMenuRadioItem key={c.value} value={c.value}>
+                  {c.label}
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuRadioGroup>
+
+            {category === "SCHOLARSHIP" && courseOptions.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Course</DropdownMenuLabel>
+                <DropdownMenuRadioGroup value={course} onValueChange={setCourse}>
+                  <DropdownMenuRadioItem value={ALL}>All courses</DropdownMenuRadioItem>
+                  {courseOptions.map((c) => (
+                    <DropdownMenuRadioItem key={c} value={c}>
+                      {c}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </>
+            )}
+
             <DropdownMenuSeparator />
             <DropdownMenuLabel>Shift</DropdownMenuLabel>
             <DropdownMenuRadioGroup value={shift} onValueChange={setShift}>

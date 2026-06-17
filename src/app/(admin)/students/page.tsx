@@ -45,12 +45,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  PROGRAM_CATEGORIES,
+  PROGRAM_CATEGORY_LABEL,
+  programCategoryOf,
+  SCHOLARSHIP_COURSES,
+  isSemesterCategory,
+  type ProgramCategory,
+} from "@/lib/program-category";
 
 const SHIFTS = ["MORNING", "AFTERNOON", "EVENING"];
 const SHIFT_LABEL: Record<string, string> = { MORNING: "Morning", AFTERNOON: "Afternoon", EVENING: "Evening" };
-
-// Course types visible under Scholarship program
-const SCHOLARSHIP_COURSES = ["Fullstack", "Foundation", "Pre-Uni", "ITP", "ITE"];
 
 export default function StudentsPage() {
   const user = useUser();
@@ -83,7 +88,7 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
 
   // Filters
   const [search, setSearch] = useState("");
-  const [programType, setProgramType] = useState<"ALL" | "BACHELOR" | "SCHOLARSHIP">("ALL");
+  const [programType, setProgramType] = useState<"ALL" | ProgramCategory>("ALL");
   const [filterYear, setFilterYear]         = useState("");
   const [filterSemester, setFilterSemester] = useState("");
   const [filterShift, setFilterShift]       = useState("");
@@ -97,18 +102,18 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
     return m;
   }, [classrooms]);
 
-  // Unique values for each filter dropdown
-  const bachelorClassrooms = useMemo(() =>
-    classrooms.filter((c) => c.programTypeName?.toUpperCase().includes("BACHELOR")), [classrooms]);
-  const scholarshipClassrooms = useMemo(() =>
-    classrooms.filter((c) => c.programTypeName?.toUpperCase().includes("SCHOLARSHIP")), [classrooms]);
+  // Classrooms in the selected category drive the secondary filter options.
+  const categoryClassrooms = useMemo(
+    () =>
+      programType === "ALL"
+        ? []
+        : classrooms.filter((c) => programCategoryOf(c.programTypeName) === programType),
+    [classrooms, programType]
+  );
 
-  const years        = useMemo(() => [...new Set(bachelorClassrooms.map((c) => c.year).filter(Boolean))].sort() as number[], [bachelorClassrooms]);
-  const semesters    = useMemo(() => [...new Set(bachelorClassrooms.map((c) => c.semester).filter(Boolean))].sort() as number[], [bachelorClassrooms]);
-  const generations  = useMemo(() => [...new Set(
-    (programType === "BACHELOR" ? bachelorClassrooms : scholarshipClassrooms)
-      .map((c) => c.generation).filter(Boolean)
-  )].sort() as number[], [programType, bachelorClassrooms, scholarshipClassrooms]);
+  const years        = useMemo(() => [...new Set(categoryClassrooms.map((c) => c.year).filter(Boolean))].sort() as number[], [categoryClassrooms]);
+  const semesters    = useMemo(() => [...new Set(categoryClassrooms.map((c) => c.semester).filter(Boolean))].sort() as number[], [categoryClassrooms]);
+  const generations  = useMemo(() => [...new Set(categoryClassrooms.map((c) => c.generation).filter(Boolean))].sort() as number[], [categoryClassrooms]);
 
   // Derive scholarship course from className (matches partial SCHOLARSHIP_COURSES name)
   function getCourse(className: string) {
@@ -121,18 +126,18 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
     return students.filter((s) => {
       const cls = classMap.get(s.className ?? "");
 
-      // Program-type-specific filters
-      if (programType === "BACHELOR") {
-        if (!cls?.programTypeName?.toUpperCase().includes("BACHELOR")) return false;
-        if (filterYear && String(cls?.year) !== filterYear) return false;
-        if (filterSemester && String(cls?.semester) !== filterSemester) return false;
-        if (filterShift && cls?.shift !== filterShift) return false;
-        if (filterGeneration && String(cls?.generation) !== filterGeneration) return false;
-      } else if (programType === "SCHOLARSHIP") {
-        if (!cls?.programTypeName?.toUpperCase().includes("SCHOLARSHIP")) return false;
-        if (filterCourse && !getCourse(s.className ?? "")?.toLowerCase().includes(filterCourse.toLowerCase())) return false;
-        if (filterShift && cls?.shift !== filterShift) return false;
-        if (filterGeneration && String(cls?.generation) !== filterGeneration) return false;
+      // Program-category filters (cascade by the selected category)
+      if (programType !== "ALL") {
+        if (!cls || programCategoryOf(cls.programTypeName) !== programType) return false;
+        if (filterShift && cls.shift !== filterShift) return false;
+        if (filterGeneration && String(cls.generation) !== filterGeneration) return false;
+        if (programType === "SCHOLARSHIP") {
+          if (filterCourse && !getCourse(s.className ?? "")?.toLowerCase().includes(filterCourse.toLowerCase())) return false;
+        } else {
+          // Bachelor / Higher Degree use year + semester structure.
+          if (filterYear && String(cls.year) !== filterYear) return false;
+          if (filterSemester && String(cls.semester) !== filterSemester) return false;
+        }
       }
 
       // Free-text search across name / studentNo / email / class
@@ -314,9 +319,9 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
           )}
           </div>
       </div>
-      {/* Program Type Tabs */}
+      {/* Program category tabs (Higher Degree / Bachelor / Scholarship) */}
       <div className="flex gap-2 mb-4 flex-wrap">
-        {(["ALL", "BACHELOR", "SCHOLARSHIP"] as const).map((pt) => (
+        {(["ALL", ...PROGRAM_CATEGORIES.map((c) => c.value)] as ("ALL" | ProgramCategory)[]).map((pt) => (
           <button
             key={pt}
             onClick={() => { setProgramType(pt); resetFilters(); }}
@@ -326,7 +331,7 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
                 : "bg-card text-muted-foreground border-border hover:border-primary/50"
             }`}
           >
-            {pt === "ALL" ? "All" : pt === "BACHELOR" ? "Bachelor" : "Scholarship"}
+            {pt === "ALL" ? "All" : PROGRAM_CATEGORY_LABEL[pt]}
           </button>
         ))}
       </div>
@@ -342,7 +347,7 @@ function StudentsView({ isAdmin }: { isAdmin: boolean }) {
             options={generations.map((g) => ({ label: `Gen ${g}`, value: String(g) }))}
           />
 
-          {programType === "BACHELOR" && (
+          {isSemesterCategory(programType) && (
             <>
               <FilterSelect
                 label="Year"
