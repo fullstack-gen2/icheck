@@ -7,10 +7,11 @@ export default async function DashboardPage() {
   const userId = user?.id ?? "";
   const isTeacher = role === "TEACHER";
 
-  // Teacher → analytics scoped to their classes; Admin → school-wide.
-  // (The class-card overview moved to the "Classes" page in the sidebar.)
+  // Teacher → analytics scoped to their classes (cards + tables, no graphs);
+  // Admin → school-wide with graphs. (The class-card overview moved to the
+  // "Classes" page in the sidebar.)
   return isTeacher ? (
-    <AdminDashboard teacherId={Number(userId)} heading="Teacher Dashboard" />
+    <AdminDashboard teacherId={Number(userId)} heading="Teacher Dashboard" showCharts={false} />
   ) : (
     <AdminDashboard heading="Admin Dashboard" />
   );
