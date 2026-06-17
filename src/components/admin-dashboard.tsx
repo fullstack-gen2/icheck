@@ -271,7 +271,7 @@ export function AdminDashboard({ teacherId, heading = "Admin Dashboard", showCha
                   <LineChart data={trend} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-                    <YAxis unit="%" tick={{ fontSize: 12 }} domain={[0, 100]} />
+                    <YAxis unit="%" tick={{ fontSize: 12 }} domain={[0, 100]} allowDataOverflow />
                     <Tooltip />
                     <Legend />
                     <Line type="monotone" dataKey="presentRate" name="Present" stroke={COLORS.present} strokeWidth={2} dot={false} />
@@ -311,7 +311,7 @@ export function AdminDashboard({ teacherId, heading = "Admin Dashboard", showCha
                     <BarChart data={programBars} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-15} textAnchor="end" height={50} />
-                      <YAxis unit="%" tick={{ fontSize: 12 }} domain={[0, 100]} />
+                      <YAxis unit="%" tick={{ fontSize: 12 }} domain={[0, 100]} allowDataOverflow />
                       <Tooltip />
                       <Bar dataKey="attendanceRate" name="Attendance %" fill={COLORS.rate} radius={[6, 6, 0, 0]} />
                     </BarChart>
@@ -334,7 +334,7 @@ export function AdminDashboard({ teacherId, heading = "Admin Dashboard", showCha
               </CardTitle>
               <CardDescription>
                 {summary?.atRiskStudents ?? 0} student(s) below the minimum attendance requirement
-                {atRiskClasses.length > 0 ? `, across ${atRiskClasses.length} class(es).` : "."}
+                {atRiskClasses.length > 0 ? `, across ${atRiskClasses.length} classes.` : "."}
               </CardDescription>
             </CardHeader>
             <CardContent>
