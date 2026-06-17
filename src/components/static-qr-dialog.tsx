@@ -36,7 +36,7 @@ function safeFileName(name: string): string {
  * it as a PNG named after the class (e.g. "ITP_Evening.png"). The static QR is
  * idempotent on the backend: the same code is returned every time, so this is
  * safe to open repeatedly. Print it / stick it on the wall — students scan it
- * to check in (reason required; same GPS/device/IP/late rules as dynamic QR).
+ * to check in (same GPS/device/IP/late rules as dynamic QR; late scans require a reason).
  */
 export function StaticQrDialog({ classroomId, className }: Props) {
   const [open, setOpen] = useState(false);
@@ -98,8 +98,8 @@ export function StaticQrDialog({ classroomId, className }: Props) {
           </DialogTitle>
           <DialogDescription>
             Permanent classroom QR. Print or display it; students scan it to
-            check in. Same rules as the dynamic QR (GPS, device, late window) —
-            a reason is required on static scans.
+            check in. Same rules as the dynamic QR (GPS, device, late window);
+            late scans require a reason.
           </DialogDescription>
         </DialogHeader>
 
