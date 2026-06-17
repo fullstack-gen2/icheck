@@ -37,7 +37,7 @@ const SHIFT_LABEL: Record<string, string> = {
   EVENING: "Evening",
 };
 
-type Counts = Record<string, { total: number; female: number }>;
+type Counts = Record<number, { total: number; female: number }>;
 type SortKey = "name" | "code" | "generation" | "startDate";
 type SortDir = "asc" | "desc";
 type StatusFilter = "all" | "active" | "inactive";
@@ -315,7 +315,7 @@ export function ClassroomsBrowser({ classrooms, classCounts }: Props) {
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-6">
           {visible.map((c) => {
-            const counts = classCounts[c.className];
+            const counts = classCounts[c.id];
             return (
               <Link
                 key={c.id}
