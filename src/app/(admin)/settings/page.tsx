@@ -78,6 +78,12 @@ const ATTENDANCE_POLICY_KEYS = [
   "min_attendance_required",
 ];
 
+const OBSOLETE_SETTING_KEYS = [
+  "qr_expire_seconds",
+  "qr_window_minutes",
+  "max_sessions_per_day",
+];
+
 function humanizeKey(key: string) {
   return KEY_LABELS[key] ?? key
     .replace(/_/g, " ")
@@ -276,15 +282,19 @@ export default function SettingsPage() {
   const { data: settings = [], isLoading, isError, error } = useGetSettingsQuery();
   const [updateSetting] = useUpdateSettingMutation();
 
+  const visibleSettings = useMemo(() => {
+    return settings.filter((setting) => !OBSOLETE_SETTING_KEYS.includes(setting.settingKey));
+  }, [settings]);
+
   const groupedSettings = useMemo(() => {
-    return settings
+    return visibleSettings
       .filter((setting) => !NETWORK_LOCATION_KEYS.includes(setting.settingKey))
       .reduce<Record<string, SettingDto[]>>((groups, setting) => {
         const group = settingGroup(setting.settingKey);
         groups[group] = [...(groups[group] ?? []), setting];
         return groups;
       }, {});
-  }, [settings]);
+  }, [visibleSettings]);
 
   async function updateSettingValue(setting: SettingDto, value: string) {
     try {
@@ -352,7 +362,7 @@ export default function SettingsPage() {
         </section>
       )}
 
-      {isLoading ? null : settings.length === 0 ? (
+      {isLoading ? null : visibleSettings.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card py-20 text-center text-muted-foreground/70">
           <Settings2Icon className="mx-auto mb-3 size-10 opacity-40" />
           <p className="font-medium">No settings returned by the API.</p>
