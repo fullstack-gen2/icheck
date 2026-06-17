@@ -56,9 +56,11 @@ interface Props {
   /** Pass to scope analytics to one teacher's classes (teacher dashboard). */
   teacherId?: number;
   heading?: string;
+  /** Teacher / student views drop the line/pie/bar graphs (cards + tables only). */
+  showCharts?: boolean;
 }
 
-export function AdminDashboard({ teacherId, heading = "Admin Dashboard" }: Props) {
+export function AdminDashboard({ teacherId, heading = "Admin Dashboard", showCharts = true }: Props) {
   const now = new Date();
   const [month, setMonth] = useState<number | null>(now.getMonth() + 1);
   const [year, setYear] = useState<number>(now.getFullYear());
@@ -140,6 +142,54 @@ export function AdminDashboard({ teacherId, heading = "Admin Dashboard" }: Props
 
   const atRiskClasses = (data?.classBreakdown ?? []).filter((c) => c.atRiskStudents > 0);
 
+  // Class Ranking is a table (not a graph), so it stays in every view.
+  const rankingCard = (
+    <ChartCard title="Class Ranking" description="By attendance rate">
+      <div className="max-h-[320px] overflow-y-auto">
+        <table className="w-full text-sm">
+          <thead className="sticky top-0 bg-card text-left text-xs text-muted-foreground">
+            <tr className="border-b border-border">
+              <th className="py-2 pr-2 font-medium">#</th>
+              <th className="py-2 pr-2 font-medium">Class</th>
+              <th className="py-2 pr-2 text-right font-medium">Rate</th>
+              <th className="py-2 pr-2 text-right font-medium">Absent</th>
+              <th className="py-2 text-right font-medium">At-risk</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(data?.classBreakdown ?? []).map((c, i) => (
+              <tr key={c.classroomId} className="border-b border-border/60">
+                <td className="py-2 pr-2 text-muted-foreground/70">{i + 1}</td>
+                <td className="py-2 pr-2">
+                  <div className="font-medium text-foreground">{c.className}</div>
+                  <div className="text-xs text-muted-foreground/70">{c.classCode}</div>
+                </td>
+                <td className="py-2 pr-2 text-right font-semibold tabular-nums">{c.attendanceRate}%</td>
+                <td className="py-2 pr-2 text-right tabular-nums">{c.absent}</td>
+                <td className="py-2 text-right tabular-nums">
+                  {c.atRiskStudents > 0 ? (
+                    <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-950/50 dark:text-red-300">
+                      {c.atRiskStudents}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground/50">0</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {(data?.classBreakdown ?? []).length === 0 && (
+              <tr>
+                <td colSpan={5} className="py-10 text-center text-muted-foreground/70">
+                  No class data for this filter.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </ChartCard>
+  );
+
   return (
     <div className="space-y-6 px-5 py-6 sm:px-7">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -213,105 +263,67 @@ export function AdminDashboard({ teacherId, heading = "Admin Dashboard" }: Props
             <StatCard label="Absent" value={summary?.absent} icon={XCircleIcon} tint="text-rose-600 bg-rose-50 dark:bg-rose-950/40" />
           </div>
 
-          {/* Charts row 1 */}
-          <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-            <ChartCard title="Monthly Attendance Trend" description="Present / Late / Absent rate by day">
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={trend} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-                  <YAxis unit="%" tick={{ fontSize: 12 }} domain={[0, 100]} />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="presentRate" name="Present" stroke={COLORS.present} strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="lateRate" name="Late" stroke={COLORS.late} strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="absentRate" name="Absent" stroke={COLORS.absent} strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </ChartCard>
-
-            <ChartCard title="Attendance Status Breakdown" description="Across the selected range">
-              {statusPie.length === 0 ? (
-                <EmptyChart />
-              ) : (
+          {/* Graphs — admin only. Teacher/Student get cards + tables. */}
+          {showCharts && (
+            <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+              <ChartCard title="Monthly Attendance Trend" description="Present / Late / Absent rate by day">
                 <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie data={statusPie} dataKey="value" nameKey="name" innerRadius={60} outerRadius={100} paddingAngle={2}>
-                      {statusPie.map((s) => (
-                        <Cell key={s.name} fill={s.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              )}
-            </ChartCard>
-          </div>
-
-          {/* Charts row 2 */}
-          <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
-            <ChartCard title="Program Type Comparison" description="Attendance rate by program">
-              {programBars.length === 0 ? (
-                <EmptyChart />
-              ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={programBars} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
+                  <LineChart data={trend} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-15} textAnchor="end" height={50} />
+                    <XAxis dataKey="day" tick={{ fontSize: 12 }} />
                     <YAxis unit="%" tick={{ fontSize: 12 }} domain={[0, 100]} />
                     <Tooltip />
-                    <Bar dataKey="attendanceRate" name="Attendance %" fill={COLORS.rate} radius={[6, 6, 0, 0]} />
-                  </BarChart>
+                    <Legend />
+                    <Line type="monotone" dataKey="presentRate" name="Present" stroke={COLORS.present} strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="lateRate" name="Late" stroke={COLORS.late} strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="absentRate" name="Absent" stroke={COLORS.absent} strokeWidth={2} dot={false} />
+                  </LineChart>
                 </ResponsiveContainer>
-              )}
-            </ChartCard>
+              </ChartCard>
 
-            <ChartCard title="Class Ranking" description="By attendance rate">
-              <div className="max-h-[300px] overflow-y-auto">
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-card text-left text-xs text-muted-foreground">
-                    <tr className="border-b border-border">
-                      <th className="py-2 pr-2 font-medium">#</th>
-                      <th className="py-2 pr-2 font-medium">Class</th>
-                      <th className="py-2 pr-2 text-right font-medium">Rate</th>
-                      <th className="py-2 pr-2 text-right font-medium">Absent</th>
-                      <th className="py-2 text-right font-medium">At-risk</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(data?.classBreakdown ?? []).map((c, i) => (
-                      <tr key={c.classroomId} className="border-b border-border/60">
-                        <td className="py-2 pr-2 text-muted-foreground/70">{i + 1}</td>
-                        <td className="py-2 pr-2">
-                          <div className="font-medium text-foreground">{c.className}</div>
-                          <div className="text-xs text-muted-foreground/70">{c.classCode}</div>
-                        </td>
-                        <td className="py-2 pr-2 text-right font-semibold tabular-nums">{c.attendanceRate}%</td>
-                        <td className="py-2 pr-2 text-right tabular-nums">{c.absent}</td>
-                        <td className="py-2 text-right tabular-nums">
-                          {c.atRiskStudents > 0 ? (
-                            <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-950/50 dark:text-red-300">
-                              {c.atRiskStudents}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground/50">0</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                    {(data?.classBreakdown ?? []).length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="py-10 text-center text-muted-foreground/70">
-                          No class data for this filter.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </ChartCard>
-          </div>
+              <ChartCard title="Attendance Status Breakdown" description="Across the selected range">
+                {statusPie.length === 0 ? (
+                  <EmptyChart />
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie data={statusPie} dataKey="value" nameKey="name" innerRadius={60} outerRadius={100} paddingAngle={2}>
+                        {statusPie.map((s) => (
+                          <Cell key={s.name} fill={s.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </ChartCard>
+            </div>
+          )}
+
+          {showCharts ? (
+            <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
+              <ChartCard title="Program Type Comparison" description="Attendance rate by program">
+                {programBars.length === 0 ? (
+                  <EmptyChart />
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={programBars} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-15} textAnchor="end" height={50} />
+                      <YAxis unit="%" tick={{ fontSize: 12 }} domain={[0, 100]} />
+                      <Tooltip />
+                      <Bar dataKey="attendanceRate" name="Attendance %" fill={COLORS.rate} radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </ChartCard>
+
+              {rankingCard}
+            </div>
+          ) : (
+            rankingCard
+          )}
 
           {/* At-risk panel */}
           <Card>
