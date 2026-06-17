@@ -243,7 +243,7 @@ export function ClassroomFormDialog({ open, initial, onOpenChange, onSaved }: Pr
 
   const checkInUrl =
     createdQr && typeof window !== "undefined"
-      ? `${window.location.origin}/check-in?token=${createdQr.codeValue}`
+      ? `${window.location.origin}/check-in?token=${createdQr.codeValue}&kind=static`
       : "";
 
   if (createdQr) {

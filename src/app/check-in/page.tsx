@@ -13,6 +13,14 @@ type State = "loading" | "success" | "error" | "noToken" | "needReason";
 
 const FETCH_TIMEOUT_MS = 12_000;
 
+/** Remember the current scan URL, then bounce to login — so a student whose
+ *  session expired mid check-in lands right back here after signing in. */
+function redirectToLoginWithReturn() {
+  const here = window.location.pathname + window.location.search;
+  document.cookie = `post_login_redirect=${encodeURIComponent(here)}; path=/; max-age=600; samesite=lax`;
+  window.location.assign("/api/auth/login");
+}
+
 export default function CheckInPage() {
   return (
     <Suspense>
@@ -39,6 +47,11 @@ function CheckInContent() {
   const [message, setMessage] = useState("");
   const [reason, setReason] = useState("");
   const didSubmit = useRef(false);
+  // The QR's kind (static vs dynamic), seeded from the URL. Some printed static
+  // QRs link to /check-in?token=… WITHOUT &kind=static, so we may correct this
+  // at runtime: if the guessed endpoint is rejected we flip once and retry.
+  const kindRef = useRef<"static" | "dynamic">(isStatic ? "static" : "dynamic");
+  const flippedRef = useRef(false);
   const viewState: State = token ? state : "noToken";
 
   const doCheckIn = async (qrToken: string, reasonOverride?: string) => {
@@ -71,8 +84,8 @@ function CheckInContent() {
         signal: controller.signal,
         body: JSON.stringify({
           qrToken,
-          kind: isStatic ? "static" : "dynamic",
-          reason: reasonOverride ?? (isStatic ? reason : undefined),
+          kind: kindRef.current,
+          reason: reasonOverride ?? (kindRef.current === "static" ? reason : undefined),
           latitude: coords.latitude,
           longitude: coords.longitude,
         }),
@@ -94,11 +107,9 @@ function CheckInContent() {
         // remembering this scan URL so they land right back here (better UX than
         // a dead-end "session expired" error).
         if (res.status === 401 || res.status === 403) {
-          const here = window.location.pathname + window.location.search;
-          document.cookie = `post_login_redirect=${encodeURIComponent(here)}; path=/; max-age=600; samesite=lax`;
           setState("loading");
           setMessage("Redirecting you to log in…");
-          window.location.href = "/api/auth/login";
+          redirectToLoginWithReturn();
           return;
         }
 
@@ -110,6 +121,17 @@ function CheckInContent() {
           json?.message ??
           json?.error ??
           "Check-in failed. Please try again, or ask your teacher to re-open the QR.";
+
+        // QR-type mismatch: we guessed the wrong endpoint (e.g. a printed static
+        // QR whose link lacks &kind=static, so we tried "dynamic"). Flip to the
+        // other endpoint once and retry transparently — the student sees nothing.
+        if (/only accepts (dynamic|static) qr codes/i.test(errMsg) && !flippedRef.current) {
+          flippedRef.current = true;
+          kindRef.current = kindRef.current === "static" ? "dynamic" : "static";
+          didSubmit.current = false;
+          await doCheckIn(qrToken, reasonOverride);
+          return;
+        }
 
         // Backend signal that a reason is required (static QR, missing reason).
         if (/reason is required/i.test(errMsg)) {
