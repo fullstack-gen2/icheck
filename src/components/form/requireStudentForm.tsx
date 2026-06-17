@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,11 +20,34 @@ import { getErrorMessage } from "@/lib/error-utils";
 import { useUser } from "@/components/user-provider";
 import { useGetUserEnrollmentsQuery } from "@/store/api/userApi";
 
+type StudentRequestType = "permission" | "late_arrival" | "leave_early";
+
+type AmendmentTypeOption = {
+  id: number;
+  name: string;
+  description?: string | null;
+};
+
+const REQUEST_COPY: Record<StudentRequestType, { label: string; pending: string }> = {
+  late_arrival: {
+    label: "Late arrival",
+    pending: "late-arrival request",
+  },
+  permission: {
+    label: "Permission / excused absence",
+    pending: "permission request",
+  },
+  leave_early: {
+    label: "Leaving early",
+    pending: "early-leave request",
+  },
+};
+
 /**
- * Student "Request Late / Permission" form.
+ * Student attendance request form.
  *
- * For when a student missed the QR (it expired / they were late) or needs to
- * leave early: they pick the class, a type, a time and a reason, and submit.
+ * For when a student missed the QR, needs official permission, or leaves early:
+ * they pick the class, a type, a time and a reason, and submit.
  * Posts to `POST /api/v1/amendments/late-out`, which creates a PENDING
  * amendment — the admin gets a notification, reviews it, and the student sees
  * the decision back in their notification bell.
@@ -35,6 +58,7 @@ export default function RequirePermissionForm() {
   const userId = user?.id ?? "";
 
   const { data: enrollments = [] } = useGetUserEnrollmentsQuery(userId, { skip: !userId });
+  const [amendmentTypes, setAmendmentTypes] = useState<AmendmentTypeOption[]>([]);
 
   const defaultTime = useMemo(() => {
     const d = new Date();
@@ -43,10 +67,47 @@ export default function RequirePermissionForm() {
   }, []);
 
   const [classroomId, setClassroomId] = useState("");
-  const [type, setType] = useState<"late" | "permission">("late");
+  const [type, setType] = useState<StudentRequestType>("late_arrival");
   const [when, setWhen] = useState(defaultTime);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get("/amendment-types")
+      .then((raw) => {
+        if (cancelled) return;
+        const list = Array.isArray(raw)
+          ? raw as AmendmentTypeOption[]
+          : Array.isArray((raw as { payload?: AmendmentTypeOption[] } | null)?.payload)
+            ? (raw as { payload: AmendmentTypeOption[] }).payload
+            : [];
+        setAmendmentTypes(list);
+      })
+      .catch(() => {
+        if (!cancelled) setAmendmentTypes([]);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const requestTypes = useMemo(() => {
+    const allowed = new Set<StudentRequestType>(["late_arrival", "permission", "leave_early"]);
+    const fromApi = amendmentTypes
+      .filter((item): item is AmendmentTypeOption & { name: StudentRequestType } =>
+        allowed.has(item.name as StudentRequestType)
+      )
+      .sort((a, b) => {
+        const order: Record<StudentRequestType, number> = { late_arrival: 0, permission: 1, leave_early: 2 };
+        return order[a.name] - order[b.name];
+      });
+    return fromApi.length > 0
+      ? fromApi
+      : [
+          { id: 1, name: "late_arrival", description: "Student arrived late or missed the QR window" },
+          { id: 2, name: "permission", description: "Approved excused permission request" },
+          { id: 3, name: "leave_early", description: "Student leaves before the session ends" },
+        ];
+  }, [amendmentTypes]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -78,10 +139,11 @@ export default function RequirePermissionForm() {
         studentId: Number(userId),
         sessionId,
         leaveTime: when.length === 16 ? `${when}:00` : when,
+        requestTypeName: type,
         reason: `[${type}] ${reason.trim()}`,
       });
 
-      toast.success("Request submitted. You'll get a notification once an admin reviews it.");
+      toast.success(`${REQUEST_COPY[type].label} submitted. You'll get a notification once an admin reviews it.`);
       setReason("");
       router.refresh();
     } catch (err) {
@@ -95,10 +157,11 @@ export default function RequirePermissionForm() {
     <form onSubmit={handleSubmit} className="w-full">
       <div className="grid gap-5">
         <div className="space-y-1">
-          <h1 className="text-xl font-semibold">Request Late / Permission</h1>
+          <h1 className="text-xl font-semibold">Request Attendance Amendment</h1>
           <p className="text-sm text-muted-foreground">
-            Missed the QR or need to leave early? Submit a request — an admin
-            reviews it and you&apos;ll see the decision in your notifications.
+            Missed the QR, need official permission, or need to leave early?
+            Submit a request — an admin reviews it and you&apos;ll see the
+            decision in your notifications.
           </p>
         </div>
 
@@ -119,11 +182,14 @@ export default function RequirePermissionForm() {
 
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Type" required>
-            <Select value={type} onValueChange={(v) => setType(v as "late" | "permission")}>
+            <Select value={type} onValueChange={(v) => setType(v as StudentRequestType)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="late">Late arrival</SelectItem>
-                <SelectItem value="permission">Permission / leaving early</SelectItem>
+                {requestTypes.map((item) => (
+                  <SelectItem key={item.name} value={item.name}>
+                    {REQUEST_COPY[item.name as StudentRequestType]?.label ?? item.name.replace(/_/g, " ")}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>
@@ -138,7 +204,7 @@ export default function RequirePermissionForm() {
           <Textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Explain why — e.g. doctor's appointment, traffic, QR expired before I could scan…"
+            placeholder="Explain why — e.g. doctor's appointment, traffic, QR expired before I could scan..."
             className="min-h-28"
           />
         </Field>
