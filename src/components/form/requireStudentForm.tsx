@@ -34,7 +34,7 @@ const REQUEST_COPY: Record<StudentRequestType, { label: string; pending: string 
     pending: "late-arrival request",
   },
   permission: {
-    label: "Permission / excused absence",
+    label: "Permission",
     pending: "permission request",
   },
   leave_early: {
