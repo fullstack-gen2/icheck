@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/logo";
 import { useLiveLocation } from "@/lib/geolocation";
+import { getCheckInErrorMessage } from "@/lib/check-in-error";
 
 type State = "loading" | "success" | "error" | "noToken" | "needReason";
 
@@ -116,11 +117,10 @@ function CheckInContent() {
         // Surface the REAL reason — read every field the backend / proxy might
         // use (payload.message, message, error). Only fall back to the generic
         // hint when the response truly carries nothing.
-        const errMsg: string =
-          json?.payload?.message ??
-          json?.message ??
-          json?.error ??
-          "Check-in failed. Please try again, or ask your teacher to re-open the QR.";
+        const errMsg = getCheckInErrorMessage(
+          json,
+          "Check-in failed. Please try again, or ask your teacher to re-open the QR."
+        );
 
         // QR-type mismatch: we guessed the wrong endpoint (e.g. a printed static
         // QR whose link lacks &kind=static, so we tried "dynamic"). Flip to the
