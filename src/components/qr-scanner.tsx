@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { parseQrPayload, type QrKind } from "@/lib/qr-token";
 import { useLiveLocation } from "@/lib/geolocation";
+import { getCheckInErrorMessage } from "@/lib/check-in-error";
 
 interface Props {
   onClose: () => void;
@@ -97,8 +98,7 @@ export function QrScanner({ onClose }: Props) {
             return;
           }
 
-          const errMsg: string =
-            json?.payload?.message ?? json?.message ?? json?.error ?? "Check-in failed. Try again.";
+          const errMsg = getCheckInErrorMessage(json, "Check-in failed. Try again.");
 
           // Wrong endpoint for this token type → flip kind once and retry.
           if (/only accepts (dynamic|static) qr codes/i.test(errMsg) && attempt === 0) {
