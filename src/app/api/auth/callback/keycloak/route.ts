@@ -1,6 +1,7 @@
 import {
   ACCESS_TOKEN_COOKIE,
   AUTH_API_URL,
+  BASE_API_URL,
   ID_TOKEN_COOKIE,
   KEYCLOAK_CLIENT_ID,
   KEYCLOAK_CLIENT_SECRET,
@@ -215,7 +216,23 @@ export async function GET(req: Request) {
   // redirects.
   const rawReturn = getCookie(req, "post_login_redirect");
   const decodedReturn = rawReturn ? decodeURIComponent(rawReturn) : "";
-  const dest = decodedReturn.startsWith("/check-in") ? decodedReturn : "/";
+  let dest = decodedReturn.startsWith("/check-in") ? decodedReturn : "/";
+  try {
+    const onboardingRes = await fetch(`${BASE_API_URL}/onboarding/status`, {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${token.access_token}` },
+    });
+    if (onboardingRes.ok) {
+      const onboardingJson = await onboardingRes.json() as {
+        payload?: { needsOnboarding?: boolean };
+      };
+      if (onboardingJson.payload?.needsOnboarding) {
+        dest = "/onboarding";
+      }
+    }
+  } catch (e) {
+    console.error("[oauth/callback] onboarding status check failed", e);
+  }
   const response = NextResponse.redirect(new URL(dest, requestUrl.origin));
   const secure = requestUrl.protocol === "https:";
 

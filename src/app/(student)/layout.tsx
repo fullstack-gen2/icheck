@@ -4,6 +4,11 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { OAUTH2_LOGIN_URL } from "@/lib/api-config";
+import { backendFetch } from "@/lib/api-fetch";
+
+type OnboardingStatus = {
+  needsOnboarding?: boolean;
+};
 
 export default async function StudentLayout({
   children,
@@ -14,6 +19,18 @@ export default async function StudentLayout({
 
   if (!user) redirect(OAUTH2_LOGIN_URL);
   if (user && user.role !== "STUDENT") redirect("/dashboard");
+
+  let needsOnboarding = false;
+  try {
+    const response = await backendFetch("/onboarding/status");
+    if (response.ok) {
+      const status = (await response.json()) as OnboardingStatus;
+      needsOnboarding = Boolean(status.needsOnboarding);
+    }
+  } catch {
+    // Keep existing student dashboard behavior if the onboarding probe is unavailable.
+  }
+  if (needsOnboarding) redirect("/onboarding");
 
   const displayUser = {
     name:        user?.name  ?? "",

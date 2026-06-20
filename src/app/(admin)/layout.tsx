@@ -2,8 +2,13 @@ import { getServerUser } from "@/auth-server";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { backendFetch } from "@/lib/api-fetch";
 import { OAUTH2_LOGIN_URL } from "@/lib/api-config";
 import { redirect } from "next/navigation";
+
+type OnboardingStatus = {
+  needsOnboarding?: boolean;
+};
 
 export default async function AdminLayout({
   children,
@@ -14,6 +19,18 @@ export default async function AdminLayout({
 
   if (!user) redirect(OAUTH2_LOGIN_URL);
   if (user.role === "STUDENT") redirect("/student");
+
+  let needsOnboarding = false;
+  try {
+    const response = await backendFetch("/onboarding/status");
+    if (response.ok) {
+      const status = (await response.json()) as OnboardingStatus;
+      needsOnboarding = Boolean(status.needsOnboarding);
+    }
+  } catch {
+    // Keep existing dashboard behavior if the onboarding probe is unavailable.
+  }
+  if (needsOnboarding) redirect("/onboarding");
 
   const displayUser = {
     name:        user?.name  ?? "",
