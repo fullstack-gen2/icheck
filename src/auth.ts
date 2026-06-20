@@ -90,17 +90,20 @@ export interface AppUser {
   profileImage: string | null;
 }
 
-const ROLE_PRIORITY = ["ADMIN", "TEACHER", "STUDENT"] as const;
+const ROLE_PRIORITY = ["PLATFORM_ADMIN", "ORG_ADMIN", "ADMIN", "TEACHER", "STUDENT"] as const;
 
 function normalizeRole(raw: string): string {
   const upper = raw?.toUpperCase?.() ?? "";
   if (upper === "SUPER_ADMIN" || upper === "SUPERADMIN") return "ADMIN";
+  if (upper === "PLATFORM_ADMIN" || upper === "ORG_ADMIN") return "ADMIN";
   return upper || "USER";
 }
 
 function humanizeRole(raw: string): string {
   const upper = raw?.toUpperCase?.() ?? "";
   if (upper === "SUPER_ADMIN" || upper === "SUPERADMIN") return "Super Admin";
+  if (upper === "PLATFORM_ADMIN") return "Platform Admin";
+  if (upper === "ORG_ADMIN") return "Organization Admin";
   if (upper === "ADMIN")   return "Admin";
   if (upper === "TEACHER") return "Teacher";
   if (upper === "STUDENT") return "Student";
@@ -114,6 +117,8 @@ function humanizeRole(raw: string): string {
 function pickDisplayRoleRaw(rawRoles: string[]): string {
   const upper = rawRoles.map((r) => r.toUpperCase());
   if (upper.some((r) => r === "SUPER_ADMIN" || r === "SUPERADMIN")) return "SUPER_ADMIN";
+  if (upper.includes("PLATFORM_ADMIN")) return "PLATFORM_ADMIN";
+  if (upper.includes("ORG_ADMIN")) return "ORG_ADMIN";
   if (upper.includes("ADMIN"))   return "ADMIN";
   if (upper.includes("TEACHER")) return "TEACHER";
   if (upper.includes("STUDENT")) return "STUDENT";

@@ -22,6 +22,8 @@ function sign(value: string) {
 
 export function GET(req: Request) {
   const requestUrl = new URL(req.url);
+  const mode = requestUrl.searchParams.get("mode");
+  const idp = requestUrl.searchParams.get("idp");
   const codeVerifier = randomBytes(32).toString("base64url");
   const codeChallenge = createHash("sha256")
     .update(codeVerifier)
@@ -32,7 +34,10 @@ export function GET(req: Request) {
   });
   const state = `${statePayload}.${sign(statePayload)}`;
   const redirectUri = new URL("/api/auth/callback/keycloak", requestUrl.origin);
-  const authorizationUrl = new URL(`${KEYCLOAK_ISSUER_URI}/protocol/openid-connect/auth`);
+  const authorizationEndpoint = mode === "signup"
+    ? `${KEYCLOAK_ISSUER_URI}/protocol/openid-connect/registrations`
+    : `${KEYCLOAK_ISSUER_URI}/protocol/openid-connect/auth`;
+  const authorizationUrl = new URL(authorizationEndpoint);
 
   console.log("[oauth/login] starting", {
     issuer: KEYCLOAK_ISSUER_URI,
@@ -47,6 +52,9 @@ export function GET(req: Request) {
   authorizationUrl.searchParams.set("state", state);
   authorizationUrl.searchParams.set("code_challenge", codeChallenge);
   authorizationUrl.searchParams.set("code_challenge_method", "S256");
+  if (idp === "google" || idp === "facebook") {
+    authorizationUrl.searchParams.set("kc_idp_hint", idp);
+  }
 
   const response = NextResponse.redirect(authorizationUrl);
   response.cookies.set(OAUTH_STATE_COOKIE, state, {
