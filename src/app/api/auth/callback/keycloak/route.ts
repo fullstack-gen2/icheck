@@ -224,9 +224,10 @@ export async function GET(req: Request) {
     });
     if (onboardingRes.ok) {
       const onboardingJson = await onboardingRes.json() as {
+        needsOnboarding?: boolean;
         payload?: { needsOnboarding?: boolean };
       };
-      if (onboardingJson.payload?.needsOnboarding) {
+      if (onboardingJson.payload?.needsOnboarding || onboardingJson.needsOnboarding) {
         dest = "/onboarding";
       }
     }
