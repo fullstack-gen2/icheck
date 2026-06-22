@@ -359,7 +359,18 @@ function Footer() {
     <footer className="border-t border-slate-200 bg-white">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-8 text-sm text-slate-500 md:flex-row md:items-center md:justify-between">
         <LogoWordmark height={30} />
-        <p>QR attendance, reporting, and alerts for modern classrooms.</p>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <p>QR attendance, reporting, and alerts for modern classrooms.</p>
+          <Link href="/privacy" className="transition hover:text-slate-950">
+            Privacy
+          </Link>
+          <Link href="/terms" className="transition hover:text-slate-950">
+            Terms
+          </Link>
+          <Link href="/data-deletion" className="transition hover:text-slate-950">
+            Data deletion
+          </Link>
+        </div>
       </div>
     </footer>
   );
